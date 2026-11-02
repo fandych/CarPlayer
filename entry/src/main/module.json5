@@ -10,14 +10,88 @@
     "deliveryWithInstall": true,
     "installationFree": false,
     "pages": "$profile:main_pages",
+    "querySchemes": [
+      "amapuri",
+      "baidumap",
+      "hwmusic",
+      "qqmap",
+      "qqmusic",
+      "orpheus",
+      "kugou",
+      "snssdk1128",
+      "kwai",
+      "emoh",
+      "tenvideo2"
+    ],
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.INTERNET"
+      },
+      {
+        "name": "ohos.permission.ACCESS_BLUETOOTH",
+        "reason": "$string:permission_bluetooth",
+        "usedScene": {
+          "abilities": ["EntryAbility"],
+          "when": "inuse"
+        }
+      },
+      {
+        "name": "ohos.permission.SET_WIFI_INFO",
+        "reason": "$string:permission_wifi",
+        "usedScene": {
+          "abilities": ["EntryAbility"],
+          "when": "inuse"
+        }
+      },
+      {
+        "name": "ohos.permission.GET_WIFI_INFO",
+        "reason": "$string:permission_wifi",
+        "usedScene": {
+          "abilities": ["EntryAbility"],
+          "when": "inuse"
+        }
+      },
+      {
+        "name": "ohos.permission.GET_NETWORK_INFO",
+        "reason": "$string:permission_wifi",
+        "usedScene": {
+          "abilities": ["EntryAbility"],
+          "when": "inuse"
+        }
+      },
+      {
+        "name": "ohos.permission.ACCESS_VIRTUAL_SCREEN",
+        "reason": "$string:permission_virtual_screen",
+        "usedScene": {
+          "abilities": ["EntryAbility", "ProjectionHomeAbility"],
+          "when": "inuse"
+        }
+      },
+      {
+        "name": "ohos.permission.CUSTOM_SCREEN_CAPTURE",
+        "reason": "$string:permission_custom_screen_capture",
+        "usedScene": {
+          "abilities": ["EntryAbility"],
+          "when": "inuse"
+        }
+      },
+      {
+        "name": "ohos.permission.MANAGE_MEDIA_RESOURCES_FOR_PUBLIC",
+        "reason": "$string:permission_media_resources",
+        "usedScene": {
+          "abilities": ["ProjectionHomeAbility"],
+          "when": "inuse"
+        }
+      },
+    ],
     "abilities": [
       {
         "name": "EntryAbility",
         "srcEntry": "./ets/entryability/EntryAbility.ets",
         "description": "$string:EntryAbility_desc",
-        "icon": "$media:layered_image",
+        "icon": "$media:logo_512",
         "label": "$string:EntryAbility_label",
-        "startWindowIcon": "$media:startIcon",
+        "startWindowIcon": "$media:logo_512",
         "startWindowBackground": "$color:start_window_background",
         "exported": true,
         "skills": [
@@ -30,6 +104,17 @@
             ]
           }
         ]
+      },
+      {
+        "name": "ProjectionHomeAbility",
+        "srcEntry": "./ets/entryability/ProjectionHomeAbility.ets",
+        "description": "$string:ProjectionHomeAbility_desc",
+        "label": "$string:ProjectionHomeAbility_label",
+        "icon": "$media:logo_512",
+        "startWindowIcon": "$media:logo_512",
+        "startWindowBackground": "$color:start_window_background",
+        "exported": false,
+        "launchType": "singleton"
       }
     ],
     "extensionAbilities": [

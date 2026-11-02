@@ -6,6 +6,10 @@
   "author": "",
   "license": "",
   "dependencies": {
-    "libentry.so": "file:./src/main/cpp/types/libentry"
-  }
+    "@noble/ciphers": "file:./libs/noble-ciphers.har",
+    "@noble/curves": "file:./libs/noble-curves.har",
+    "@noble/hashes": "file:./libs/noble-hashes.har"
+  },
+  "devDependencies": {},
+  "dynamicDependencies": {}
 }

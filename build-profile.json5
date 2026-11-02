@@ -1,6 +1,20 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "storeFile": "C:/Users/fandych/OneDrive/Documents/Projects/Harmony/CarPlayer/certs/CarPlayer.p12",
+          "storePassword": "000000190D453F676BE1947B2EE02EA4F98FEAAD34073347053A795D0CD6D6A334EBD1800EACB3BF8B",
+          "keyAlias": "CarPlayer",
+          "keyPassword": "000000194DA9A0B3C9EEB2F23D3C741BC7FF540F0A03E1A078638F3FB2A6A8D866EAF58AA37958F209",
+          "signAlg": "SHA256withECDSA",
+          "profile": "C:/Users/fandych/OneDrive/Documents/Projects/Harmony/CarPlayer/certs/v2DebugDebug.p7b",
+          "certpath": "C:/Users/fandych/OneDrive/Documents/Projects/Harmony/CarPlayer/certs/CarPlayerDebug.cer"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",

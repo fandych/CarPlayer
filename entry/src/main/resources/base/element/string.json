@@ -10,7 +10,35 @@
     },
     {
       "name": "EntryAbility_label",
-      "value": "label"
+      "value": "CarPlayer"
+    },
+    {
+      "name": "permission_bluetooth",
+      "value": "用于等待车机蓝牙 RFCOMM/iAP2 连接"
+    },
+    {
+      "name": "permission_wifi",
+      "value": "用于连接车机热点并发现 AirPlay 服务"
+    },
+    {
+      "name": "permission_virtual_screen",
+      "value": "用于创建 CarPlay 虚拟屏；需要设备系统授权"
+    },
+    {
+      "name": "permission_custom_screen_capture",
+      "value": "用于采集 CarPlay 虚拟屏画面并发送到车机"
+    },
+    {
+      "name": "permission_media_resources",
+      "value": "用于读取并控制音乐应用公开的媒体会话"
+    },
+    {
+      "name": "ProjectionHomeAbility_desc",
+      "value": "CarPlayer 投影首页"
+    },
+    {
+      "name": "ProjectionHomeAbility_label",
+      "value": "CarPlayer 投影"
     }
   ]
 }
