@@ -47,8 +47,8 @@ export type ProjectionDayNightMode = 'AUTO' | 'DAY' | 'NIGHT';
 export type ProjectionSafeInsetEdge = 'top' | 'right' | 'bottom' | 'left';
 
 export const RECEIVER_NATIVE_MODE_ID: string = 'receiver-native';
-export const PROJECTION_ENCODER_MAX_WIDTH: number = 1920;
-export const PROJECTION_ENCODER_MAX_HEIGHT: number = 1200;
+export const PROJECTION_ENCODER_MAX_WIDTH: number = 4096;
+export const PROJECTION_ENCODER_MAX_HEIGHT: number = 2160;
 
 export const VERIFIED_PROJECTION_DISPLAY_MODES: VerifiedProjectionDisplayMode[] = [];
 
@@ -176,24 +176,35 @@ export function projectionDisplayModes(
   displayUuid: string,
   nativeWidth: number,
   nativeHeight: number,
-  verifiedModes: VerifiedProjectionDisplayMode[] = VERIFIED_PROJECTION_DISPLAY_MODES
+  verifiedModes: VerifiedProjectionDisplayMode[] = VERIFIED_PROJECTION_DISPLAY_MODES,
+  supportsVideoSize: (width: number, height: number) => boolean = isSupportedProjectionSize
 ): ProjectionDisplayMode[] {
   if (!displayUuid || !isSupportedProjectionSize(nativeWidth, nativeHeight)) {
     return [];
   }
-  const modes: ProjectionDisplayMode[] = [{
-    id: RECEIVER_NATIVE_MODE_ID,
-    label: `车机原生 ${nativeWidth}×${nativeHeight}`,
-    width: nativeWidth,
-    height: nativeHeight,
-    isNative: true
-  }];
+  const nativeSupported = supportsVideoSize(nativeWidth, nativeHeight);
+  const modes: ProjectionDisplayMode[] = [];
+  if (nativeSupported) {
+    modes.push({
+      id: RECEIVER_NATIVE_MODE_ID,
+      label: `车机原生 ${nativeWidth}×${nativeHeight}`,
+      width: nativeWidth,
+      height: nativeHeight,
+      isNative: true
+    });
+  } else {
+    const fallback = findEncoderFallbackMode(nativeWidth, nativeHeight, supportsVideoSize);
+    if (fallback) {
+      modes.push(fallback);
+    }
+  }
   const normalizedUuid = displayUuid.trim().toLowerCase();
   for (const verified of verifiedModes) {
     if (verified.displayUuid.trim().toLowerCase() !== normalizedUuid ||
       verified.nativeWidth !== nativeWidth || verified.nativeHeight !== nativeHeight ||
       verified.encoder !== 'video/avc' || !verified.id || verified.id === RECEIVER_NATIVE_MODE_ID ||
       !isSupportedProjectionSize(verified.width, verified.height) ||
+      !supportsVideoSize(verified.width, verified.height) ||
       !sameAspectRatio(verified.width, verified.height, nativeWidth, nativeHeight) ||
       modes.some((mode: ProjectionDisplayMode): boolean =>
         mode.id === verified.id || (mode.width === verified.width && mode.height === verified.height))) {
@@ -210,15 +221,48 @@ export function projectionDisplayModes(
   return modes;
 }
 
+function findEncoderFallbackMode(
+  nativeWidth: number,
+  nativeHeight: number,
+  supportsVideoSize: (width: number, height: number) => boolean
+): ProjectionDisplayMode | undefined {
+  const maxScale = Math.min(
+    1,
+    PROJECTION_ENCODER_MAX_WIDTH / nativeWidth,
+    PROJECTION_ENCODER_MAX_HEIGHT / nativeHeight
+  );
+  for (let step = 0; step < 20; step++) {
+    const scale = maxScale * (1 - step * 0.05);
+    const width = Math.floor(nativeWidth * scale / 2) * 2;
+    const height = Math.floor(nativeHeight * scale / 2) * 2;
+    if ((width === nativeWidth && height === nativeHeight) || !isSupportedProjectionSize(width, height) ||
+      !supportsVideoSize(width, height)) {
+      continue;
+    }
+    return {
+      id: `encoder-fallback-${width}x${height}`,
+      label: `H.264 兼容 ${width}×${height}`,
+      width,
+      height,
+      isNative: false
+    };
+  }
+  return undefined;
+}
+
 export function resolveProjectionDisplayMode(
   modes: ProjectionDisplayMode[],
   selectedModeId: string
 ): ProjectionDisplayModeResolution {
   const nativeMode = modes.find((mode: ProjectionDisplayMode): boolean => mode.isNative);
-  if (!nativeMode) {
-    throw new Error('车机原生分辨率不在当前 H.264 输出能力范围内，且没有已验证的替代档位');
-  }
   const selectedMode = modes.find((mode: ProjectionDisplayMode): boolean => mode.id === selectedModeId);
+  if (!nativeMode) {
+    const fallbackMode = selectedMode ?? modes[0];
+    if (!fallbackMode) {
+      throw new Error('车机原生分辨率不受 H.264 编码器支持，且没有可用的下采样档位');
+    }
+    return { mode: fallbackMode, usedNativeFallback: true };
+  }
   return {
     mode: selectedMode ?? nativeMode,
     usedNativeFallback: selectedMode === undefined

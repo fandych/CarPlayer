@@ -95,24 +95,21 @@ export class AirPlayPairingClient {
       await this.connect(service);
       let setupReceiverId = '';
       let usedPairVerifyFastPath = false;
-      let keys: PairVerifyKeys | undefined;
-      if (!identity.newlyCreated) {
-        try {
-          keys = await new PairVerifyClient(this.requireClient(), identity, this.log).run(receiverPublicKey);
-          usedPairVerifyFastPath = true;
-        } catch (error) {
-          this.log(`已有身份 pair-verify 未通过，改为完整 pair-setup：${error instanceof Error ? error.message : String(error)}`);
-          await this.close();
-          await this.connect(service);
-        }
-      }
-      if (!keys) {
+      try {
         const receiver = await new PairSetupClient(this.requireClient(), identity, this.log).run(receiverPublicKey);
         setupReceiverId = receiver.receiverId;
-        keys = await new PairVerifyClient(this.requireClient(), identity, this.log).run(receiverPublicKey);
-        if (setupReceiverId !== keys.receiverId) {
-          throw new Error('pair-setup and pair-verify receiver identities do not match');
+      } catch (error) {
+        if (!(error instanceof AirPlayRtspStatusError) || error.statusCode !== 403) {
+          throw error instanceof Error ? error : new Error(String(error));
         }
+        this.log('Pair-Setup 被接收端以 403 拒绝；关闭当前 TCP 并按 CardDeck 已配对快路径重连 Pair-Verify');
+        await this.close();
+        await this.connect(service);
+        usedPairVerifyFastPath = true;
+      }
+      const keys = await new PairVerifyClient(this.requireClient(), identity, this.log).run(receiverPublicKey);
+      if (setupReceiverId && setupReceiverId !== keys.receiverId) {
+        throw new Error('pair-setup and pair-verify receiver identities do not match');
       }
       const client = this.requireClient();
       client.activateEncryption(keys.phoneReadKey, keys.phoneWriteKey);
@@ -151,6 +148,10 @@ export class AirPlayPairingClient {
     const hosts = Array.from(new Set([service.host, ...(service.addresses ?? [])].filter(Boolean)));
     const failures: string[] = [];
     for (const host of hosts) {
+      if (isUnscopedIpv6LinkLocal(host)) {
+        failures.push(`${host}: IPv6 link-local address is missing an interface scope`);
+        continue;
+      }
       let connectionEstablished = false;
       const client = new AirPlayRtspClient(
         this.log,
@@ -265,6 +266,11 @@ export class AirPlayPairingClient {
       throw new Error(`AirPlay cleanup failed: ${failures.join('; ')}`);
     }
   }
+}
+
+function isUnscopedIpv6LinkLocal(host: string): boolean {
+  const address = host.replace(/^\[|\]$/g, '');
+  return !address.includes('%') && /^fe[89ab][0-9a-f]:/i.test(address);
 }
 
 class PairSetupClient {

@@ -5,7 +5,9 @@ import radio from '@ohos.telephony.radio';
 import emitter from '@ohos.events.emitter';
 import abilityAccessCtrl from '@ohos.abilityAccessCtrl';
 import common from '@ohos.app.ability.common';
-import { CARPLAY_TOUCH_TAP_EVENT, CarPlayTouchTap } from '../video/CarPlayTouchInput';
+import {
+  CARPLAY_TOUCH_REPORT_EVENT, CARPLAY_TOUCH_TAP_EVENT, CarPlayTouchReport, CarPlayTouchTap
+} from '../video/CarPlayTouchInput';
 import {
   ProjectionApp,
   PROJECTION_MAP_URI,
@@ -54,6 +56,16 @@ interface ProjectionPoint {
   y: number;
 }
 
+interface ProjectionTouchScrollState {
+  displayId: number;
+  contactId: number;
+  startX: number;
+  startY: number;
+  lastX: number;
+  lastY: number;
+  scroller?: Scroller;
+}
+
 interface ProjectionTouchArea extends ProjectionBounds {
   group: string;
   action: () => void;
@@ -99,11 +111,18 @@ export struct ProjectionDashboard {
     (_surface: ProjectionMapSurface | undefined): void => {};
   @Prop activeAppLabel: string = '';
   @Prop activeAppUri: string = '';
+  @Prop appOnPhone: boolean = false;
+  @Prop viewAreaOriginX: number = 0;
+  @Prop viewAreaOriginY: number = 0;
+  onToggleAppDisplay: () => void = (): void => {};
   @StorageLink('carplayNavigationPreview') navigationPreview: boolean = false;
   @Prop launchMessage: string = '';
   @Prop mapMessage: string = '正在准备地图画面';
   @State apps: ProjectionApp[] = [];
+  @State appsGridColumns: number = 4;
   @State dashboardView: string = 'home';
+  @State splitMapWeight: number = 3;
+  @State splitMusicWeight: number = 1;
   @State selectedMapUri: string = '';
   @State selectedMusicUri: string = '';
   @State dockIconSize: number = 30;
@@ -142,6 +161,9 @@ export struct ProjectionDashboard {
   @State mediaState: ProjectionMediaSnapshot = {
     title: EMPTY_PROJECTION_MEDIA.title,
     artist: EMPTY_PROJECTION_MEDIA.artist,
+    lyric: EMPTY_PROJECTION_MEDIA.lyric,
+    positionMs: EMPTY_PROJECTION_MEDIA.positionMs,
+    durationMs: EMPTY_PROJECTION_MEDIA.durationMs,
     isPlaying: EMPTY_PROJECTION_MEDIA.isPlaying,
     commands: [],
     queue: [],
@@ -161,6 +183,13 @@ export struct ProjectionDashboard {
   private lastMapSurface: ProjectionMapSurface | undefined = undefined;
   private readonly touchAreas: Map<string, ProjectionTouchArea> = new Map();
   private readonly touchBounds: Map<string, ProjectionBounds> = new Map();
+  private readonly dockScroller: Scroller = new Scroller();
+  private readonly appsScroller: Scroller = new Scroller();
+  private readonly dockMenuScroller: Scroller = new Scroller();
+  private readonly settingsScroller: Scroller = new Scroller();
+  private readonly themesScroller: Scroller = new Scroller();
+  private readonly sidebarMediaScroller: Scroller = new Scroller();
+  private touchScrollState?: ProjectionTouchScrollState;
   private projectionViewportWidth: number = 0;
   private projectionViewportHeight: number = 0;
   private readonly touchHandler = (event: emitter.GenericEventData<CarPlayTouchTap>): void => {
@@ -169,9 +198,8 @@ export struct ProjectionDashboard {
       AppStorage.get<number>('carplayProjectionDisplayId') !== tap.displayId) {
       return;
     }
-    const ui = this.getUIContext();
-    const start = this.screenToContentPoint(ui.px2vp(tap.startX), ui.px2vp(tap.startY));
-    const end = this.screenToContentPoint(ui.px2vp(tap.endX), ui.px2vp(tap.endY));
+    const start = this.canvasPixelToContentPoint(tap.startX, tap.startY);
+    const end = this.canvasPixelToContentPoint(tap.endX, tap.endY);
     const startX = start.x;
     const startY = start.y;
     const endX = end.x;
@@ -179,12 +207,13 @@ export struct ProjectionDashboard {
     if (Math.hypot(endX - startX, endY - startY) > 20) {
       return;
     }
+    const pointX = (startX + endX) / 2;
+    const pointY = (startY + endY) / 2;
     const dock = this.touchBounds.get('dock');
     if (dock && (this.contains(dock, startX, startY) || this.contains(dock, endX, endY))) {
-      if (this.contains(dock, startX, startY) && this.contains(dock, endX, endY)) {
+      if (this.contains(dock, pointX, pointY)) {
         for (const area of this.touchAreas.values()) {
-          if (area.group === 'dock' && this.contains(area, startX, startY) &&
-            this.contains(area, endX, endY)) {
+          if (area.group === 'dock' && this.contains(area, pointX, pointY)) {
             if ((tap.durationMs ?? 0) >= 550) {
               area.longPress?.();
             } else {
@@ -194,9 +223,6 @@ export struct ProjectionDashboard {
           }
         }
       }
-      return;
-    }
-    if ((tap.durationMs ?? 0) >= 550) {
       return;
     }
     for (const area of this.touchAreas.values()) {
@@ -212,13 +238,75 @@ export struct ProjectionDashboard {
         continue;
       }
       const bounds = this.touchBounds.get(area.group);
-      if (bounds && this.contains(area, startX, startY) && this.contains(area, endX, endY) &&
-        this.contains(bounds, startX, startY) && this.contains(bounds, endX, endY)) {
+      if (bounds && this.contains(area, pointX, pointY) && this.contains(bounds, pointX, pointY)) {
         area.action();
         return;
       }
     }
   };
+
+  private readonly touchReportHandler = (event: emitter.GenericEventData<CarPlayTouchReport>): void => {
+    this.handleTouchReport(event.data);
+  };
+
+  private scrollControllerAt(x: number, y: number): Scroller | undefined {
+    const emptyBounds: ProjectionBounds = { left: 0, top: 0, right: 0, bottom: 0 };
+    if (this.contains(this.touchBounds.get('dock') ?? emptyBounds, x, y)) {
+      return this.dockScroller;
+    }
+    if (this.dashboardView === 'apps' && this.contains(this.touchBounds.get('grid') ?? emptyBounds, x, y)) {
+      return this.appsScroller;
+    }
+    if ((this.dashboardView === 'maps' || this.dashboardView === 'music') &&
+      this.contains(this.touchBounds.get(this.dashboardView) ?? emptyBounds, x, y)) {
+      return this.dockMenuScroller;
+    }
+    if (this.dashboardView === 'settings' && this.contains(this.touchBounds.get('settings') ?? emptyBounds, x, y)) {
+      return this.settingsScroller;
+    }
+    if (this.dashboardView === 'themes' && this.contains(this.touchBounds.get('themes') ?? emptyBounds, x, y)) {
+      return this.themesScroller;
+    }
+    if (this.navigationPreview && this.contains(this.touchBounds.get('media') ?? emptyBounds, x, y)) {
+      return this.sidebarMediaScroller;
+    }
+    return undefined;
+  }
+
+  private handleTouchReport(report: CarPlayTouchReport | undefined): void {
+    if (!report || AppStorage.get<boolean>('carplayProjectionHomeActive') !== true ||
+      AppStorage.get<number>('carplayProjectionDisplayId') !== report.displayId) {
+      this.touchScrollState = undefined;
+      return;
+    }
+    const pressed = report.contacts.filter((contact): boolean => contact.down);
+    if (pressed.length !== 1) {
+      this.touchScrollState = undefined;
+      return;
+    }
+    const contact = pressed[0];
+    const point = this.canvasPixelToContentPoint(contact.x, contact.y);
+    const previous = this.touchScrollState;
+    if (!previous || previous.displayId !== report.displayId || previous.contactId !== contact.id) {
+      this.touchScrollState = {
+        displayId: report.displayId,
+        contactId: contact.id,
+        startX: point.x,
+        startY: point.y,
+        lastX: point.x,
+        lastY: point.y,
+        scroller: this.scrollControllerAt(point.x, point.y)
+      };
+      return;
+    }
+    const deltaX = previous.lastX - point.x;
+    const deltaY = previous.lastY - point.y;
+    previous.lastX = point.x;
+    previous.lastY = point.y;
+    if (Math.hypot(point.x - previous.startX, point.y - previous.startY) >= 8) {
+      previous.scroller?.scrollBy(deltaX, deltaY);
+    }
+  }
 
   aboutToAppear(): void {
     initializeProjectionSettings();
@@ -227,6 +315,7 @@ export struct ProjectionDashboard {
     this.loadProjectionResolution();
     AppStorage.setOrCreate('carplayDashboardView', 'home');
     emitter.on<CarPlayTouchTap>(CARPLAY_TOUCH_TAP_EVENT, this.touchHandler);
+    emitter.on<CarPlayTouchReport>(CARPLAY_TOUCH_REPORT_EVENT, this.touchReportHandler);
     void this.discoverApps().catch((error: Error): void => {
       this.apps = projectionAppCatalog([]);
       this.appDiscoveryMessage = `应用入口核验失败：${error.message}`;
@@ -241,6 +330,8 @@ export struct ProjectionDashboard {
 
   aboutToDisappear(): void {
     emitter.off<CarPlayTouchTap>(CARPLAY_TOUCH_TAP_EVENT, this.touchHandler);
+    emitter.off<CarPlayTouchReport>(CARPLAY_TOUCH_REPORT_EVENT, this.touchReportHandler);
+    this.touchScrollState = undefined;
     this.onMapSurfaceChange(undefined);
     this.onAppSurfaceChange(undefined);
     this.touchAreas.clear();
@@ -520,6 +611,10 @@ export struct ProjectionDashboard {
       this.dayNightMode === 'DAY' ? 'NIGHT' : 'AUTO';
   }
 
+  private selectDayNightMode(mode: 'AUTO' | 'DAY' | 'NIGHT'): void {
+    this.dayNightMode = mode;
+  }
+
   private adjustSafeInset(edge: 'top' | 'right' | 'bottom' | 'left', delta: number): void {
     if (edge === 'top') {
       this.safeInsetTop = normalizeSafeInset(this.safeInsetTop + delta);
@@ -596,6 +691,14 @@ export struct ProjectionDashboard {
     };
   }
 
+  private canvasPixelToContentPoint(x: number, y: number): ProjectionPoint {
+    const ui = this.getUIContext();
+    const originX = ui.px2vp(this.viewAreaOriginX);
+    const originY = ui.px2vp(this.viewAreaOriginY);
+    const content = this.screenToContentPoint(ui.px2vp(x) - originX, ui.px2vp(y) - originY);
+    return { x: content.x + originX, y: content.y + originY };
+  }
+
   private loadProjectionResolution(): void {
     if (!this.vehicleDisplayUuid || this.projectionModeOptions.length === 0) {
       this.resolutionSelectionMessage = '建立车机连接后，才能按 /info 显示档案设置分辨率';
@@ -656,23 +759,23 @@ export struct ProjectionDashboard {
   @Builder
   private CalibrationControlRow(label: string, value: number, control: ProjectionCalibrationControl) {
     Row({ space: 8 }) {
-      Text(label).fontSize(11).fontColor('#DCE4DE').layoutWeight(1)
+      Text(label).fontSize(13).fontColor('#DCE4DE').layoutWeight(1)
       Button('−')
-        .width(34)
+        .width(40).height(40)
         .onClick((): void => this.adjustContentCalibration(control, -1))
         .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
           'settings', `calibration-${control}-minus`, newArea,
           (): void => this.adjustContentCalibration(control, -1)))
-      Text(`${value}%`).fontSize(11).fontColor('#F2F6F2').width(42).textAlign(TextAlign.Center)
+      Text(`${value}%`).fontSize(13).fontColor('#F2F6F2').width(46).textAlign(TextAlign.Center)
       Button('+')
-        .width(34)
+        .width(40).height(40)
         .onClick((): void => this.adjustContentCalibration(control, 1))
         .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
           'settings', `calibration-${control}-plus`, newArea,
           (): void => this.adjustContentCalibration(control, 1)))
     }
     .width('100%')
-    .height(38)
+    .height(46)
   }
 
   private categoryApp(category: string): ProjectionApp | undefined {
@@ -683,13 +786,55 @@ export struct ProjectionDashboard {
       this.apps.find((app: ProjectionApp): boolean => app.category === category);
   }
 
-  private activateDock(id: string, longPress: boolean = false): void {
-    if (id === 'primary') {
-      if (this.isDashboardHome()) {
-        this.showDashboardView('apps');
-      } else {
-        this.selectApp(HOME_APP);
+  private mediaProgressPercent(): number {
+    if (this.mediaState.durationMs <= 0) {
+      return 0;
+    }
+    return Math.max(0, Math.min(100, this.mediaState.positionMs / this.mediaState.durationMs * 100));
+  }
+
+  private formatMediaTime(positionMs: number): string {
+    const totalSeconds = Math.floor(Math.max(0, positionMs) / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = `${totalSeconds % 60}`.padStart(2, '0');
+    return `${minutes}:${seconds}`;
+  }
+
+  private visibleApps(): ProjectionApp[] {
+    const visible: ProjectionApp[] = [...PROJECTION_VEHICLE_APPS];
+    for (const app of this.apps) {
+      if (isProjectionAppLaunchable(app)) {
+        visible.push(app);
       }
+    }
+    return visible;
+  }
+
+  private updateAppsGridColumns(width: number): void {
+    const columns = width < 360 ? 3 : width < 480 ? 4 : width < 640 ? 5 : 6;
+    if (columns !== this.appsGridColumns) {
+      this.appsGridColumns = columns;
+    }
+  }
+
+  private appsGridTemplate(): string {
+    if (this.appsGridColumns === 3) {
+      return '1fr 1fr 1fr';
+    }
+    if (this.appsGridColumns === 5) {
+      return '1fr 1fr 1fr 1fr 1fr';
+    }
+    if (this.appsGridColumns === 6) {
+      return '1fr 1fr 1fr 1fr 1fr 1fr';
+    }
+    return '1fr 1fr 1fr 1fr';
+  }
+
+  private activateDock(id: string, longPress: boolean = false): void {
+    if (id === 'home') {
+      this.selectApp(HOME_APP);
+    } else if (id === 'apps') {
+      this.showDashboardView('apps');
     } else if (id === 'settings') {
       this.showDashboardView('settings');
     } else if (id === 'split') {
@@ -722,6 +867,9 @@ export struct ProjectionDashboard {
     return {
       title: EMPTY_PROJECTION_MEDIA.title,
       artist: EMPTY_PROJECTION_MEDIA.artist,
+      lyric: EMPTY_PROJECTION_MEDIA.lyric,
+      positionMs: EMPTY_PROJECTION_MEDIA.positionMs,
+      durationMs: EMPTY_PROJECTION_MEDIA.durationMs,
       isPlaying: EMPTY_PROJECTION_MEDIA.isPlaying,
       commands: [],
       queue: [],
@@ -804,9 +952,8 @@ export struct ProjectionDashboard {
     Stack({ alignContent: Alignment.Center }) {
       Image($r(icon)).width(this.dockIconSize).height(this.dockIconSize).objectFit(ImageFit.Contain).borderRadius(8)
     }
-    .width(vertical ? '100%' : '0%')
-    .height(vertical ? '0%' : '100%')
-    .layoutWeight(1)
+    .width(vertical ? '100%' : 64)
+    .height(vertical ? 48 : '100%')
     .borderRadius(8)
     .backgroundColor(selected ? '#FFFFFF22' : Color.Transparent)
     .gesture(GestureGroup(GestureMode.Exclusive,
@@ -830,58 +977,64 @@ export struct ProjectionDashboard {
   @Builder
   DockPanel(vertical: boolean) {
     if (vertical) {
-      Column({ space: 4 }) {
-        Column({ space: 3 }) {
-          this.SignalIndicator()
-          this.BatteryIndicator()
+      Scroll(this.dockScroller) {
+        Column({ space: 4 }) {
+          Column({ space: 3 }) {
+            this.SignalIndicator()
+            this.BatteryIndicator()
+          }
+          .height(32)
+          .justifyContent(FlexAlign.Center)
+          .padding({ left: 2, right: 2 })
+              this.DockItem('home', '首页', 'app.media.ic_house', this.isDashboardHome(), true)
+              this.DockItem('apps', '应用', 'app.media.ic_layout_grid', this.dashboardView === 'apps', true)
+              this.DockItem('map', '地图', 'app.media.ic_navigation',
+            this.dashboardView === 'maps' ||
+              (!this.navigationPreview && this.activeAppUri === this.categoryApp('map')?.uri), true)
+              this.DockItem('music', '音乐', 'app.media.ic_music',
+            this.dashboardView === 'music' || this.activeAppUri === this.categoryApp('music')?.uri, true)
+          this.DockItem('split', '分屏', 'app.media.ic_split', this.dashboardView === 'split', true)
+          this.DockItem('settings', '设置', 'app.media.ic_settings', this.dashboardView === 'settings', true)
         }
-        .height(32)
-        .justifyContent(FlexAlign.Center)
-        .padding({ left: 2, right: 2 })
-        this.DockItem('primary', this.isDashboardHome() ? '应用' : '首页',
-          this.isDashboardHome() ? 'app.media.ic_layout_grid' : 'app.media.ic_house',
-          this.dashboardView === 'apps', true)
-        this.DockItem('map', '地图', this.categoryApp('map')?.icon ?? 'app.media.ic_navigation',
-          this.dashboardView === 'maps' ||
-            (!this.navigationPreview && this.activeAppUri === this.categoryApp('map')?.uri), true)
-        this.DockItem('music', '音乐', this.categoryApp('music')?.icon ?? 'app.media.ic_music',
-          this.dashboardView === 'music' || this.activeAppUri === this.categoryApp('music')?.uri, true)
-        this.DockItem('split', '分屏', 'app.media.ic_layout_grid', this.dashboardView === 'split', true)
-        this.DockItem('settings', '设置', 'app.media.ic_settings', this.dashboardView === 'settings', true)
+        .width('100%')
+        .height('100%')
+        .constraintSize({ minHeight: 320 })
+        .padding({ top: 8, bottom: 8, left: 5, right: 5 })
+        .alignItems(HorizontalAlign.Center)
+        .border({ width: { right: 0.5 }, color: '#FFFFFF18' })
+        .backgroundColor(projectionTheme(this.theme).surface)
       }
-      .width('11%')
-      .constraintSize({ minWidth: 48, maxWidth: 66 })
-      .height('100%')
-      .padding({ top: 8, bottom: 8, left: 5, right: 5 })
-      .alignItems(HorizontalAlign.Center)
-      .border({ width: { right: 0.5 }, color: '#FFFFFF18' })
-      .backgroundColor(projectionTheme(this.theme).surface)
+      .width('11%').constraintSize({ minWidth: 48, maxWidth: 66 }).height('100%')
+      .scrollable(ScrollDirection.Vertical).scrollBar(BarState.Off)
       .onAreaChange((_oldArea, newArea) => this.touchBounds.set('dock', this.areaBounds(newArea)))
     } else {
-      Row({ space: 4 }) {
-        Column({ space: 2 }) {
-          this.SignalIndicator()
-          this.BatteryIndicator()
+      Scroll(this.dockScroller) {
+        Row({ space: 4 }) {
+          Column({ space: 2 }) {
+            this.SignalIndicator()
+            this.BatteryIndicator()
+          }
+          .width(36)
+          .height('100%')
+          .justifyContent(FlexAlign.Center)
+          this.DockItem('home', '首页', 'app.media.ic_house', this.isDashboardHome(), false)
+          this.DockItem('apps', '应用', 'app.media.ic_layout_grid', this.dashboardView === 'apps', false)
+          this.DockItem('map', '地图', 'app.media.ic_navigation',
+            this.dashboardView === 'maps' ||
+              (!this.navigationPreview && this.activeAppUri === this.categoryApp('map')?.uri), false)
+          this.DockItem('music', '音乐', 'app.media.ic_music',
+            this.dashboardView === 'music' || this.activeAppUri === this.categoryApp('music')?.uri, false)
+          this.DockItem('split', '分屏', 'app.media.ic_split', this.dashboardView === 'split', false)
+          this.DockItem('settings', '设置', 'app.media.ic_settings', this.dashboardView === 'settings', false)
         }
-        .width(36)
-        .height('100%')
+        .width('100%').height('100%').constraintSize({ minWidth: 396 })
+        .padding({ left: 8, right: 8, top: 4, bottom: 4 })
         .justifyContent(FlexAlign.Center)
-        this.DockItem('primary', this.isDashboardHome() ? '应用' : '首页',
-          this.isDashboardHome() ? 'app.media.ic_layout_grid' : 'app.media.ic_house',
-          this.dashboardView === 'apps', false)
-        this.DockItem('map', '地图', this.categoryApp('map')?.icon ?? 'app.media.ic_navigation',
-          this.dashboardView === 'maps' ||
-            (!this.navigationPreview && this.activeAppUri === this.categoryApp('map')?.uri), false)
-        this.DockItem('music', '音乐', this.categoryApp('music')?.icon ?? 'app.media.ic_music',
-          this.dashboardView === 'music' || this.activeAppUri === this.categoryApp('music')?.uri, false)
-        this.DockItem('split', '分屏', 'app.media.ic_layout_grid', this.dashboardView === 'split', false)
-        this.DockItem('settings', '设置', 'app.media.ic_settings', this.dashboardView === 'settings', false)
+        .border({ width: { top: 0.5 }, color: '#FFFFFF18' })
+        .backgroundColor(projectionTheme(this.theme).surface)
       }
-      .width('100%')
-      .height(64)
-      .padding({ left: 8, right: 8, top: 4, bottom: 4 })
-      .border({ width: { top: 0.5 }, color: '#FFFFFF18' })
-      .backgroundColor(projectionTheme(this.theme).surface)
+      .width('100%').height(64)
+      .scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off)
       .onAreaChange((_oldArea, newArea) => this.touchBounds.set('dock', this.areaBounds(newArea)))
     }
   }
@@ -914,18 +1067,13 @@ export struct ProjectionDashboard {
     Column({ space: 5 }) {
       this.AppIcon(app, 36)
       Text(app.label)
-        .fontSize(10)
+        .fontSize(12)
         .fontColor('#DCE4DE')
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-      if (app.category !== 'vehicle' && app.category !== 'home') {
-        Text(isProjectionAppLaunchable(app) ? '入口可用 · 目标屏待实测' : '待验证')
-          .fontSize(9).fontColor('#E7C77B').maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
     }
     .width('100%')
-    .height(72)
+    .height(88)
     .justifyContent(FlexAlign.Center)
     .borderRadius(8)
     .backgroundColor(projectionTheme(this.theme).panel)
@@ -939,61 +1087,28 @@ export struct ProjectionDashboard {
 
   @Builder
   AppsPage() {
-    Scroll() {
-      Column({ space: 8 }) {
-        Text('车机应用').fontSize(14).fontColor('#F2F6F2').alignSelf(ItemAlign.Start)
-        Text(this.appDiscoveryMessage).fontSize(10).fontColor('#AAB8AF')
-          .width('100%').maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-        Button('重新核验应用入口')
-          .width('100%').height(34)
-          .onClick((): void => {
-            void this.discoverApps(true).catch((error: Error): void => {
-              this.appDiscoveryMessage = `应用入口核验失败：${error.message}`;
-            });
-          })
-          .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
-            'grid', 'refreshAppTargets', newArea, (): void => {
-              void this.discoverApps(true).catch((error: Error): void => {
-                this.appDiscoveryMessage = `应用入口核验失败：${error.message}`;
-              });
-            }))
-        Grid() {
-          ForEach(PROJECTION_VEHICLE_APPS, (app: ProjectionApp) => {
-            GridItem() { this.AppTile(app) }
-          }, (app: ProjectionApp) => app.uri)
-        }
-        .columnsTemplate('1fr 1fr 1fr 1fr').columnsGap(8).rowsGap(8).height(80)
-        this.AppCategory('地图', 'map')
-        this.AppCategory('音乐', 'music')
-        this.AppCategory('视频', 'video')
-        this.AppCategory('其他应用', 'finance')
-      }
-      .width('100%').padding(12)
-    }
-    .width('100%').height('100%')
-    .backgroundColor(projectionTheme(this.theme).background)
-    .onAreaChange((_oldArea, newArea) => this.touchBounds.set('grid', this.areaBounds(newArea)))
-  }
-
-  @Builder
-  AppCategory(title: string, category: string) {
-    if (this.apps.some((app: ProjectionApp): boolean => app.category === category)) {
-      Text(title).fontSize(13).fontColor('#AAB8AF').alignSelf(ItemAlign.Start)
+    Scroll(this.appsScroller) {
       Grid() {
-        ForEach(this.apps.filter((app: ProjectionApp): boolean => app.category === category), (app: ProjectionApp) => {
+        ForEach(this.visibleApps(), (app: ProjectionApp) => {
           GridItem() { this.AppTile(app) }
         }, (app: ProjectionApp) => app.uri)
       }
-      .columnsTemplate('1fr 1fr 1fr').rowsGap(8).columnsGap(8)
-      .height(Math.ceil(this.apps.filter((app: ProjectionApp): boolean => app.category === category).length / 3) * 80)
+      .columnsTemplate(this.appsGridTemplate()).columnsGap(12).rowsGap(12)
+      .height(Math.ceil(this.visibleApps().length / this.appsGridColumns) * 100)
+      .width('100%').padding(16)
     }
+    .width('100%').height('100%')
+    .backgroundColor(projectionTheme(this.theme).background)
+    .onAreaChange((_oldArea, newArea) => {
+      this.touchBounds.set('grid', this.areaBounds(newArea));
+      this.updateAppsGridColumns(Number.parseFloat(`${newArea.width}`));
+    })
   }
 
   @Builder
   DockMenu() {
     Column({ space: 12 }) {
       Row() {
-        Text(this.dashboardView === 'maps' ? '地图' : '音乐').fontSize(16).fontColor('#F5F5F7')
         Blank()
         Button({ type: ButtonType.Circle }) {
           SymbolGlyph($r('sys.symbol.xmark')).fontSize(18).fontColor(['#F5F5F7'])
@@ -1007,7 +1122,18 @@ export struct ProjectionDashboard {
         })
       }
       .width('100%')
-      Scroll() {
+      if (this.dashboardView === 'maps' && this.activeAppLabel.length > 0 &&
+        this.activeAppUri === this.categoryApp('map')?.uri) {
+        Button({ type: ButtonType.Circle }) {
+          SymbolGlyph($r('sys.symbol.arrow_up_right')).fontSize(18).fontColor(['#F5F5F7'])
+        }
+          .width(44).height(44).backgroundColor('#FFFFFF18')
+          .onClick((): void => this.onToggleAppDisplay())
+          .accessibilityText(this.appOnPhone ? '切换地图到虚拟屏' : '切换地图到手机')
+          .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
+            'maps', 'toggleDisplay', newArea, (): void => this.onToggleAppDisplay()))
+      }
+      Scroll(this.dockMenuScroller) {
         Column({ space: 6 }) {
           ForEach(this.apps.filter((app: ProjectionApp): boolean =>
             app.category === (this.dashboardView === 'maps' ? 'map' : 'music')), (app: ProjectionApp) => {
@@ -1049,11 +1175,48 @@ export struct ProjectionDashboard {
       app.uri === this.activeAppUri && app.category === 'music' && isProjectionAppLaunchable(app));
   }
 
+  private selectSplitRatio(mapWeight: number, musicWeight: number): void {
+    const supported = (mapWeight === 2 && musicWeight === 2) ||
+      (mapWeight === 3 && musicWeight === 1) || (mapWeight === 4 && musicWeight === 1);
+    if (!supported) {
+      return;
+    }
+    this.splitMapWeight = mapWeight;
+    this.splitMusicWeight = musicWeight;
+  }
+
   @Builder
   SplitPage() {
     Row({ space: 8 }) {
       Column({ space: 6 }) {
-        Text('导航 APP').fontSize(13).fontColor('#F2F6F2')
+        Row({ space: 4 }) {
+          Blank()
+          Button({ type: ButtonType.Normal }) {
+            Text('2:2').fontSize(11).fontColor(this.splitMapWeight === 2 ? '#101713' : '#F5F5F7')
+          }
+            .height(28).padding({ left: 8, right: 8 })
+            .backgroundColor(this.splitMapWeight === 2 ? this.accent : '#FFFFFF12')
+            .borderRadius(6)
+            .onClick((): void => this.selectSplitRatio(2, 2))
+            .accessibilityText('地图与音乐比例 2:2')
+          Button({ type: ButtonType.Normal }) {
+            Text('3:1').fontSize(11).fontColor(this.splitMapWeight === 3 ? '#101713' : '#F5F5F7')
+          }
+            .height(28).padding({ left: 8, right: 8 })
+            .backgroundColor(this.splitMapWeight === 3 ? this.accent : '#FFFFFF12')
+            .borderRadius(6)
+            .onClick((): void => this.selectSplitRatio(3, 1))
+            .accessibilityText('地图与音乐比例 3:1')
+          Button({ type: ButtonType.Normal }) {
+            Text('4:1').fontSize(11).fontColor(this.splitMapWeight === 4 ? '#101713' : '#F5F5F7')
+          }
+            .height(28).padding({ left: 8, right: 8 })
+            .backgroundColor(this.splitMapWeight === 4 ? this.accent : '#FFFFFF12')
+            .borderRadius(6)
+            .onClick((): void => this.selectSplitRatio(4, 1))
+            .accessibilityText('地图与音乐比例 4:1')
+        }
+        .width('100%')
         Stack({ alignContent: Alignment.Center }) {
           XComponent({
             id: 'projectionSplitMapSurface',
@@ -1084,14 +1247,13 @@ export struct ProjectionDashboard {
         .width('100%')
         .clip(true)
       }
-      .layoutWeight(1)
+      .layoutWeight(this.splitMapWeight)
       .height('100%')
       .padding(8)
       .borderRadius(10)
       .backgroundColor(projectionTheme(this.theme).panel)
 
       Column({ space: 6 }) {
-        Text('音乐 APP').fontSize(13).fontColor('#F2F6F2')
         if (this.activeAppLabel.length > 0) {
           Stack({ alignContent: Alignment.Center }) {
             XComponent({
@@ -1140,7 +1302,7 @@ export struct ProjectionDashboard {
           .layoutWeight(1)
         }
       }
-      .layoutWeight(1)
+      .layoutWeight(this.splitMusicWeight)
       .height('100%')
       .padding(8)
       .borderRadius(10)
@@ -1154,26 +1316,26 @@ export struct ProjectionDashboard {
   @Builder
   SafeInsetRow(label: string, edge: 'top' | 'right' | 'bottom' | 'left', value: number) {
     Row({ space: 8 }) {
-      Text(label).fontSize(11).fontColor('#DCE4DE').layoutWeight(1)
+      Text(label).fontSize(13).fontColor('#DCE4DE').layoutWeight(1)
       Button('−')
-        .width(34)
+        .width(40).height(40)
         .onClick((): void => this.adjustSafeInset(edge, -1))
         .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
           'settings', `safe-${edge}-minus`, newArea, (): void => this.adjustSafeInset(edge, -1)))
-      Text(`${value}%`).fontSize(11).fontColor('#F2F6F2').width(36).textAlign(TextAlign.Center)
+      Text(`${value}%`).fontSize(13).fontColor('#F2F6F2').width(42).textAlign(TextAlign.Center)
       Button('+')
-        .width(34)
+        .width(40).height(40)
         .onClick((): void => this.adjustSafeInset(edge, 1))
         .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
           'settings', `safe-${edge}-plus`, newArea, (): void => this.adjustSafeInset(edge, 1)))
     }
     .width('100%')
-    .height(38)
+    .height(46)
   }
 
   @Builder
   ThemesPage() {
-    Scroll() {
+    Scroll(this.themesScroller) {
       Column({ space: 16 }) {
         Text('主题').fontSize(16).fontColor('#F2F6F2')
         Row({ space: 16 }) {
@@ -1220,53 +1382,79 @@ export struct ProjectionDashboard {
 
   @Builder
   SettingsPage() {
-    Scroll() {
-      Column({ space: 12 }) {
-        Text('设置').fontSize(16).fontColor('#F2F6F2')
-        Row({ space: 16 }) {
+    Scroll(this.settingsScroller) {
+      Column({ space: 16 }) {
+        Text('设置').fontSize(18).fontColor('#F2F6F2')
+        Row({ space: 14 }) {
           Column({ space: 4 }) {
-            Text('Dock 位置').fontSize(12).fontColor('#DCE4DE')
-            Text(this.dockPosition === 'bottom' ? '底部' : '左侧').fontSize(11).fontColor('#AAB8AF')
+            Text('Dock 位置').fontSize(14).fontColor('#DCE4DE')
+            Text(this.dockPosition === 'bottom' ? '底部' : '左侧').fontSize(12).fontColor('#AAB8AF')
           }
           .layoutWeight(1)
           Button(this.dockPosition === 'bottom' ? '切换到左侧' : '切换到底部')
+            .height(44)
             .onClick((): void => this.toggleDockPosition())
             .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
               'settings', 'dockPosition', newArea, (): void => this.toggleDockPosition()))
         }
-        Row({ space: 16 }) {
+        .height(68).padding(12).borderRadius(8).backgroundColor(projectionTheme(this.theme).panel)
+        Row({ space: 10 }) {
+          Image($r('app.media.ic_day_night')).width(28).height(28).objectFit(ImageFit.Contain)
           Column({ space: 4 }) {
-            Text('昼夜模式').fontSize(12).fontColor('#DCE4DE')
+            Text('昼夜模式').fontSize(14).fontColor('#DCE4DE')
             Text(this.dayNightMode === 'AUTO' ? '自动（跟随车机）' :
-              this.dayNightMode === 'DAY' ? '白天' : '夜间').fontSize(11).fontColor('#AAB8AF')
+              this.dayNightMode === 'DAY' ? '白天' : '夜间').fontSize(12).fontColor('#AAB8AF')
           }
           .layoutWeight(1)
-          Button('切换模式')
-            .onClick((): void => this.cycleDayNightMode())
-            .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
-              'settings', 'dayNightMode', newArea, (): void => this.cycleDayNightMode()))
+          Row({ space: 3 }) {
+            Button({ type: ButtonType.Normal }) {
+              Text('自动').fontSize(11).fontColor(this.dayNightMode === 'AUTO' ? '#101713' : '#F5F5F7')
+            }
+              .height(42).padding({ left: 9, right: 9 })
+              .backgroundColor(this.dayNightMode === 'AUTO' ? this.accent : '#FFFFFF12')
+              .onClick((): void => this.selectDayNightMode('AUTO'))
+              .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
+                'settings', 'dayNightAuto', newArea, (): void => this.selectDayNightMode('AUTO')))
+            Button({ type: ButtonType.Normal }) {
+              Text('白天').fontSize(11).fontColor(this.dayNightMode === 'DAY' ? '#101713' : '#F5F5F7')
+            }
+              .height(42).padding({ left: 9, right: 9 })
+              .backgroundColor(this.dayNightMode === 'DAY' ? this.accent : '#FFFFFF12')
+              .onClick((): void => this.selectDayNightMode('DAY'))
+              .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
+                'settings', 'dayNightDay', newArea, (): void => this.selectDayNightMode('DAY')))
+            Button({ type: ButtonType.Normal }) {
+              Text('夜间').fontSize(11).fontColor(this.dayNightMode === 'NIGHT' ? '#101713' : '#F5F5F7')
+            }
+              .height(42).padding({ left: 9, right: 9 })
+              .backgroundColor(this.dayNightMode === 'NIGHT' ? this.accent : '#FFFFFF12')
+              .onClick((): void => this.selectDayNightMode('NIGHT'))
+              .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
+                'settings', 'dayNightNight', newArea, (): void => this.selectDayNightMode('NIGHT')))
+          }
         }
+        .height(76).padding(12).borderRadius(8).backgroundColor(projectionTheme(this.theme).panel)
         Column({ space: 4 }) {
           Text(this.vehicleDisplayUuid.length > 0
             ? `显示安全边距 · ${this.vehicleDisplayUuid.slice(-8)}` : '显示安全边距 · 默认')
-            .fontSize(12).fontColor('#DCE4DE')
+            .fontSize(14).fontColor('#DCE4DE')
           Text('按百分比避让遮挡区域；曲面轮廓仍需在目标车机校准')
-            .fontSize(10).fontColor('#AAB8AF').maxLines(2)
+            .fontSize(12).fontColor('#AAB8AF').maxLines(2)
           this.SafeInsetRow('上', 'top', this.safeInsetTop)
           this.SafeInsetRow('右', 'right', this.safeInsetRight)
           this.SafeInsetRow('下', 'bottom', this.safeInsetBottom)
           this.SafeInsetRow('左', 'left', this.safeInsetLeft)
         }
         .width('100%')
-        .padding(12)
-        .borderRadius(10)
+        .padding(14)
+        .borderRadius(8)
         .backgroundColor(projectionTheme(this.theme).panel)
         Column({ space: 4 }) {
           Text(this.vehicleDisplayUuid.length > 0
             ? `异形屏内容校准 · ${this.vehicleDisplayUuid.slice(-8)}` : '异形屏内容校准')
-            .fontSize(12).fontColor('#DCE4DE')
+            .fontSize(14).fontColor('#DCE4DE')
           Text('等比缩放与位置微调仅作用于 Shell 内容；输出分辨率和全屏背景保持不变')
-            .fontSize(10).fontColor('#AAB8AF').maxLines(2)
+            .fontSize(12).fontColor('#AAB8AF').maxLines(2)
           this.CalibrationControlRow('内容缩放', this.contentScalePercent, 'scale')
           this.CalibrationControlRow('水平位置', this.contentOffsetXPercent, 'offsetX')
           this.CalibrationControlRow('垂直位置', this.contentOffsetYPercent, 'offsetY')
@@ -1274,17 +1462,17 @@ export struct ProjectionDashboard {
             .fontSize(10).fontColor('#AAB8AF').maxLines(2)
         }
         .width('100%')
-        .padding(12)
-        .borderRadius(10)
+        .padding(14)
+        .borderRadius(8)
         .backgroundColor(projectionTheme(this.theme).panel)
         Row({ space: 12 }) {
           Column({ space: 4 }) {
-            Text('投屏分辨率').fontSize(12).fontColor('#DCE4DE')
+            Text('投屏分辨率').fontSize(14).fontColor('#DCE4DE')
             Text(this.activeProjectionModeId.length > 0
               ? `当前会话 ${this.projectionModeOptions.find(
                 (mode: ProjectionDisplayMode): boolean => mode.id === this.activeProjectionModeId
               )?.label ?? this.activeProjectionModeId}` : '下次连接生效')
-              .fontSize(11).fontColor('#AAB8AF')
+              .fontSize(12).fontColor('#AAB8AF')
           }
           .layoutWeight(1)
           Select(this.projectionModeSelectOptions())
@@ -1298,24 +1486,24 @@ export struct ProjectionDashboard {
                 this.selectProjectionResolution(mode.id);
               }
             })
-            .width(180).height(36).font({ size: 12 })
+            .width(180).height(44).font({ size: 13 })
             .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
               'settings', 'projectionResolution', newArea, (): void => this.cycleProjectionResolution()))
         }
         .width('100%')
-        .padding(12)
-        .borderRadius(10)
+        .padding(14)
+        .borderRadius(8)
         .backgroundColor(projectionTheme(this.theme).panel)
         Text(this.resolutionSelectionMessage || this.projectionResolutionMessage ||
           (this.projectionModeOptions.length > 1
             ? `车机原生 ${this.projectionNativeWidth}×${this.projectionNativeHeight}；档位按显示 UUID 独立保存`
             : `车机原生 ${this.projectionNativeWidth}×${this.projectionNativeHeight}；当前无其它已验证档位`))
-          .fontSize(10).fontColor('#AAB8AF').width('100%').maxLines(2)
+          .fontSize(12).fontColor('#AAB8AF').width('100%').maxLines(2)
         Row({ space: 16 }) {
           Column({ space: 4 }) {
-            Text('使用蓝牙音频').fontSize(12).fontColor('#DCE4DE')
+            Text('使用蓝牙音频').fontSize(14).fontColor('#DCE4DE')
             Text(this.useBluetoothAudio ? '蓝牙 A2DP（系统路由）' : 'CarPlay RTP')
-              .fontSize(11).fontColor('#AAB8AF')
+              .fontSize(12).fontColor('#AAB8AF')
           }
           .layoutWeight(1)
           Toggle({ type: ToggleType.Switch, isOn: this.useBluetoothAudio })
@@ -1326,24 +1514,27 @@ export struct ProjectionDashboard {
               'settings', 'bluetoothAudio', newArea,
               (): void => { this.useBluetoothAudio = !this.useBluetoothAudio; }))
         }
+        .height(68).padding(12).borderRadius(8).backgroundColor(projectionTheme(this.theme).panel)
         Row({ space: 16 }) {
-          Text('编码帧率').fontSize(12).fontColor('#DCE4DE').layoutWeight(1)
+          Text('编码帧率').fontSize(14).fontColor('#DCE4DE').layoutWeight(1)
           Select([{ value: '15 fps' }, { value: '24 fps' }, { value: '30 fps' }, { value: '60 fps' }])
             .selected(Math.max(0, [15, 24, 30, 60].indexOf(this.encoderFps)))
             .onSelect((index: number): void => { this.encoderFps = [15, 24, 30, 60][index]; })
-            .width(120).height(32).font({ size: 12 })
+            .width(120).height(42).font({ size: 13 })
         }
+        .height(64).padding(12).borderRadius(8).backgroundColor(projectionTheme(this.theme).panel)
         Row({ space: 16 }) {
-          Text('采集刷新率').fontSize(12).fontColor('#DCE4DE').layoutWeight(1)
+          Text('采集刷新率').fontSize(14).fontColor('#DCE4DE').layoutWeight(1)
           Select([{ value: '30 Hz' }, { value: '60 Hz' }])
             .selected(Math.max(0, [30, 60].indexOf(this.captureFps)))
             .onSelect((index: number): void => { this.captureFps = [30, 60][index]; })
-            .width(120).height(32).font({ size: 12 })
+            .width(120).height(42).font({ size: 13 })
         }
-        Text('下次连接生效').fontSize(11).fontColor('#AAB8AF')
+        .height(64).padding(12).borderRadius(8).backgroundColor(projectionTheme(this.theme).panel)
+        Text('下次连接生效').fontSize(12).fontColor('#AAB8AF')
         if (this.activeEncoderFps > 0) {
           Text(`当前 ${this.activeEncoderFps} fps / ${this.activeCaptureFps} Hz`)
-            .fontSize(11).fontColor('#DCE4DE')
+            .fontSize(12).fontColor('#DCE4DE')
         }
         Text(this.receiverHomeMessage || this.launchMessage).fontSize(11).fontColor('#DCE4DE')
       }
@@ -1359,7 +1550,7 @@ export struct ProjectionDashboard {
     Button({ type: ButtonType.Normal }) {
       SymbolGlyph(symbol).fontSize(18).fontColor(['#F5F5F7'])
     }
-    .layoutWeight(1).height(28).borderRadius(6)
+    .layoutWeight(1).height(42).borderRadius(6)
     .backgroundColor(command === 'play' || command === 'pause' ? '#FFFFFF22' : Color.Transparent)
     .enabled(this.mediaState.commands.includes(command))
     .accessibilityText(label)
@@ -1374,84 +1565,75 @@ export struct ProjectionDashboard {
 
   @Builder
   private DashboardSidebar() {
-    Column({ space: 8 }) {
-      Row({ space: 8 }) {
-        Image($r('app.media.ic_navigation')).width(26).height(26).objectFit(ImageFit.Contain)
-        Column({ space: 3 }) {
-          Text('导航信息').fontSize(12).fontWeight(FontWeight.Medium).fontColor('#F5F5F7')
-          Text(this.launchMessage || '路线明细暂不可用').fontSize(10).fontColor('#FFFFFFB3')
-            .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+    Column({ space: 10 }) {
+      Column({ space: 8 }) {
+        Row({ space: 8 }) {
+          Image($r('app.media.ic_navigation')).width(24).height(24).objectFit(ImageFit.Contain)
+          Text('导航').fontSize(14).fontWeight(FontWeight.Medium).fontColor('#F5F5F7').layoutWeight(1)
+          SymbolGlyph($r('sys.symbol.arrow_up_right')).fontSize(16).fontColor(['#FFFFFFB3'])
         }
-        .layoutWeight(1).alignItems(HorizontalAlign.Start)
-        SymbolGlyph($r('sys.symbol.arrow_up_right')).fontSize(16).fontColor(['#FFFFFFB3'])
-      }
-      .layoutWeight(1).width('100%').padding(10).borderRadius(8)
-      .backgroundColor('#2364BD')
-      .border({ width: 0.5, color: '#FFFFFF20' }).clip(true)
-      .onClick((): void => this.openMapApp())
-      .accessibilityText('展开导航')
-      .onAreaChange((_oldArea, newArea) => {
-        this.touchBounds.set('map', this.areaBounds(newArea));
-        this.updateTouchArea('map', 'expandButton', newArea, (): void => this.openMapApp());
-      })
-      Row({ space: 8 }) {
-        Image($r('app.media.ic_cloud_sun')).width(28).height(28).objectFit(ImageFit.Contain)
-        Column({ space: 3 }) {
-          Text('天气').fontSize(12).fontWeight(FontWeight.Medium).fontColor('#F5F5F7')
-          Text('天气数据暂不可用').fontSize(10).fontColor('#FFFFFFB3')
-            .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+        .onClick((): void => this.openMapApp())
+        .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
+          'map', 'open', newArea, (): void => this.openMapApp()))
+        Text(this.launchMessage || '路线由地图应用提供')
+          .fontSize(12).fontColor('#FFFFFFB3').maxLines(3)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        if (this.activeAppLabel.length > 0 && this.activeAppUri === this.categoryApp('map')?.uri) {
+          Button({ type: ButtonType.Circle }) {
+            SymbolGlyph($r('sys.symbol.arrow_up_right')).fontSize(18).fontColor(['#F5F5F7'])
+          }
+            .width(44).height(44).backgroundColor('#FFFFFF18')
+            .onClick((): void => this.onToggleAppDisplay())
+            .accessibilityText(this.appOnPhone ? '切换地图到虚拟屏' : '切换地图到手机')
+            .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
+              'map', 'toggleDisplay', newArea, (): void => this.onToggleAppDisplay()))
         }
-        .layoutWeight(1).alignItems(HorizontalAlign.Start)
       }
-      .layoutWeight(0.9).width('100%').padding(10).borderRadius(8)
-      .backgroundColor('#393A40').border({ width: 0.5, color: '#E8C06B38' }).clip(true)
-      Scroll() {
-        Column({ space: 6 }) {
-          Row({ space: 8 }) {
-            this.AppIcon(this.categoryApp('music') ?? {
-              uri: '', label: '音乐', mark: '', color: '#F0789C', category: 'music',
-              appId: 'music-unavailable', launchState: 'UNVERIFIED',
-              icon: 'app.media.ic_music'
-            }, 28)
-            Column({ space: 3 }) {
-              Text(this.mediaState.title).fontSize(12).fontWeight(FontWeight.Medium).fontColor('#F5F5F7')
-                .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-              Text(this.mediaState.artist || '音乐').fontSize(10).fontColor('#FFFFFFA6')
-                .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-            }
-            .layoutWeight(1).alignItems(HorizontalAlign.Start)
-          }
-          .width('100%')
-          .onClick((): void => this.openMediaApp())
-          .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
-            'media', 'open', newArea, (): void => this.openMediaApp()))
-          Row({ space: 4 }) {
-            this.MediaControl('playPrevious', '上一首', $r('sys.symbol.backward_end_fill'))
-            this.MediaControl(this.mediaState.isPlaying ? 'pause' : 'play', this.mediaState.isPlaying ? '暂停' : '播放',
-              this.mediaState.isPlaying ? $r('sys.symbol.pause_fill') : $r('sys.symbol.play_fill'))
-            this.MediaControl('playNext', '下一首', $r('sys.symbol.forward_end_fill'))
-          }
-          .width('100%')
-          if (this.mediaActionMessage.length > 0) {
-            Text(this.mediaActionMessage).fontSize(9).fontColor('#FFFFFFA6')
+      .layoutWeight(1).width('100%').padding(12).borderRadius(8)
+      .backgroundColor('#2364BD').clip(true)
+
+      Column({ space: 8 }) {
+        Row({ space: 8 }) {
+          Image($r('app.media.ic_music')).width(24).height(24).objectFit(ImageFit.Contain)
+          Column({ space: 2 }) {
+            Text(this.mediaState.title).fontSize(13).fontWeight(FontWeight.Medium).fontColor('#F5F5F7')
+              .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+            Text(this.mediaState.artist || '未知歌手').fontSize(11).fontColor('#FFFFFFA6')
               .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           }
-          ForEach(this.mediaState.queue.slice(0, 2), (item: ProjectionQueueItem) => {
-            Text(item.title).fontSize(10).fontColor('#FFFFFFB3').width('100%')
-              .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-              .onClick((): void => { void this.playQueueItem(item.itemId); })
-              .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
-                'media', `queue_${item.itemId}`, newArea, (): void => { void this.playQueueItem(item.itemId); }))
-              .accessibilityText(`播放${item.title}`)
-          }, (item: ProjectionQueueItem) => `queue_${item.itemId}`)
+          .layoutWeight(1).alignItems(HorizontalAlign.Start)
         }
-        .width('100%').padding(10)
+        .width('100%')
+        .onClick((): void => this.openMediaApp())
+        .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
+          'media', 'open', newArea, (): void => this.openMediaApp()))
+        Text(this.mediaState.lyric || '当前播放软件未提供歌词')
+          .fontSize(11).fontColor('#FFFFFFB3').maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Progress({ value: this.mediaProgressPercent(), total: 100 })
+          .width('100%').height(6).color(this.accent)
+        Row() {
+          Text(this.formatMediaTime(this.mediaState.positionMs)).fontSize(10).fontColor('#FFFFFFA6')
+          Blank()
+          Text(this.mediaState.durationMs > 0 ? this.formatMediaTime(this.mediaState.durationMs) : '--:--')
+            .fontSize(10).fontColor('#FFFFFFA6')
+        }
+        .width('100%')
+        Row({ space: 4 }) {
+          this.MediaControl('playPrevious', '上一首', $r('sys.symbol.backward_end_fill'))
+          this.MediaControl(this.mediaState.isPlaying ? 'pause' : 'play', this.mediaState.isPlaying ? '暂停' : '播放',
+            this.mediaState.isPlaying ? $r('sys.symbol.pause_fill') : $r('sys.symbol.play_fill'))
+          this.MediaControl('playNext', '下一首', $r('sys.symbol.forward_end_fill'))
+        }
+        .width('100%')
+        if (this.mediaActionMessage.length > 0) {
+          Text(this.mediaActionMessage).fontSize(10).fontColor('#FFFFFFA6')
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
       }
-      .scrollBar(BarState.Auto)
-      .layoutWeight(1.7).width('100%').borderRadius(8)
+      .layoutWeight(1).width('100%').padding(12).borderRadius(8)
       .backgroundColor(projectionTheme(this.theme).panel)
-      .border({ width: 0.5, color: '#F0789C30' }).clip(true)
-      .onAreaChange((_oldArea, newArea) => this.touchBounds.set('media', this.areaBounds(newArea)))
     }
     .width('32%').constraintSize({ minWidth: 118, maxWidth: 250 }).height('100%')
   }

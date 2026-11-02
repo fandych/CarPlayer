@@ -12,6 +12,8 @@ declare module 'libprojection.so' {
     surfaceId: string;
   }
 
+  export function isVideoEncoderSizeSupported(width: number, height: number): boolean;
+
   export function createVideoEncoder(
     width: number,
     height: number,

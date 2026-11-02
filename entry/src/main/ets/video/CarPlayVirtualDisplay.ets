@@ -1,4 +1,5 @@
 import display from '@ohos.display';
+import { isSupportedProjectionSize } from './ProjectionSettings';
 
 export interface CarPlayDisplaySize {
   width: number;
@@ -27,9 +28,7 @@ export class CarPlayVirtualDisplay {
     if (this.screenId >= 0) {
       throw new Error('CarPlay virtual display is already active');
     }
-    if (!Number.isInteger(size.width) || !Number.isInteger(size.height) ||
-      size.width < 320 || size.height < 240 || size.width > 1920 || size.height > 1200 ||
-      size.width % 2 !== 0 || size.height % 2 !== 0) {
+    if (!isSupportedProjectionSize(size.width, size.height)) {
       throw new Error('Invalid CarPlay virtual display parameters');
     }
     try {

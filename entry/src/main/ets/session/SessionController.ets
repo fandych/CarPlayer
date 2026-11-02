@@ -861,6 +861,17 @@ export class SessionController {
     AppStorage.setOrCreate('carplayVehicleDisplayUuid', media.displayUuid);
     AppStorage.setOrCreate('carplayProjectionNativeWidth', media.nativeDisplayWidth);
     AppStorage.setOrCreate('carplayProjectionNativeHeight', media.nativeDisplayHeight);
+    AppStorage.setOrCreate('carplayProjectionOutputWidth', media.displayWidth);
+    AppStorage.setOrCreate('carplayProjectionOutputHeight', media.displayHeight);
+    AppStorage.setOrCreate('carplayProjectionViewAreaX', media.viewArea.originX);
+    AppStorage.setOrCreate('carplayProjectionViewAreaY', media.viewArea.originY);
+    AppStorage.setOrCreate('carplayProjectionViewAreaWidth', media.viewArea.width);
+    AppStorage.setOrCreate('carplayProjectionViewAreaHeight', media.viewArea.height);
+    this.events.onLog(
+      `显示尺寸计算：DiPlay type=${media.displayType} canvas=${media.nativeDisplayWidth}x${media.nativeDisplayHeight}, ` +
+        `H.264=${media.displayWidth}x${media.displayHeight}, ` +
+        `activeViewArea=${media.viewArea.width}x${media.viewArea.height}@${media.viewArea.originX},${media.viewArea.originY}`
+    );
     AppStorage.setOrCreate('carplayProjectionDisplayModes', media.availableDisplayModes);
     AppStorage.setOrCreate('carplayProjectionActiveModeId', media.displayModeId);
     AppStorage.setOrCreate('carplayProjectionResolutionMessage', media.resolutionMessage);

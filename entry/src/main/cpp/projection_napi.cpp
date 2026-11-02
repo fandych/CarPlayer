@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <napi/native_api.h>
+#include <multimedia/player_framework/native_avcapability.h>
 #include <multimedia/player_framework/native_avbuffer.h>
 #include <multimedia/player_framework/native_avbuffer_info.h>
 #include <multimedia/player_framework/native_avcodec_base.h>
@@ -21,7 +22,8 @@ namespace {
 constexpr size_t MAX_PENDING_FRAMES = 48;
 constexpr int32_t MAX_ENCODED_BUFFER_BYTES = 4 * 1024 * 1024;
 constexpr int32_t MIN_DIMENSION = 320;
-constexpr int32_t MAX_DIMENSION = 1920;
+constexpr int32_t MAX_VIDEO_WIDTH = 4096;
+constexpr int32_t MAX_VIDEO_HEIGHT = 2160;
 
 struct EncoderEvent {
   std::string type;
@@ -311,6 +313,28 @@ napi_value ThrowError(napi_env env, const std::string& message) {
   return nullptr;
 }
 
+napi_value IsVideoEncoderSizeSupported(napi_env env, napi_callback_info info) {
+  size_t argc = 2;
+  napi_value args[2];
+  if (napi_get_cb_info(env, info, &argc, args, nullptr, nullptr) != napi_ok || argc != 2) {
+    return ThrowError(env, "isVideoEncoderSizeSupported expects width and height");
+  }
+  int32_t width = 0;
+  int32_t height = 0;
+  if (!ReadInt32(env, args[0], &width) || !ReadInt32(env, args[1], &height)) {
+    return ThrowError(env, "Invalid H.264 encoder size arguments");
+  }
+  bool supported = false;
+  if (width >= MIN_DIMENSION && width <= MAX_VIDEO_WIDTH && height >= MIN_DIMENSION &&
+      height <= MAX_VIDEO_HEIGHT && (width & 1) == 0 && (height & 1) == 0) {
+    OH_AVCapability* capability = OH_AVCodec_GetCapability("video/avc", true);
+    supported = capability != nullptr && OH_AVCapability_IsVideoSizeSupported(capability, width, height);
+  }
+  napi_value result;
+  napi_get_boolean(env, supported, &result);
+  return result;
+}
+
 napi_value StartScreenCapture(napi_env env, napi_callback_info info) {
   size_t argc = 7;
   napi_value args[7];
@@ -331,8 +355,8 @@ napi_value StartScreenCapture(napi_env env, napi_callback_info info) {
       napi_typeof(env, args[6], &callbackType) != napi_ok || callbackType != napi_function) {
     return ThrowError(env, "Invalid AVScreenCapture arguments");
   }
-  if (displayId <= 0 || width < MIN_DIMENSION || width > MAX_DIMENSION || height < MIN_DIMENSION ||
-      height > 1200 || (width & 1) != 0 || (height & 1) != 0 || fps < 15 || fps > 60 ||
+    if (displayId <= 0 || width < MIN_DIMENSION || width > MAX_VIDEO_WIDTH || height < MIN_DIMENSION ||
+      height > MAX_VIDEO_HEIGHT || (width & 1) != 0 || (height & 1) != 0 || fps < 15 || fps > 60 ||
       bitrate < 500000 || bitrate > 20000000) {
     return ThrowError(env, "AVScreenCapture display, dimensions, frame rate, or bitrate are out of range");
   }
@@ -497,8 +521,8 @@ napi_value CreateVideoEncoder(napi_env env, napi_callback_info info) {
       napi_typeof(env, args[4], &callbackType) != napi_ok || callbackType != napi_function) {
     return ThrowError(env, "Invalid H.264 encoder arguments");
   }
-  if (width < MIN_DIMENSION || width > MAX_DIMENSION || height < MIN_DIMENSION ||
-      height > MAX_DIMENSION || (width & 1) != 0 || (height & 1) != 0 ||
+    if (width < MIN_DIMENSION || width > MAX_VIDEO_WIDTH || height < MIN_DIMENSION ||
+      height > MAX_VIDEO_HEIGHT || (width & 1) != 0 || (height & 1) != 0 ||
       fps < 15 || fps > 60 || bitrate < 500000 || bitrate > 20000000) {
     return ThrowError(env, "H.264 encoder dimensions, frame rate, or bitrate are out of range");
   }
@@ -693,6 +717,7 @@ napi_value RequestKeyFrame(napi_env env, napi_callback_info info) {
 
 napi_value Init(napi_env env, napi_value exports) {
   const napi_property_descriptor properties[] = {
+      {"isVideoEncoderSizeSupported", nullptr, IsVideoEncoderSizeSupported, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"createVideoEncoder", nullptr, CreateVideoEncoder, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"stopVideoEncoder", nullptr, StopVideoEncoder, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"requestKeyFrame", nullptr, RequestKeyFrame, nullptr, nullptr, nullptr, napi_default, nullptr},

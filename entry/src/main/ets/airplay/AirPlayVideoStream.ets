@@ -396,7 +396,7 @@ function buildAirPlayVideoHeader(
 
 function validateVideoShape(width: number, height: number): void {
   if (!Number.isInteger(width) || !Number.isInteger(height) ||
-    width < 320 || height < 240 || width > 1920 || height > 1200 ||
+    width < 320 || height < 240 || width > 4096 || height > 2160 ||
     (width & 1) !== 0 || (height & 1) !== 0) {
     throw new Error(`Unsupported AirPlay H.264 dimensions ${width}x${height}`);
   }

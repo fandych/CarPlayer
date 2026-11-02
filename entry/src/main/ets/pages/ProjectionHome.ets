@@ -23,6 +23,13 @@ struct ProjectionHome {
   @State launchMessage: string = '';
   @State mapMessage: string = '正在准备地图画面';
   @State activeAppLabel: string = '';
+  @StorageLink('carplayProjectionOutputWidth') projectionOutputWidth: number = 0;
+  @StorageLink('carplayProjectionOutputHeight') projectionOutputHeight: number = 0;
+  @StorageLink('carplayProjectionViewAreaX') projectionViewAreaX: number = 0;
+  @StorageLink('carplayProjectionViewAreaY') projectionViewAreaY: number = 0;
+  @StorageLink('carplayProjectionViewAreaWidth') projectionViewAreaWidth: number = 0;
+  @StorageLink('carplayProjectionViewAreaHeight') projectionViewAreaHeight: number = 0;
+  @StorageLink('carplayProjectionDensity') projectionDensity: number = 1;
   private activeApp?: ProjectionApp;
   private appDisplayId: number = -1;
   private appContentWidth: number = 0;
@@ -31,7 +38,7 @@ struct ProjectionHome {
   private activeAppSurface?: ProjectionMapSurface;
   private appSurfaceAttached: boolean = false;
   private appSurfaceGeneration: number = 0;
-  private appOnPhone: boolean = false;
+  @State private appOnPhone: boolean = false;
   private appSwitching: boolean = false;
   private sensorStarted: boolean = false;
   private readonly shakeDetector: ProjectionShakeDetector = new ProjectionShakeDetector();
@@ -232,7 +239,7 @@ struct ProjectionHome {
       this.appSwitching = true;
       this.mapDisplayGeneration++;
       try {
-        await this.releaseMapDisplay();
+        await this.releaseMapDisplay(app.category !== 'map');
       } finally {
         this.appSwitching = false;
       }
@@ -312,7 +319,7 @@ struct ProjectionHome {
     AppStorage.setOrCreate('carplayEmbeddedMapHeight', surface.height);
   }
 
-  private async releaseMapDisplay(): Promise<void> {
+  private async releaseMapDisplay(restoreToPhone: boolean = true): Promise<void> {
     const displayId = this.mapDisplayId;
     const app = this.mapApp;
     this.mapApp = undefined;
@@ -324,7 +331,7 @@ struct ProjectionHome {
     AppStorage.setOrCreate('carplayEmbeddedMapWidth', 0);
     AppStorage.setOrCreate('carplayEmbeddedMapHeight', 0);
     if (displayId >= 0) {
-      if (app) {
+      if (app && restoreToPhone) {
         try {
           await this.launchApp(app, display.getDefaultDisplaySync().id);
         } catch (error) {
@@ -373,7 +380,7 @@ struct ProjectionHome {
       return;
     }
 
-    await this.releaseMapDisplay();
+    await this.releaseMapDisplay(false);
     if (generation !== this.mapDisplayGeneration) {
       return;
     }
@@ -441,32 +448,59 @@ struct ProjectionHome {
     this.logProjection(message);
   }
 
+  private projectionAreaDensity(): number {
+    return Number.isFinite(this.projectionDensity) && this.projectionDensity > 0 ? this.projectionDensity : 1;
+  }
+
+  private projectionAreaWidthVp(): number {
+    const width = this.projectionViewAreaWidth > 0 ? this.projectionViewAreaWidth : this.projectionOutputWidth;
+    return width > 0 ? width / this.projectionAreaDensity() : 1;
+  }
+
+  private projectionAreaHeightVp(): number {
+    const height = this.projectionViewAreaHeight > 0 ? this.projectionViewAreaHeight : this.projectionOutputHeight;
+    return height > 0 ? height / this.projectionAreaDensity() : 1;
+  }
+
   build() {
-    Column() {
-      ProjectionDashboard({
-        launchMessage: this.launchMessage,
-        mapMessage: this.mapMessage,
-        activeAppLabel: this.activeAppLabel,
-        activeAppUri: this.activeApp?.uri ?? '',
-        onHomeClick: (): void => { void this.returnHome(); },
-        onBackClick: (): void => this.back(),
-        onReceiverHomeClick: (): void => { emitter.emit(CARPLAY_RECEIVER_HOME_EVENT); },
-        onAppSurfaceChange: (surface): void => { void this.updateAppSurface(surface); },
-        onMapSurfaceChange: (surface): void => {
-          void this.updateMapSurface(surface);
-        },
-        onAppClick: (app): void => {
-          void this.selectApp(app);
-        }
-      })
-        .width('100%')
-        .height('100%')
-        .onAreaChange((_oldArea, newArea) => {
-          this.logLayoutArea('dashboard', `${newArea.width}`, `${newArea.height}`);
+    Stack({ alignContent: Alignment.TopStart }) {
+      Column() {
+        ProjectionDashboard({
+          launchMessage: this.launchMessage,
+          mapMessage: this.mapMessage,
+          activeAppLabel: this.activeAppLabel,
+          activeAppUri: this.activeApp?.uri ?? '',
+          appOnPhone: this.appOnPhone,
+          viewAreaOriginX: this.projectionViewAreaX,
+          viewAreaOriginY: this.projectionViewAreaY,
+          onToggleAppDisplay: (): void => { void this.toggleAppDisplay(); },
+          onHomeClick: (): void => { void this.returnHome(); },
+          onBackClick: (): void => this.back(),
+          onReceiverHomeClick: (): void => { emitter.emit(CARPLAY_RECEIVER_HOME_EVENT); },
+          onAppSurfaceChange: (surface): void => { void this.updateAppSurface(surface); },
+          onMapSurfaceChange: (surface): void => {
+            void this.updateMapSurface(surface);
+          },
+          onAppClick: (app): void => {
+            void this.selectApp(app);
+          }
         })
+          .width('100%')
+          .height('100%')
+          .onAreaChange((_oldArea, newArea) => {
+            this.logLayoutArea('dashboard active viewArea', `${newArea.width}`, `${newArea.height}`);
+          })
+      }
+      .width(this.projectionAreaWidthVp())
+      .height(this.projectionAreaHeightVp())
+      .position({
+        x: this.projectionViewAreaX / this.projectionAreaDensity(),
+        y: this.projectionViewAreaY / this.projectionAreaDensity()
+      })
     }
     .width('100%')
     .height('100%')
+    .backgroundColor('#101713')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
   }
 }

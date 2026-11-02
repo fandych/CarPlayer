@@ -12,7 +12,8 @@ test('capture, encoder, Dock, safe-area and day/night settings stay within suppo
   const {
     resolveProjectionRates, projectionTheme, resolveNightMode, normalizeSafeInset, projectionSafeInsetKey,
     projectionDisplayModes, resolveProjectionDisplayMode, projectionResolutionKey,
-    projectionContentCalibrationKey, normalizeProjectionContentScale, normalizeProjectionContentOffset
+    projectionContentCalibrationKey, normalizeProjectionContentScale, normalizeProjectionContentOffset,
+    isSupportedProjectionSize
   } = loadEts('video/ProjectionSettings.ets');
   assert.deepEqual(resolveProjectionRates(30, 60, 60), { capture: 30, encode: 30 });
   assert.deepEqual(resolveProjectionRates(60, 24, 60), { capture: 60, encode: 24 });
@@ -41,7 +42,11 @@ test('capture, encoder, Dock, safe-area and day/night settings stay within suppo
   assert.equal(normalizeProjectionContentOffset(-20), -15);
   assert.equal(normalizeProjectionContentOffset(18), 15);
   assert.equal(normalizeProjectionContentOffset(NaN), 0);
+  assert.equal(isSupportedProjectionSize(2560, 1080), true);
+  assert.equal(isSupportedProjectionSize(1920, 1920), true);
 
+  const supportsTestSizes = (width, height) =>
+    (width === 1280 && height === 720) || (width === 800 && height === 450);
   const modes = projectionDisplayModes('Display-1', 1280, 720, [
     { displayUuid: 'display-1', nativeWidth: 1280, nativeHeight: 720, id: 'verified-800', width: 800, height: 450,
       encoder: 'video/avc' },
@@ -51,13 +56,31 @@ test('capture, encoder, Dock, safe-area and day/night settings stay within suppo
       width: 800, height: 480, encoder: 'video/avc' },
     { displayUuid: 'display-1', nativeWidth: 1280, nativeHeight: 720, id: 'too-large',
       width: 2560, height: 1440, encoder: 'video/avc' }
-  ]);
+  ], supportsTestSizes);
   assert.deepEqual(modes.map(mode => mode.id), ['receiver-native', 'verified-800']);
   assert.equal(resolveProjectionDisplayMode(modes, 'verified-800').mode.width, 800);
   assert.equal(resolveProjectionDisplayMode(modes, 'unknown').mode.id, 'receiver-native');
   assert.equal(resolveProjectionDisplayMode(modes, 'unknown').usedNativeFallback, true);
-  assert.deepEqual(projectionDisplayModes('Display-1', 2500, 1400), []);
+  assert.deepEqual(projectionDisplayModes('Display-1', 2500, 1400, [], () => false), []);
+  const fallbackModes = projectionDisplayModes('Square-Display', 1920, 1920, [],
+    (width, height) => width <= 1920 && height <= 1200);
+  assert.equal(fallbackModes[0].id, 'encoder-fallback-1152x1152');
+  assert.equal(fallbackModes[0].isNative, false);
+  assert.equal(resolveProjectionDisplayMode(fallbackModes, 'receiver-native').mode.width, 1152);
   assert.throws(() => resolveProjectionDisplayMode([], 'receiver-native'), /原生分辨率/);
+});
+
+test('projection settings provide spacious controls and a direct icon-led day/night selector', () => {
+  const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
+  assert.match(source, /app\.media\.ic_day_night/);
+  assert.match(source, /\.height\(76\)\.padding\(12\)\.borderRadius\(8\)/);
+  assert.match(source, /\.height\(42\)\.padding\(\{ left: 9, right: 9 \}\)/);
+  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', ['selectDayNightMode']);
+  const target = new Target();
+  target.selectDayNightMode('NIGHT');
+  assert.equal(target.dayNightMode, 'NIGHT');
+  target.selectDayNightMode('AUTO');
+  assert.equal(target.dayNightMode, 'AUTO');
 });
 
 test('irregular-display calibration preserves aspect ratio and maps touch coordinates back', () => {
@@ -109,13 +132,21 @@ test('AirPlay display profile uses /info dimensions and refuses invented or sile
   const parsed = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true);
   const declaration = parsed.statements.find(statement =>
     ts.isFunctionDeclaration(statement) && statement.name?.text === 'readDisplayInfo');
+  const activeAreaDeclaration = parsed.statements.find(statement =>
+    ts.isFunctionDeclaration(statement) && statement.name?.text === 'readActiveViewArea');
   assert.ok(declaration);
-  const javascript = ts.transpileModule(`${declaration.getText(parsed)}\nreadDisplayInfo`, {
+  assert.ok(activeAreaDeclaration);
+  const javascript = ts.transpileModule(
+    `${activeAreaDeclaration.getText(parsed)}\n${declaration.getText(parsed)}\nreadDisplayInfo`, {
     compilerOptions: { target: ts.ScriptTarget.ES2020 }
   }).outputText;
-  const makeReader = (preferredMode, modes = settings.projectionDisplayModes) => vm.runInNewContext(javascript, {
+  const makeReader = (preferredMode, modes = settings.projectionDisplayModes,
+    supportsSize = settings.isSupportedProjectionSize) => vm.runInNewContext(javascript, {
     projectionDisplayModes: modes,
+    VERIFIED_PROJECTION_DISPLAY_MODES: settings.VERIFIED_PROJECTION_DISPLAY_MODES,
+    isH264EncoderSizeSupported: supportsSize,
     readProjectionResolutionPreference: () => preferredMode,
+    saveProjectionResolutionPreference: () => {},
     resolveProjectionDisplayMode: settings.resolveProjectionDisplayMode,
     BigInt, Number, Array, Math
   });
@@ -131,6 +162,7 @@ test('AirPlay display profile uses /info dimensions and refuses invented or sile
   const string = value => ({ kind: 'string', stringValue: value });
   const nativeInfo = infoFor({
     uuid: string('display-1'),
+    type: integer(110),
     widthPixels: integer(1280),
     heightPixels: integer(720),
     maxFPS: integer(60)
@@ -140,18 +172,58 @@ test('AirPlay display profile uses /info dimensions and refuses invented or sile
     { width: native.width, height: native.height, sourceWidth: native.sourceWidth, sourceHeight: native.sourceHeight },
     { width: 1280, height: 720, sourceWidth: 1280, sourceHeight: 720 }
   );
-  const verifiedModes = (uuid, width, height) => settings.projectionDisplayModes(uuid, width, height, [
-    { displayUuid: uuid, nativeWidth: width, nativeHeight: height, id: 'verified-800x450',
-      width: 800, height: 450, encoder: 'video/avc' }
-  ]);
+  assert.deepEqual(
+    [native.viewArea.originX, native.viewArea.originY, native.viewArea.width, native.viewArea.height],
+    [0, 0, 1280, 720]
+  );
+  const verifiedModes = (uuid, width, height, _verified, supportsSize) =>
+    settings.projectionDisplayModes(uuid, width, height, [
+      { displayUuid: uuid, nativeWidth: width, nativeHeight: height, id: 'verified-800x450',
+        width: 800, height: 450, encoder: 'video/avc' }
+    ], supportsSize);
   const selected = makeReader('verified-800x450', verifiedModes)(nativeInfo);
   assert.equal(selected.width, 800);
   assert.equal(selected.height, 450);
   assert.equal(selected.nativeWidth, 1280);
   assert.equal(selected.modeId, 'verified-800x450');
-  assert.throws(() => makeReader('receiver-native')(infoFor({
+  const wideNative = makeReader('receiver-native')(infoFor({
     uuid: string('display-1'), widthPixels: integer(2560), heightPixels: integer(1080)
-  })), /原生分辨率/);
+  }));
+  assert.equal(wideNative.width, 2560);
+  assert.equal(wideNative.height, 1080);
+  const squareInfo = infoFor({
+    uuid: string('display-square'),
+    type: integer(110),
+    widthPixels: integer(1920),
+    heightPixels: integer(1920),
+    initialViewArea: integer(0),
+    viewAreas: { kind: 'array', arrayValue: [
+      dictionary(new Map([
+        ['widthPixels', integer(1920)], ['heightPixels', integer(1080)],
+        ['originXPixels', integer(0)], ['originYPixels', integer(0)]
+      ])),
+      dictionary(new Map([
+        ['widthPixels', integer(1080)], ['heightPixels', integer(1920)],
+        ['originXPixels', integer(0)], ['originYPixels', integer(0)]
+      ]))
+    ] }
+  });
+  const squareNative = makeReader('receiver-native')(squareInfo);
+  assert.deepEqual(
+    [squareNative.viewArea.originX, squareNative.viewArea.originY,
+      squareNative.viewArea.width, squareNative.viewArea.height],
+    [0, 0, 1920, 1080]
+  );
+  const squareFallback = makeReader('receiver-native', settings.projectionDisplayModes,
+    (width, height) => width <= 1920 && height <= 1200)(squareInfo);
+  assert.equal(squareFallback.width, 1152);
+  assert.equal(squareFallback.height, 1152);
+  assert.deepEqual(
+    [squareFallback.viewArea.originX, squareFallback.viewArea.originY,
+      squareFallback.viewArea.width, squareFallback.viewArea.height],
+    [0, 0, 1152, 648]
+  );
+  assert.match(squareFallback.resolutionMessage, /自动下采样到 1152×1152/);
   assert.throws(() => makeReader('receiver-native')(infoFor({
     uuid: string('display-1'), heightPixels: integer(720)
   })), /missing valid widthPixels\/heightPixels/);
@@ -312,8 +384,9 @@ test('vehicle Bluetooth audio touch area is active only on the settings page', (
     source.replace('struct ProjectionDashboard {', 'class ProjectionDashboard {'), ts.ScriptTarget.Latest, true);
   const declaration = parsed.statements.find(statement =>
     ts.isClassDeclaration(statement) && statement.name?.text === 'ProjectionDashboard');
-  const handler = declaration.members.find(member => member.name?.text === 'touchHandler');
-  const javascript = ts.transpileModule(`class Target { ${handler.getText(parsed)} }`, {
+  const methods = declaration.members.filter(member =>
+    ['touchHandler', 'canvasPixelToContentPoint', 'screenToContentPoint'].includes(member.name?.text));
+  const javascript = ts.transpileModule(`class Target { ${methods.map(member => member.getText(parsed)).join('\n')} }`, {
     compilerOptions: { target: ts.ScriptTarget.ES2020 }
   }).outputText;
   const Target = vm.runInNewContext(`${javascript}\nTarget`, {
@@ -322,6 +395,8 @@ test('vehicle Bluetooth audio touch area is active only on the settings page', (
   const target = new Target();
   let toggles = 0;
   target.getUIContext = () => ({ px2vp: value => value });
+  target.viewAreaOriginX = 0;
+  target.viewAreaOriginY = 0;
   target.screenToContentPoint = (x, y) => ({ x, y });
   target.contains = () => true;
   target.touchBounds = new Map([['settings', {}]]);
@@ -426,7 +501,8 @@ test('restricted permissions are declared but never treated as approved or third
 
 test('custom vehicle icons are bundled library SVGs with native-compatible dimensions and a license', () => {
   const media = path.join(sourceRoot, '../resources/base/media');
-  for (const name of ['house', 'layout_grid', 'settings', 'car_front', 'palette', 'navigation', 'cloud_sun', 'music']) {
+  for (const name of ['house', 'layout_grid', 'split', 'day_night', 'settings', 'car_front', 'palette',
+    'navigation', 'cloud_sun', 'music']) {
     const source = fs.readFileSync(path.join(media, `ic_${name}.svg`), 'utf8');
     assert.match(source, /viewBox="0 0 24 24"/);
     assert.match(source, /width="64"/);
@@ -503,6 +579,15 @@ test('AirPlay SETUP payloads round-trip with one negotiated audio stream and dec
   assert.equal(streams.arrayValue.length, 1);
   assert.equal(Number(streams.arrayValue[0].get('framesPerPacket').integerValue), 352);
   assert.equal(Number(streams.arrayValue[0].get('spf').integerValue), 352);
+  const hidModeSetup = loadMethods('airplay/AirPlayMediaSession.ets', 'AirPlayMediaSession',
+    ['buildHidSetInputModePayload'], { BinaryPlist, PlistNode });
+  const hidMode = BinaryPlist.decode(hidModeSetup.buildHidSetInputModePayload('2A2A2A2A'));
+  assert.equal(hidMode.get('type').stringValue, 'hidSetInputMode');
+  assert.equal(Number(hidMode.get('params').get('hidInputMode').integerValue), 0);
+  assert.equal(hidMode.get('params').get('uuid').stringValue, '2a2a2a2a');
+  const mediaSessionSource = fs.readFileSync(path.join(sourceRoot, 'airplay/AirPlayMediaSession.ets'), 'utf8');
+  assert.ok(mediaSessionSource.indexOf('eventChannel.sendCommand(AirPlayMediaSession.buildHidSetInputModePayload') <
+    mediaSessionSource.indexOf("'video stream SETUP'"));
 
   const sessionSource = fs.readFileSync(path.join(sourceRoot, 'airplay/AirPlayMediaSession.ets'), 'utf8');
   const featureBlock = /const CONTROLLER_FEATURES:\s*string\[\]\s*=\s*\[([\s\S]*?)\];/.exec(sessionSource);
@@ -602,15 +687,40 @@ test('diagnostic archive batches packet log writes and flushes before export', (
     './ProtocolLogger': { redactProtocolText: text => text }
   });
   const archive = new DiagnosticLogArchive();
+  const logDirectory = 'C:\\logs/CarPlayerLogs';
+  const previousRuns = [
+    `${logDirectory}/CarPlayer-2026-10-31.log`,
+    `${logDirectory}/CarPlayer-2026-11-01.log`
+  ];
+  for (const filename of previousRuns) {
+    contents.set(filename, 'previous run');
+  }
   archive.start('C:\\logs');
+  for (const filename of previousRuns) {
+    assert.equal(contents.has(filename), false, 'startup must delete every previous run log');
+  }
+  const currentLog = `${logDirectory}/CarPlayer-current.log`;
+  assert.equal(contents.has(currentLog), true);
   archive.append('packet one');
   archive.append('packet two');
   assert.equal(writes.length, 0);
   archive.flush();
   assert.equal(writes.length, 1);
   assert.equal(fsyncCount, 1);
+  archive.appendFromAbility('C:\\logs', 'projection', 'current ability event');
+  assert.ok(contents.get(currentLog).includes('current ability event'));
+  assert.ok(contents.get(currentLog).includes('packet one'));
   const exported = archive.readAllText();
   assert.ok(exported.indexOf('packet one') < exported.indexOf('packet two'));
+  assert.ok(exported.includes('current ability event'));
+  assert.doesNotMatch(exported, /previous run/);
+  const recent = archive.readRecentLines().join('\n');
+  assert.ok(recent.includes('current app session'));
+  assert.ok(recent.includes('current ability event'));
+  archive.start('C:\\logs');
+  const restarted = archive.readAllText();
+  assert.ok(restarted.includes('current app session'));
+  assert.doesNotMatch(restarted, /packet one|current ability event/);
   archive.clear();
 });
 
@@ -1457,7 +1567,7 @@ test('navigation preview and full view share the running app without returning i
   assert.equal((source.match(/id: 'projectionAppSurface'/g) || []).length, 1);
 });
 
-test('home selects a map preview from other apps and includes weather, music and navigation cards', async () => {
+test('home selects a map preview and shows only navigation and AVSession music cards', async () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
   const parsed = ts.createSourceFile('ProjectionDashboard.ts',
     source.replace('struct ProjectionDashboard {', 'class ProjectionDashboard {'), ts.ScriptTarget.Latest, true);
@@ -1507,15 +1617,31 @@ test('home selects a map preview from other apps and includes weather, music and
   assert.equal(stored.get('carplayNavigationPreview'), true);
   assert.deepEqual(opened, [map.uri, map.uri]);
   assert.match(source, /private DashboardSidebar\(\)/);
-  for (const heading of ['\u5929\u6c14', '\u97f3\u4e50', '\u5bfc\u822a']) {
+  for (const heading of ['\u97f3\u4e50', '\u5bfc\u822a']) {
     assert.ok(source.includes(heading), `missing home card ${heading}`);
   }
+  assert.doesNotMatch(source, /天气数据暂不可用|app\.media\.ic_cloud_sun/);
+  assert.doesNotMatch(source, /在手机打开地图/);
+  assert.match(source, /this\.mediaState\.lyric/);
+  assert.match(source, /this\.mediaProgressPercent\(\)/);
   assert.ok(!source.includes('this.navigationPreview ? 0.7'), 'preview uses actual layout, not a floating scaled page');
+});
+
+test('AVSession lyric metadata resolves the current LRC line at playback position', () => {
+  const { resolveCurrentLyric } = loadEts('session/MediaSessionBridge.ets', {
+    '@ohos.multimedia.avsession': {}
+  });
+  const lyric = '[offset:-500]\n[00:00.00]Intro\n[00:01.25][00:01.50]Chorus\n[00:02.00]Outro';
+  assert.equal(resolveCurrentLyric(lyric, undefined, 100), 'Intro');
+  assert.equal(resolveCurrentLyric(lyric, undefined, 900), 'Chorus');
+  assert.equal(resolveCurrentLyric(lyric, 'live lyric', 0), 'live lyric');
+  assert.equal(resolveCurrentLyric(undefined, undefined, 1000), '');
 });
 
 test('music discovers late sessions, publishes changes, controls and cleans up', async () => {
   let descriptors = [];
   let title = 'First track';
+  let lyric = '[00:00.00]First line\n[00:02.00]Current line';
   let state = 1;
   let notifications = 0;
   let destroyed = 0;
@@ -1525,8 +1651,10 @@ test('music discovers late sessions, publishes changes, controls and cleans up',
   const controller = {
     on(name, ...args) { listeners.set(name, args.at(-1)); },
     off(name) { listeners.delete(name); },
-    async getAVMetadata() { return { title, artist: 'Artist' }; },
-    async getAVPlaybackState() { return { state }; },
+    async getAVMetadata() { return { title, artist: 'Artist', lyric, duration: 120000 }; },
+    async getAVPlaybackState() {
+      return { state, duration: 120000, position: { elapsedTime: 2500, updateTime: Date.now() - 500 } };
+    },
     async getValidCommands() { return ['play', 'pause', 'playNext', 'playPrevious']; },
     async getAVQueueItems() { return []; },
     async sendControlCommand(command) { commands.push(command.command); },
@@ -1548,7 +1676,11 @@ test('music discovers late sessions, publishes changes, controls and cleans up',
     elementName: { bundleName: 'example.music', abilityName: 'MainAbility' } }];
   managerListeners.get('SessionCreate')();
   assert.equal(notifications, 1);
-  assert.equal((await bridge.refresh()).title, 'First track');
+  const first = await bridge.refresh();
+  assert.equal(first.title, 'First track');
+  assert.equal(first.durationMs, 120000);
+  assert.ok(first.positionMs >= 2500);
+  assert.equal(first.lyric, 'Current line');
   title = 'Next track';
   listeners.get('metadataChange')();
   assert.equal((await bridge.refresh()).title, 'Next track');
@@ -1556,6 +1688,7 @@ test('music discovers late sessions, publishes changes, controls and cleans up',
   state = 0;
   const paused = await bridge.refresh();
   assert.equal(paused.isPlaying, false);
+  assert.equal(paused.positionMs, 2500, 'paused position must not advance from its last update timestamp');
   assert.equal(paused.bundleName, 'example.music');
   await bridge.send('play');
   assert.deepEqual(commands, ['play']);
@@ -2117,6 +2250,18 @@ test('phone media volume changes update car gain and the route releases its subs
 test('Dock supports Apps, Home, split and map/music alternative menus', () => {
   const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard',
     ['activateDock', 'isDashboardHome', 'categoryApp'], { HOME_APP: { uri: 'home' }, PROJECTION_MAP_URI: 'amap' });
+  const dashboardSource = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
+  assert.match(dashboardSource, /Scroll\(this\.dockScroller\)/);
+  assert.match(dashboardSource, /\.width\(vertical \? '100%' : 64\)/);
+  assert.match(dashboardSource, /\.height\(vertical \? 48 : '100%'\)/);
+  assert.match(dashboardSource, /DockItem\('home', '首页', 'app\.media\.ic_house'/);
+  assert.match(dashboardSource, /DockItem\('apps', '应用', 'app\.media\.ic_layout_grid'/);
+  assert.match(dashboardSource, /DockItem\('map', '地图', 'app\.media\.ic_navigation'/);
+  assert.match(dashboardSource, /DockItem\('music', '音乐', 'app\.media\.ic_music'/);
+  assert.match(dashboardSource, /DockItem\('split', '分屏', 'app\.media\.ic_split'/);
+  assert.doesNotMatch(dashboardSource, /DockItem\([\s\S]{0,800}?\.layoutWeight\(1\)/);
+  assert.match(dashboardSource, /accessibilityText\(this\.appOnPhone \? '切换地图到虚拟屏' : '切换地图到手机'\)/);
+  assert.match(dashboardSource, /'map', 'toggleDisplay', newArea, \(\): void => this\.onToggleAppDisplay\(\)/);
   const target = new Target();
   target.apps = [
     { uri: 'amap', category: 'map' }, { uri: 'baidu', category: 'map' },
@@ -2128,10 +2273,10 @@ test('Dock supports Apps, Home, split and map/music alternative menus', () => {
   const actions = [];
   target.showDashboardView = view => actions.push(view);
   target.selectApp = app => actions.push(app.uri);
-  target.activateDock('primary');
+  target.activateDock('apps');
   target.activeAppLabel = 'Map';
   target.navigationPreview = false;
-  target.activateDock('primary');
+  target.activateDock('home');
   target.activateDock('map');
   target.selectedMapUri = 'baidu';
   target.activateDock('map');
@@ -2143,6 +2288,45 @@ test('Dock supports Apps, Home, split and map/music alternative menus', () => {
   target.activateDock('split');
   target.activateDock('settings');
   assert.deepEqual(actions, ['apps', 'home', 'amap', 'baidu', 'maps', 'music', 'otherMusic', 'music', 'split', 'settings']);
+});
+
+test('Apps grid includes only launchable third-party apps and adapts from three to six columns', () => {
+  const vehicleApps = [{ appId: 'shell-settings', uri: 'settings', category: 'vehicle' }];
+  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', [
+    'visibleApps', 'updateAppsGridColumns', 'appsGridTemplate'
+  ], {
+    PROJECTION_VEHICLE_APPS: vehicleApps,
+    isProjectionAppLaunchable: app => app.launchState === 'VERIFIED' && !!app.launchTarget
+  });
+  const target = new Target();
+  target.apps = [
+    { appId: 'verified', uri: 'verified', launchState: 'VERIFIED', launchTarget: { uri: 'open' } },
+    { appId: 'unverified', uri: 'unverified', launchState: 'UNVERIFIED', launchTarget: { uri: 'unknown' } }
+  ];
+  assert.equal(target.visibleApps().map(app => app.appId).join(','), 'shell-settings,verified');
+  for (const [width, columns] of [[320, 3], [400, 4], [520, 5], [700, 6]]) {
+    target.updateAppsGridColumns(width);
+    assert.equal(target.appsGridColumns, columns);
+    assert.equal(target.appsGridTemplate().split(' ').length, columns);
+  }
+});
+
+test('split dashboard defaults to 3:1 and supports the three map/music ratios', () => {
+  const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
+  assert.match(source, /@State splitMapWeight: number = 3/);
+  assert.match(source, /@State splitMusicWeight: number = 1/);
+  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', ['selectSplitRatio']);
+  const target = new Target();
+  target.splitMapWeight = 3;
+  target.splitMusicWeight = 1;
+  target.selectSplitRatio(2, 2);
+  assert.deepEqual([target.splitMapWeight, target.splitMusicWeight], [2, 2]);
+  target.selectSplitRatio(4, 1);
+  assert.deepEqual([target.splitMapWeight, target.splitMusicWeight], [4, 1]);
+  target.selectSplitRatio(1, 3);
+  assert.deepEqual([target.splitMapWeight, target.splitMusicWeight], [4, 1], 'unsupported ratios must be ignored');
+  assert.match(source, /layoutWeight\(this\.splitMapWeight\)/);
+  assert.match(source, /layoutWeight\(this\.splitMusicWeight\)/);
 });
 
 test('socket shutdown deadlines settle stalled operations instead of hanging recovery', async () => {
@@ -2165,6 +2349,7 @@ test('audio closes its socket before waiting for a blocked packet write', async 
 
 test('shake opens the existing app link on the target display and preserves state on failure', async () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionHome.ets'), 'utf8');
+  assert.match(source, /@State private appOnPhone: boolean = false/);
   const parsed = ts.createSourceFile('ProjectionHome.ts',
     source.replace('struct ProjectionHome {', 'class ProjectionHome {'), ts.ScriptTarget.Latest, true);
   const component = parsed.statements.find(statement =>
@@ -2335,6 +2520,65 @@ test('map card opens its link on the phone before releasing the content display'
   assert.equal(order.length, 2);
 });
 
+test('resizing the map split surface rebuilds its virtual display without a phone handoff', async () => {
+  const mapApp = {
+    appId: 'amap', uri: 'map', category: 'map', launchState: 'VERIFIED',
+    launchTarget: { kind: 'appLink', uri: 'map-link' }
+  };
+  const events = [];
+  const Target = loadMethods('pages/ProjectionHome.ets', 'ProjectionHome', ['updateMapSurface'], {
+    AppStorage: { get: key => key === 'carplaySelectedMapAppId' ? 'amap' : 2, setOrCreate() {} },
+    discoverProjectionApps: async () => [mapApp],
+    isProjectionAppLaunchable: () => true,
+    PROJECTION_APP_CANDIDATES: [],
+    display: {
+      async createVirtualScreen(options) { events.push(['create', options.width, options.height]); return 24; },
+      async setVirtualScreenSurface(id, surfaceId) { events.push(['surface', id, surfaceId]); },
+      async makeUnique(id) { events.push(['unique', id]); }
+    }
+  });
+  const target = new Target();
+  target.mapDisplayId = 23;
+  target.mapDisplayGeneration = 0;
+  target.activeMapSurface = { surfaceId: 'map-surface', left: 0, top: 0, width: 600, height: 400 };
+  target.releaseMapDisplay = async restoreToPhone => {
+    events.push(['release', restoreToPhone]);
+    target.mapDisplayId = -1;
+    target.activeMapSurface = undefined;
+  };
+  target.publishMapTouchBounds = () => {};
+  target.launchApp = async (app, displayId) => events.push(['launch', app.appId, displayId]);
+  target.logProjection = () => {};
+  await target.updateMapSurface({ surfaceId: 'map-surface', left: 0, top: 0, width: 800, height: 400 });
+  assert.deepEqual(events, [
+    ['release', false], ['create', 800, 400], ['surface', 24, 'map-surface'], ['unique', 24], ['launch', 'amap', 24]
+  ]);
+});
+
+test('selecting map from split promotes it to the content display without a phone handoff', async () => {
+  const Target = loadMethods('pages/ProjectionHome.ets', 'ProjectionHome', ['selectApp'], {
+    AppStorage: { get: () => 'home' },
+    isProjectionAppLaunchable: app => app.launchState === 'VERIFIED' && !!app.launchTarget
+  });
+  const target = new Target();
+  const events = [];
+  target.appSwitching = false;
+  target.appDisplayId = 42;
+  target.appOnPhone = false;
+  target.mapDisplayId = 23;
+  target.activeApp = { uri: 'music', category: 'music' };
+  target.releaseMapDisplay = async restoreToPhone => events.push(['releaseMap', restoreToPhone]);
+  target.launchApp = async (app, displayId) => events.push(['launch', app.uri, displayId]);
+  target.publishAppTouchBounds = () => {};
+  await target.selectApp({
+    uri: 'map', label: '地图', category: 'map', launchState: 'VERIFIED',
+    launchTarget: { kind: 'appLink', uri: 'map-link' }
+  });
+  assert.deepEqual(events, [['releaseMap', false], ['launch', 'map', 42]]);
+  assert.equal(target.activeApp.uri, 'map');
+  assert.equal(target.appOnPhone, false);
+});
+
 test('abnormal video shutdown closes TCP before draining and does not send TEARDOWN', async () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'airplay/AirPlayMediaSession.ets'), 'utf8');
   const parsed = ts.createSourceFile('AirPlayMediaSession.ts', source, ts.ScriptTarget.Latest, true);
@@ -2398,6 +2642,44 @@ test('embedded app and map hit rectangles use the actual window density, not the
   assert.ok(120 < app.left, 'a Dock touch must stay outside the embedded app');
 });
 
+test('CarPlay tap hit testing tolerates small finger drift by targeting the contact midpoint', () => {
+  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', [
+    'touchHandler', 'canvasPixelToContentPoint', 'screenToContentPoint', 'contains'
+  ], {
+    AppStorage: { get: key => ({ carplayProjectionHomeActive: true, carplayProjectionDisplayId: 7 })[key] }
+  });
+  const target = new Target();
+  target.viewAreaOriginX = 0;
+  target.viewAreaOriginY = 0;
+  target.contentScalePercent = 100;
+  target.contentOffsetXPercent = 0;
+  target.contentOffsetYPercent = 0;
+  target.projectionViewportWidth = 400;
+  target.projectionViewportHeight = 200;
+  target.getUIContext = () => ({ px2vp: value => value });
+  const bounds = { left: 10, top: 10, right: 60, bottom: 60 };
+  let activated = 0;
+  target.touchBounds = new Map([['dock', bounds]]);
+  target.touchAreas = new Map([['dock:map', {
+    group: 'dock', ...bounds, action: () => { activated++; }
+  }]]);
+  target.touchHandler({ data: {
+    displayId: 7, startX: 54, endX: 62, startY: 30, endY: 30, maxDistance: 8, durationMs: 120
+  } });
+  assert.equal(activated, 1);
+  const settingsBounds = { left: 100, top: 10, right: 160, bottom: 60 };
+  let settingsActivated = 0;
+  target.dashboardView = 'settings';
+  target.touchBounds.set('settings', settingsBounds);
+  target.touchAreas.set('settings:dayNight', {
+    group: 'settings', ...settingsBounds, action: () => { settingsActivated++; }
+  });
+  target.touchHandler({ data: {
+    displayId: 7, startX: 120, endX: 120, startY: 30, endY: 30, maxDistance: 0, durationMs: 800
+  } });
+  assert.equal(settingsActivated, 1, 'a slow non-Dock touch must still activate on release');
+});
+
 test('Dock taps use measured bounds and window density while hidden map areas cannot steal grid taps', () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
   const parsed = ts.createSourceFile('ProjectionDashboard.ts',
@@ -2405,7 +2687,7 @@ test('Dock taps use measured bounds and window density while hidden map areas ca
   const declaration = parsed.statements.find(statement =>
     ts.isClassDeclaration(statement) && statement.name?.text === 'ProjectionDashboard');
   const members = declaration.members.filter(member =>
-    ['touchHandler', 'contains', 'screenToContentPoint'].includes(member.name?.text));
+    ['touchHandler', 'contains', 'screenToContentPoint', 'canvasPixelToContentPoint'].includes(member.name?.text));
   const javascript = ts.transpileModule(`class Target { ${members.map(member => member.getText(parsed)).join('\n')} }`, {
     compilerOptions: { target: ts.ScriptTarget.ES2020 }
   }).outputText;
@@ -2420,6 +2702,8 @@ test('Dock taps use measured bounds and window density while hidden map areas ca
   target.contentOffsetYPercent = 0;
   target.projectionViewportWidth = 1000;
   target.projectionViewportHeight = 600;
+  target.viewAreaOriginX = 0;
+  target.viewAreaOriginY = 0;
   let density = 3;
   target.getUIContext = () => ({ px2vp: value => value / density });
   target.touchBounds = new Map([
@@ -2489,6 +2773,12 @@ test('Dock taps use measured bounds and window density while hidden map areas ca
   target.dashboardView = 'maps';
   tap(300, 60);
   assert.deepEqual(menus, ['music', 'map']);
+  density = 2;
+  target.viewAreaOriginX = 200;
+  target.viewAreaOriginY = 100;
+  target.contentScalePercent = 200;
+  const mapped = target.canvasPixelToContentPoint(400, 300);
+  assert.deepEqual([mapped.x, mapped.y], [400, 250]);
 });
 
 test('disabled media commands cannot be invoked through fallback touch', async () => {
@@ -2507,6 +2797,7 @@ test('split dashboard has independent navigation and app surfaces', () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
   assert.match(source, /id: 'projectionSplitMapSurface'/);
   assert.match(source, /id: 'projectionSplitMusicSurface'/);
+  assert.doesNotMatch(source, /Text\('导航 APP'\)|Text\('音乐 APP'\)/);
   assert.match(source, /this\.dashboardView === 'split'/);
   assert.match(source, /this\.dashboardView === 'split' && app\.category === 'music'/);
   assert.match(source, /this\.DockPanel\(false\)/);
@@ -2567,6 +2858,74 @@ test('touch HID UUID and logical extents come from /info and reports scale to th
   const scaled = touch.scaleCarPlayTouchReport(report, found, 1920, 540);
   assert.deepEqual([...scaled.subarray(2, 6)], [0x7f, 0x07, 0x1b, 0x02]);
   assert.deepEqual([...scaled.subarray(6)], [1, 0, 0, 0, 0, 0]);
+
+  const integerUuid = node('dictionary', { dictionaryValue: new Map([
+    ['uuid', { kind: 'integer', integerValue: BigInt('0x2a2a2a2a') }],
+    ['displayUUID', { kind: 'string', stringValue: 'display-1' }],
+    ['hidDescriptor', { kind: 'data', dataValue: descriptor }]
+  ]) });
+  const integerInfo = node('dictionary', { dictionaryValue: new Map([[
+    'hidDevices', { kind: 'array', arrayValue: [integerUuid] }
+  ]]) });
+  const integerDevice = touch.findTouchHidDevice(integerInfo, 'display-1');
+  assert.deepEqual(integerDevice, { uuid: '2a2a2a2a', logicalMaxX: 2559, logicalMaxY: 719 });
+  const integerCommand = node('dictionary', { dictionaryValue: new Map([
+    ['type', { kind: 'string', stringValue: 'hidSendReport' }],
+    ['params', node('dictionary', { dictionaryValue: new Map([
+      ['uuid', { kind: 'integer', integerValue: BigInt('0x2a2a2a2a') }],
+      ['hidReport', { kind: 'data', dataValue: report }]
+    ]) })]
+  ]) });
+  assert.deepEqual([...touch.extractCarPlayTouchReport(integerCommand, integerDevice.uuid)], [...report]);
+});
+
+test('HID drag scrolls the visible Apps and DockMenu lists in virtual-screen coordinates', () => {
+  const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
+  const parsed = ts.createSourceFile('ProjectionDashboard.ts',
+    source.replace('struct ProjectionDashboard {', 'class ProjectionDashboard {'), ts.ScriptTarget.Latest, true);
+  const declaration = parsed.statements.find(statement =>
+    ts.isClassDeclaration(statement) && statement.name?.text === 'ProjectionDashboard');
+  const members = declaration.members.filter(member =>
+    ['scrollControllerAt', 'handleTouchReport', 'screenToContentPoint', 'canvasPixelToContentPoint',
+      'contains'].includes(member.name?.text));
+  const javascript = ts.transpileModule(`class Target { ${members.map(member => member.getText(parsed)).join('\n')} }`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2020 }
+  }).outputText;
+  const Target = vm.runInNewContext(`${javascript}\nTarget`, {
+    AppStorage: { get: key => ({ carplayProjectionHomeActive: true, carplayProjectionDisplayId: 7 })[key] },
+    Math
+  });
+  const moves = [];
+  const makeScroller = target => ({ scrollBy: (x, y) => moves.push({ target, x, y }) });
+  const target = new Target();
+  target.appsScroller = makeScroller('apps');
+  target.dockMenuScroller = makeScroller('dock-menu');
+  target.settingsScroller = makeScroller('settings');
+  target.themesScroller = makeScroller('themes');
+  target.sidebarMediaScroller = makeScroller('media');
+  target.touchBounds = new Map([
+    ['grid', { left: 0, top: 0, right: 200, bottom: 300 }],
+    ['maps', { left: 200, top: 0, right: 400, bottom: 300 }]
+  ]);
+  target.getUIContext = () => ({ px2vp: value => value / 2 });
+  target.contentScalePercent = 100;
+  target.contentOffsetXPercent = 0;
+  target.contentOffsetYPercent = 0;
+  target.projectionViewportWidth = 400;
+  target.projectionViewportHeight = 600;
+  target.viewAreaOriginX = 0;
+  target.viewAreaOriginY = 0;
+  target.dashboardView = 'apps';
+  target.handleTouchReport({ displayId: 7, contacts: [{ id: 0, down: true, x: 100, y: 200 }] });
+  target.handleTouchReport({ displayId: 7, contacts: [{ id: 0, down: true, x: 100, y: 120 }] });
+  target.handleTouchReport({ displayId: 7, contacts: [{ id: 0, down: false, x: 100, y: 120 }] });
+  target.dashboardView = 'maps';
+  target.handleTouchReport({ displayId: 7, contacts: [{ id: 0, down: true, x: 500, y: 200 }] });
+  target.handleTouchReport({ displayId: 7, contacts: [{ id: 0, down: true, x: 500, y: 120 }] });
+  assert.deepEqual(moves, [
+    { target: 'apps', x: 0, y: 40 },
+    { target: 'dock-menu', x: 0, y: 40 }
+  ]);
 });
 
 test('accessory changeModes requests are granted and reflected in the mode state', () => {

@@ -1,19 +1,18 @@
 import fileFs from '@ohos.file.fs';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { MAX_CONNECTION_LOG_LINES } from './ConnectionLogBuffer';
-import { formatLocalClock, formatLocalDateKey } from './LogTimestamp';
+import { formatLocalClock } from './LogTimestamp';
 import { redactProtocolText } from './ProtocolLogger';
 
 const LOG_DOMAIN: number = 0xCA21;
-const LOG_RETENTION_DAYS: number = 10;
 const LOG_FILE_PREFIX: string = 'CarPlayer-';
+const LOG_FILE_NAME: string = 'CarPlayer-current.log';
 const LOG_FLUSH_INTERVAL_MS: number = 500;
 const MAX_PENDING_LOG_LINES: number = 1024;
 
 export class DiagnosticLogArchive {
   private directoryPath: string = '';
   private currentFilePath: string = '';
-  private currentDateKey: string = '';
   private currentFd: number = -1;
   private initializationError: string = '';
   private pendingEntries: string[] = [];
@@ -21,27 +20,29 @@ export class DiagnosticLogArchive {
 
   start(filesDirectory: string): void {
     if (this.currentFd >= 0) {
-      return;
+      try {
+        this.flush();
+        fileFs.closeSync(this.currentFd);
+      } catch (error) {
+        this.initializationError = this.errorDetails(error instanceof Error ? error : new Error(String(error)));
+        return;
+      }
+      this.currentFd = -1;
     }
     try {
       this.directoryPath = `${filesDirectory}/CarPlayerLogs`;
       if (!fileFs.accessSync(this.directoryPath)) {
         fileFs.mkdirSync(this.directoryPath, true);
       }
-      const now = new Date();
-      this.pruneExpiredFiles(now, this.directoryPath);
-      this.currentDateKey = formatLocalDateKey(now);
-      const currentName = `${LOG_FILE_PREFIX}${this.currentDateKey}.log`;
-      this.currentFilePath = `${this.directoryPath}/${currentName}`;
+      for (const name of this.getLogFiles()) {
+        fileFs.unlinkSync(`${this.directoryPath}/${name}`);
+      }
+      this.currentFilePath = `${this.directoryPath}/${LOG_FILE_NAME}`;
       this.currentFd = fileFs.openSync(
         this.currentFilePath,
         fileFs.OpenMode.WRITE_ONLY | fileFs.OpenMode.CREATE | fileFs.OpenMode.APPEND
       ).fd;
-      this.restoreFiles = this.getLogFiles().filter((name: string): boolean => name !== currentName);
-      this.append(
-        `${formatLocalClock()} INFO diagnostics: Log archive initialized; daily files, retaining ` +
-          `${LOG_RETENTION_DAYS} days`
-      );
+      this.append(`${formatLocalClock()} INFO diagnostics: Log archive initialized for current app session`);
     } catch (error) {
       this.currentFd = -1;
       this.initializationError = this.errorDetails(error);
@@ -54,16 +55,7 @@ export class DiagnosticLogArchive {
     }
   }
 
-  private restoreFiles: string[] = [];
-
   append(line: string): void {
-    if (this.directoryPath) {
-      try {
-        this.ensureCurrentDay(new Date());
-      } catch (error) {
-        this.initializationError = this.errorDetails(error);
-      }
-    }
     if (this.currentFd < 0) {
       hilog.error(
         LOG_DOMAIN,
@@ -116,11 +108,8 @@ export class DiagnosticLogArchive {
       if (!fileFs.accessSync(directoryPath)) {
         fileFs.mkdirSync(directoryPath, true);
       }
-      const now = new Date();
-      this.pruneExpiredFiles(now);
-      const currentName = `${LOG_FILE_PREFIX}${formatLocalDateKey(now)}.log`;
       fd = fileFs.openSync(
-        `${directoryPath}/${currentName}`,
+        `${directoryPath}/${LOG_FILE_NAME}`,
         fileFs.OpenMode.WRITE_ONLY | fileFs.OpenMode.CREATE | fileFs.OpenMode.APPEND
       ).fd;
       const safeMessage = redactProtocolText(message).replace(/\r?\n/g, ' | ');
@@ -152,56 +141,41 @@ export class DiagnosticLogArchive {
 
   readRecentLines(): string[] {
     this.flushPendingBestEffort();
-    this.rotateForRead();
     const lines: string[] = [];
-    const currentName = this.currentFilePath.split('/').pop() ?? '';
-    const sessionNames = [...this.restoreFiles, currentName].filter((name: string) => name.length > 0).reverse();
-    for (const name of sessionNames) {
-      if (!name) {
-        continue;
-      }
-      try {
-        const contents = fileFs.readTextSync(`${this.directoryPath}/${name}`);
-        lines.push(`===== session ${name} =====`);
-        lines.push(...contents.split(/\r?\n/).filter((line: string) => line.length > 0).reverse());
-      } catch (error) {
-        hilog.warn(
-          LOG_DOMAIN,
-          'CarPlayerLogArchive',
-          'Could not restore session log %{public}s: %{public}s',
-          name,
-          error instanceof Error ? error.message : String(error)
-        );
-      }
+    if (!this.currentFilePath) {
+      return lines;
+    }
+    try {
+      const contents = fileFs.readTextSync(this.currentFilePath);
+      lines.push('===== current app session =====');
+      lines.push(...contents.split(/\r?\n/).filter((line: string) => line.length > 0).reverse());
+    } catch (error) {
+      hilog.warn(
+        LOG_DOMAIN,
+        'CarPlayerLogArchive',
+        'Could not read current app session log: %{public}s',
+        error instanceof Error ? error.message : String(error)
+      );
     }
     return lines.slice(0, MAX_CONNECTION_LOG_LINES);
   }
 
   readAllText(): string {
     this.flush();
-    this.rotateForRead();
-    const sections: string[] = [];
-    const sessionNames = [...this.restoreFiles, this.currentFilePath.split('/').pop() ?? '']
-      .filter((name: string) => name.length > 0);
-    for (const name of sessionNames) {
-      if (!name) {
-        continue;
-      }
-      try {
-        const contents = fileFs.readTextSync(`${this.directoryPath}/${name}`);
-        const lines = contents.split(/\r?\n/).filter((line: string) => line.length > 0);
-        sections.push(`===== ${name} =====\n${lines.join('\n')}`);
-      } catch (error) {
-        hilog.warn(
-          LOG_DOMAIN,
-          'CarPlayerLogArchive',
-          'Could not read log for export %{public}s: %{public}s',
-          name,
-          error instanceof Error ? error.message : String(error)
-        );
-      }
+    if (!this.currentFilePath) {
+      return '';
     }
-    return sections.join('\n');
+    try {
+      return fileFs.readTextSync(this.currentFilePath);
+    } catch (error) {
+      hilog.warn(
+        LOG_DOMAIN,
+        'CarPlayerLogArchive',
+        'Could not read current app session log: %{public}s',
+        error instanceof Error ? error.message : String(error)
+      );
+      return '';
+    }
   }
 
   clear(): void {
@@ -220,10 +194,7 @@ export class DiagnosticLogArchive {
     for (const name of this.getLogFiles()) {
       fileFs.unlinkSync(`${this.directoryPath}/${name}`);
     }
-    this.restoreFiles = [];
-    const now = new Date();
-    this.currentDateKey = formatLocalDateKey(now);
-    this.currentFilePath = `${this.directoryPath}/${LOG_FILE_PREFIX}${this.currentDateKey}.log`;
+    this.currentFilePath = `${this.directoryPath}/${LOG_FILE_NAME}`;
     this.currentFd = fileFs.openSync(
       this.currentFilePath,
       fileFs.OpenMode.WRITE_ONLY | fileFs.OpenMode.CREATE | fileFs.OpenMode.APPEND
@@ -235,34 +206,6 @@ export class DiagnosticLogArchive {
     return fileFs.listFileSync(this.directoryPath)
       .filter((name: string): boolean => name.startsWith(LOG_FILE_PREFIX) && name.endsWith('.log'))
       .sort();
-  }
-
-  private ensureCurrentDay(now: Date): void {
-    const dateKey = formatLocalDateKey(now);
-    if (this.currentFd >= 0 && this.currentDateKey === dateKey) {
-      return;
-    }
-    this.flush();
-    const currentName = `${LOG_FILE_PREFIX}${dateKey}.log`;
-    const currentFilePath = `${this.directoryPath}/${currentName}`;
-    const nextFd = fileFs.openSync(
-      currentFilePath,
-      fileFs.OpenMode.WRITE_ONLY | fileFs.OpenMode.CREATE | fileFs.OpenMode.APPEND
-    ).fd;
-    const previousFd = this.currentFd;
-    this.currentFd = nextFd;
-    this.currentDateKey = dateKey;
-    this.currentFilePath = currentFilePath;
-    this.pruneExpiredFiles(now);
-    this.restoreFiles = this.getLogFiles().filter((name: string): boolean => name !== currentName);
-    if (previousFd >= 0) {
-      try {
-        fileFs.closeSync(previousFd);
-      } catch (error) {
-        hilog.warn(LOG_DOMAIN, 'CarPlayerLogArchive', 'Could not close previous daily log: %{public}s',
-          this.errorDetails(error));
-      }
-    }
   }
 
   private scheduleFlush(): void {
@@ -301,38 +244,6 @@ export class DiagnosticLogArchive {
     fileFs.writeSync(this.currentFd, text);
     this.pendingEntries = [];
     fileFs.fsyncSync(this.currentFd);
-  }
-
-  private rotateForRead(): void {
-    if (this.currentFd < 0 || !this.directoryPath) {
-      return;
-    }
-    try {
-      this.ensureCurrentDay(new Date());
-    } catch (error) {
-      hilog.warn(
-        LOG_DOMAIN,
-        'CarPlayerLogArchive',
-        'Could not rotate daily log before read: %{public}s',
-        this.errorDetails(error instanceof Error ? error : new Error(String(error)))
-      );
-    }
-  }
-
-  private pruneExpiredFiles(now: Date, directoryPath: string = this.directoryPath): void {
-    const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (LOG_RETENTION_DAYS - 1));
-    const cutoffKey = formatLocalDateKey(cutoff);
-    const names = fileFs.listFileSync(directoryPath)
-      .filter((name: string): boolean => name.startsWith(LOG_FILE_PREFIX) && name.endsWith('.log'))
-      .sort();
-    for (const name of names) {
-      const dailyMatch = /^CarPlayer-(\d{4}-\d{2}-\d{2})\.log$/.exec(name);
-      const legacyMatch = /^CarPlayer-(\d{13})\.log$/.exec(name);
-      const dateKey = dailyMatch?.[1] ?? (legacyMatch ? formatLocalDateKey(new Date(Number(legacyMatch[1]))) : '');
-      if (!dateKey || dateKey < cutoffKey) {
-        fileFs.unlinkSync(`${directoryPath}/${name}`);
-      }
-    }
   }
 
   private errorDetails(error: Error | Object): string {

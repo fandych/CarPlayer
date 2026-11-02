@@ -33,8 +33,9 @@ export function extractCarPlayTouchReport(
   const fields = params?.kind === 'dictionary' ? params : command;
   const uuid = fields.get('uuid');
   const report = fields.get('hidReport');
+  const commandUuid = normalizeHidUuid(uuid);
   if (type?.kind !== 'string' || type.stringValue !== 'hidSendReport' ||
-    uuid?.kind !== 'string' || uuid.stringValue.toLowerCase() !== touchUuid.toLowerCase() ||
+    commandUuid !== normalizeHidUuidText(touchUuid) ||
     report?.kind !== 'data') {
     return undefined;
   }
@@ -100,16 +101,32 @@ export function findTouchHidDevice(info: PlistNode, displayUuid: string): TouchH
     const uuid = device.get('uuid');
     const descriptor = device.get('hidDescriptor');
     const deviceDisplay = device.get('displayUUID');
-    if (uuid?.kind !== 'string' || descriptor?.kind !== 'data' ||
+    const normalizedUuid = normalizeHidUuid(uuid);
+    if (!normalizedUuid || descriptor?.kind !== 'data' ||
       (deviceDisplay?.kind === 'string' && deviceDisplay.stringValue !== displayUuid)) {
       continue;
     }
     const extents = parseHidPointerExtents(descriptor.dataValue);
     if (extents.touchScreen && extents.logicalMaxX && extents.logicalMaxY) {
-      return { uuid: uuid.stringValue, logicalMaxX: extents.logicalMaxX, logicalMaxY: extents.logicalMaxY };
+      return { uuid: normalizedUuid, logicalMaxX: extents.logicalMaxX, logicalMaxY: extents.logicalMaxY };
     }
   }
   return undefined;
+}
+
+function normalizeHidUuid(node: PlistNode | undefined): string | undefined {
+  if (node?.kind === 'string') {
+    return normalizeHidUuidText(node.stringValue);
+  }
+  if (node?.kind === 'integer' && node.integerValue >= BigInt(0)) {
+    return node.integerValue.toString(16);
+  }
+  return undefined;
+}
+
+function normalizeHidUuidText(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  return normalized.startsWith('0x') ? normalized.slice(2) : normalized;
 }
 
 export function scaleCarPlayTouchReport(

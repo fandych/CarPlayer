@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "storeFile": "C:/Users/fandych/OneDrive/Documents/Projects/Harmony/CarPlayer/certs/CarPlayer.p12",
-          "storePassword": "000000190D453F676BE1947B2EE02EA4F98FEAAD34073347053A795D0CD6D6A334EBD1800EACB3BF8B",
+          "storeFile": "C:/Users/fandych/DevEcoStudioProjects/CarPlayer/certs/CarPlayer.p12",
+          "storePassword": "0000001938ABFB46970D8FE5047E73D3C7CA313965B0A604C0A1301630B0ABBEBDCB13E40048466E1B",
           "keyAlias": "CarPlayer",
-          "keyPassword": "000000194DA9A0B3C9EEB2F23D3C741BC7FF540F0A03E1A078638F3FB2A6A8D866EAF58AA37958F209",
+          "keyPassword": "000000190D5081B552AB8491E0249D4630C10A6B4BC9ABEB2A6C878CD7CA777507BC41DF7335238F20",
           "signAlg": "SHA256withECDSA",
-          "profile": "C:/Users/fandych/OneDrive/Documents/Projects/Harmony/CarPlayer/certs/v2DebugDebug.p7b",
-          "certpath": "C:/Users/fandych/OneDrive/Documents/Projects/Harmony/CarPlayer/certs/CarPlayerDebug.cer"
+          "profile": "C:/Users/fandych/DevEcoStudioProjects/CarPlayer/certs/v2DebugDebug.p7b",
+          "certpath": "C:/Users/fandych/DevEcoStudioProjects/CarPlayer/certs/CarPlayerDebug.cer"
         }
       }
     ],
