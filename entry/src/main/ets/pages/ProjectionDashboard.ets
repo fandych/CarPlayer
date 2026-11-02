@@ -1,6 +1,7 @@
 import batteryInfo from '@ohos.batteryInfo';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import bundleManager from '@ohos.bundle.bundleManager';
+import promptAction from '@ohos.promptAction';
 import radio from '@ohos.telephony.radio';
 import emitter from '@ohos.events.emitter';
 import abilityAccessCtrl from '@ohos.abilityAccessCtrl';
@@ -10,9 +11,11 @@ import {
 } from '../video/CarPlayTouchInput';
 import {
   ProjectionApp,
+  activeProjectionMusicApp,
+  findLaunchableProjectionApp,
+  isProjectionAppLaunchable,
   PROJECTION_MAP_URI,
   PROJECTION_VEHICLE_APPS,
-  isProjectionAppLaunchable,
   projectionAppCatalog,
   resolveProjectionApps,
   includeMediaSessionApp
@@ -112,17 +115,20 @@ export struct ProjectionDashboard {
   @Prop activeAppLabel: string = '';
   @Prop activeAppUri: string = '';
   @Prop appOnPhone: boolean = false;
+  @Prop mapAppLabel: string = '';
+  @Prop mapAppUri: string = '';
+  @Prop mapOnPhone: boolean = false;
   @Prop viewAreaOriginX: number = 0;
   @Prop viewAreaOriginY: number = 0;
   onToggleAppDisplay: () => void = (): void => {};
   @StorageLink('carplayNavigationPreview') navigationPreview: boolean = false;
   @Prop launchMessage: string = '';
   @Prop mapMessage: string = '正在准备地图画面';
+  onToggleMapDisplay: () => void = (): void => {};
   @State apps: ProjectionApp[] = [];
   @State appsGridColumns: number = 4;
   @State dashboardView: string = 'home';
-  @State splitMapWeight: number = 3;
-  @State splitMusicWeight: number = 1;
+  @State private preserveSplitSurfaceForOverlays: boolean = false;
   @State selectedMapUri: string = '';
   @State selectedMusicUri: string = '';
   @State dockIconSize: number = 30;
@@ -158,6 +164,7 @@ export struct ProjectionDashboard {
   @State signalLevel: number = 0;
   @State networkLabel: string = '网络';
   @State appDiscoveryMessage: string = '正在读取可启动应用';
+  @State dockActionMessage: string = '';
   @State mediaState: ProjectionMediaSnapshot = {
     title: EMPTY_PROJECTION_MEDIA.title,
     artist: EMPTY_PROJECTION_MEDIA.artist,
@@ -445,8 +452,11 @@ export struct ProjectionDashboard {
     if (app.category !== 'home' && !isProjectionAppLaunchable(app)) {
       this.appDiscoveryMessage = app.unavailableReason ?? `${app.label} 的启动入口尚未验证`;
       this.mediaActionMessage = this.appDiscoveryMessage;
+      this.showDockActionMessage(this.appDiscoveryMessage);
       return;
     }
+    this.dockActionMessage = '';
+    this.preserveSplitSurfaceForOverlays = false;
     if (app.category === 'map') {
       this.selectedMapUri = app.uri;
       AppStorage.setOrCreate('carplaySelectedMapAppId', app.appId);
@@ -486,6 +496,21 @@ export struct ProjectionDashboard {
   }
 
   private showDashboardView(view: string): void {
+    if (view === 'split' && !this.activeMusicApp()) {
+      const message = this.appOnPhone
+        ? '请先将音乐 app 切回车机屏幕，再进入分屏'
+        : '请先从音乐 Dock 打开音乐 app，再进入分屏';
+      this.mediaActionMessage = message;
+      this.showDockActionMessage(message);
+      return;
+    }
+    this.dockActionMessage = '';
+    if (view === 'split' || view === 'home') {
+      this.preserveSplitSurfaceForOverlays = false;
+    } else if (this.dashboardView === 'split' &&
+      (AppStorage.get<number>('carplayEmbeddedMapDisplayId') ?? -1) > 0) {
+      this.preserveSplitSurfaceForOverlays = true;
+    }
     this.touchBounds.delete('grid');
     this.touchBounds.delete('media');
     this.dashboardView = view;
@@ -577,24 +602,25 @@ export struct ProjectionDashboard {
 
   private openMediaApp(): void {
     const bundleName = this.mediaState.bundleName;
-    const abilityName = this.mediaState.abilityName;
-    if (!bundleName || !abilityName) {
-      this.activateDock('music');
-      return;
-    }
-    const app = this.apps.find((item: ProjectionApp): boolean => item.bundleName === bundleName);
+    const activeMediaApp = bundleName
+      ? findLaunchableProjectionApp(this.apps, 'music', undefined, bundleName)
+      : undefined;
+    const app = activeMediaApp ?? this.launchableCategoryApp('music');
     if (app) {
       this.selectApp(app);
     } else {
-      this.mediaActionMessage = '当前音乐应用未提供可用的打开链接';
+      this.showDashboardView('music');
+      this.showDockActionMessage('当前音乐应用没有已验证的启动入口；请选择可用音乐 app');
     }
   }
 
   private openMapApp(): void {
-    const mapUri = this.selectedMapUri || PROJECTION_MAP_URI;
-    const app = this.apps.find((item: ProjectionApp): boolean => item.uri === mapUri);
+    const app = this.launchableCategoryApp('map');
     if (app) {
       this.selectApp(app);
+    } else {
+      this.showDashboardView('maps');
+      this.showDockActionMessage('所选导航 app 没有可用启动入口；请选择已验证的地图 app');
     }
   }
 
@@ -786,6 +812,23 @@ export struct ProjectionDashboard {
       this.apps.find((app: ProjectionApp): boolean => app.category === category);
   }
 
+  private launchableCategoryApp(category: string): ProjectionApp | undefined {
+    const selectedUri = category === 'map' ? this.selectedMapUri : this.selectedMusicUri;
+    const selected = this.apps.find((app: ProjectionApp): boolean =>
+      app.category === category && app.uri === selectedUri);
+    if (selected) {
+      return isProjectionAppLaunchable(selected) ? selected : undefined;
+    }
+    if (category === 'music' && this.mediaState.bundleName) {
+      const mediaApp = this.apps.find((app: ProjectionApp): boolean =>
+        app.category === category && app.bundleName === this.mediaState.bundleName);
+      if (mediaApp) {
+        return isProjectionAppLaunchable(mediaApp) ? mediaApp : undefined;
+      }
+    }
+    return findLaunchableProjectionApp(this.apps, category === 'map' ? 'map' : 'music');
+  }
+
   private mediaProgressPercent(): number {
     if (this.mediaState.durationMs <= 0) {
       return 0;
@@ -840,12 +883,27 @@ export struct ProjectionDashboard {
     } else if (id === 'split') {
       this.showDashboardView('split');
     } else if (id === 'map' || id === 'music') {
-      const app = this.categoryApp(id);
+      const app = this.launchableCategoryApp(id);
       if (longPress || !app) {
         this.showDashboardView(id === 'map' ? 'maps' : 'music');
+        if (!longPress && !app) {
+          this.showDockActionMessage(id === 'map'
+            ? '没有已验证的地图启动入口，请从导航列表中选择'
+            : '没有已验证的音乐启动入口，请从音乐列表中选择');
+        }
       } else {
         this.selectApp(app);
       }
+    }
+  }
+
+  private showDockActionMessage(message: string): void {
+    this.dockActionMessage = message;
+    try {
+      promptAction.showToast({ message });
+    } catch (error) {
+      hilog.warn(DOMAIN, 'CarPlayerProjection', '提示显示失败：%{public}s',
+        error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -1133,6 +1191,10 @@ export struct ProjectionDashboard {
           .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
             'maps', 'toggleDisplay', newArea, (): void => this.onToggleAppDisplay()))
       }
+      if (this.dockActionMessage.length > 0) {
+        Text(this.dockActionMessage).fontSize(11).fontColor('#E7C77B').maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
       Scroll(this.dockMenuScroller) {
         Column({ space: 6 }) {
           ForEach(this.apps.filter((app: ProjectionApp): boolean =>
@@ -1171,52 +1233,13 @@ export struct ProjectionDashboard {
   }
 
   private activeMusicApp(): ProjectionApp | undefined {
-    return this.apps.find((app: ProjectionApp): boolean =>
-      app.uri === this.activeAppUri && app.category === 'music' && isProjectionAppLaunchable(app));
-  }
-
-  private selectSplitRatio(mapWeight: number, musicWeight: number): void {
-    const supported = (mapWeight === 2 && musicWeight === 2) ||
-      (mapWeight === 3 && musicWeight === 1) || (mapWeight === 4 && musicWeight === 1);
-    if (!supported) {
-      return;
-    }
-    this.splitMapWeight = mapWeight;
-    this.splitMusicWeight = musicWeight;
+    return this.appOnPhone ? undefined : activeProjectionMusicApp(this.apps, this.activeAppUri);
   }
 
   @Builder
   SplitPage() {
     Row({ space: 8 }) {
       Column({ space: 6 }) {
-        Row({ space: 4 }) {
-          Blank()
-          Button({ type: ButtonType.Normal }) {
-            Text('2:2').fontSize(11).fontColor(this.splitMapWeight === 2 ? '#101713' : '#F5F5F7')
-          }
-            .height(28).padding({ left: 8, right: 8 })
-            .backgroundColor(this.splitMapWeight === 2 ? this.accent : '#FFFFFF12')
-            .borderRadius(6)
-            .onClick((): void => this.selectSplitRatio(2, 2))
-            .accessibilityText('地图与音乐比例 2:2')
-          Button({ type: ButtonType.Normal }) {
-            Text('3:1').fontSize(11).fontColor(this.splitMapWeight === 3 ? '#101713' : '#F5F5F7')
-          }
-            .height(28).padding({ left: 8, right: 8 })
-            .backgroundColor(this.splitMapWeight === 3 ? this.accent : '#FFFFFF12')
-            .borderRadius(6)
-            .onClick((): void => this.selectSplitRatio(3, 1))
-            .accessibilityText('地图与音乐比例 3:1')
-          Button({ type: ButtonType.Normal }) {
-            Text('4:1').fontSize(11).fontColor(this.splitMapWeight === 4 ? '#101713' : '#F5F5F7')
-          }
-            .height(28).padding({ left: 8, right: 8 })
-            .backgroundColor(this.splitMapWeight === 4 ? this.accent : '#FFFFFF12')
-            .borderRadius(6)
-            .onClick((): void => this.selectSplitRatio(4, 1))
-            .accessibilityText('地图与音乐比例 4:1')
-        }
-        .width('100%')
         Stack({ alignContent: Alignment.Center }) {
           XComponent({
             id: 'projectionSplitMapSurface',
@@ -1247,14 +1270,14 @@ export struct ProjectionDashboard {
         .width('100%')
         .clip(true)
       }
-      .layoutWeight(this.splitMapWeight)
+      .layoutWeight(2)
       .height('100%')
       .padding(8)
       .borderRadius(10)
       .backgroundColor(projectionTheme(this.theme).panel)
 
       Column({ space: 6 }) {
-        if (this.activeAppLabel.length > 0) {
+        if (this.activeMusicApp()) {
           Stack({ alignContent: Alignment.Center }) {
             XComponent({
               id: 'projectionSplitMusicSurface',
@@ -1279,30 +1302,17 @@ export struct ProjectionDashboard {
             if (this.launchMessage.length > 0) {
               Text(this.launchMessage).fontSize(11).fontColor('#DCE4DE')
                 .textAlign(TextAlign.Center).padding(12)
-            } else if (!this.activeMusicApp()) {
-              Text('当前应用未验证为音乐源')
-                .fontSize(11).fontColor('#E7C77B').textAlign(TextAlign.Center).padding(12)
             }
           }
           .layoutWeight(1)
           .width('100%')
           .clip(true)
         } else {
-          Text('需先验证音乐 APP 的公开启动入口、指定屏幕和同时显示能力')
-            .fontSize(11).fontColor('#AAB8AF').maxLines(2)
-          Grid() {
-            ForEach(this.apps.filter((app: ProjectionApp): boolean => app.category === 'music'),
-              (app: ProjectionApp) => {
-                GridItem() { this.AppTile(app) }
-              }, (app: ProjectionApp) => app.appId)
-          }
-          .columnsTemplate('1fr 1fr')
-          .rowsGap(8)
-          .columnsGap(8)
-          .layoutWeight(1)
+          Text('请先从音乐 Dock 打开音乐 app，再进入分屏')
+            .fontSize(11).fontColor('#AAB8AF').maxLines(2).layoutWeight(1)
         }
       }
-      .layoutWeight(this.splitMusicWeight)
+      .layoutWeight(1)
       .height('100%')
       .padding(8)
       .borderRadius(10)
@@ -1579,7 +1589,16 @@ export struct ProjectionDashboard {
         Text(this.launchMessage || '路线由地图应用提供')
           .fontSize(12).fontColor('#FFFFFFB3').maxLines(3)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-        if (this.activeAppLabel.length > 0 && this.activeAppUri === this.categoryApp('map')?.uri) {
+        if (this.mapAppLabel.length > 0 && this.mapAppUri === this.categoryApp('map')?.uri) {
+          Button({ type: ButtonType.Circle }) {
+            SymbolGlyph($r('sys.symbol.arrow_up_right')).fontSize(18).fontColor(['#F5F5F7'])
+          }
+            .width(44).height(44).backgroundColor('#FFFFFF18')
+            .onClick((): void => this.onToggleMapDisplay())
+            .accessibilityText(this.mapOnPhone ? '切换地图到虚拟屏' : '切换地图到手机')
+            .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
+              'map', 'toggleDisplay', newArea, (): void => this.onToggleMapDisplay()))
+        } else if (this.activeAppLabel.length > 0 && this.activeAppUri === this.categoryApp('map')?.uri) {
           Button({ type: ButtonType.Circle }) {
             SymbolGlyph($r('sys.symbol.arrow_up_right')).fontSize(18).fontColor(['#F5F5F7'])
           }
@@ -1631,6 +1650,10 @@ export struct ProjectionDashboard {
           Text(this.mediaActionMessage).fontSize(10).fontColor('#FFFFFFA6')
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         }
+        if (this.dockActionMessage.length > 0) {
+          Text(this.dockActionMessage).fontSize(10).fontColor('#E7C77B')
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
       }
       .layoutWeight(1).width('100%').padding(12).borderRadius(8)
       .backgroundColor(projectionTheme(this.theme).panel)
@@ -1641,7 +1664,7 @@ export struct ProjectionDashboard {
   @Builder
   MainPanel(verticalDock: boolean) {
     Stack({ alignContent: Alignment.TopStart }) {
-      if (this.dashboardView === 'split') {
+      if (this.dashboardView === 'split' || this.preserveSplitSurfaceForOverlays) {
         this.SplitPage()
       } else if (this.activeAppLabel.length > 0) {
         Row({ space: 8 }) {

@@ -20,6 +20,27 @@ export interface ParsedAirPlayEventRequests {
   remaining: Uint8Array;
 }
 
+export class AirPlayHidReportSummaryWindow {
+  private readonly intervalMs: number;
+  private windowStartAt: number = -1;
+  private reportCount: number = 0;
+
+  constructor(intervalMs: number = 1000) {
+    this.intervalMs = intervalMs;
+  }
+
+  record(now: number): number | undefined {
+    this.reportCount++;
+    if (this.windowStartAt >= 0 && now - this.windowStartAt < this.intervalMs) {
+      return undefined;
+    }
+    const reportCount = this.reportCount;
+    this.reportCount = 0;
+    this.windowStartAt = now;
+    return reportCount;
+  }
+}
+
 export function parseAirPlayEventRequests(input: Uint8Array): ParsedAirPlayEventRequests {
   const requests: AirPlayEventRequest[] = [];
   let remaining = input;
@@ -119,6 +140,12 @@ export class AirPlayEventChannel {
   private running: boolean = false;
   private receivedChunks: number = 0;
   private receivedRequests: number = 0;
+  private receivedBytes: number = 0;
+  private pendingReceiveChunks: number = 0;
+  private lastTransportSummaryAt: number = 0;
+  private lastQueueDelayLogAt: number = 0;
+  private lastProcessingDelayLogAt: number = 0;
+  private readonly hidReportSummary: AirPlayHidReportSummaryWindow = new AirPlayHidReportSummaryWindow();
   private readonly log: (message: string) => void;
   private readonly onRequest: (request: AirPlayEventRequest) => boolean;
   private readonly wifiNetworkLease: WifiNetworkLease;
@@ -154,18 +181,33 @@ export class AirPlayEventChannel {
     const socket = netSocket.constructTCPSocketInstance();
     this.socket = socket;
     this.running = true;
+    this.lastTransportSummaryAt = Date.now();
     this.messageHandler = (info: netSocket.SocketMessageInfo): void => {
+      if (!this.running) {
+        return;
+      }
       const chunk = new Uint8Array(info.message);
       this.receivedChunks++;
-      this.log(formatRawBytesDiagnostic('RX', 'AirPlay event TCP ciphertext', chunk, 256));
-      this.log(formatProtocolEvent('airplay.event.transport.rx',
-        'chunk', this.receivedChunks,
-        'wireBytes', chunk.length,
-        'encrypted', true,
-        'meaning', '收到事件通道 TCP 密文分块，已排队解密和 RTSP 事件解析'
-      ));
+      this.receivedBytes += chunk.length;
+      this.pendingReceiveChunks++;
+      const receivedAt = Date.now();
+      if (receivedAt - this.lastTransportSummaryAt >= 5000) {
+        this.lastTransportSummaryAt = receivedAt;
+        this.log(formatProtocolEvent('airplay.event.transport.rx.summary',
+          'chunks', this.receivedChunks,
+          'wireBytes', this.receivedBytes,
+          'requests', this.receivedRequests,
+          'pendingChunks', this.pendingReceiveChunks
+        ));
+      }
       this.receiveQueue = this.receiveQueue
-        .then((): Promise<void> => this.handleIncoming(chunk))
+        .then(async (): Promise<void> => {
+          try {
+            await this.handleIncoming(chunk, receivedAt);
+          } finally {
+            this.pendingReceiveChunks--;
+          }
+        })
         .catch((error: Error): void => {
           this.log(`AirPlay event channel receive failed: ${error.message}`);
           this.running = false;
@@ -252,38 +294,85 @@ export class AirPlayEventChannel {
     );
   }
 
-  private async handleIncoming(data: Uint8Array): Promise<void> {
-    const cipher = this.cipher;
-    if (!cipher || !this.running) {
+  private async handleIncoming(data: Uint8Array, receivedAt: number): Promise<void> {
+    const processingStartedAt = Date.now();
+    this.logQueueDelay(processingStartedAt - receivedAt);
+    try {
+      const cipher = this.cipher;
+      if (!cipher || !this.running) {
+        return;
+      }
+      const plaintext = await cipher.decrypt(data);
+      this.receiveBuffer = concatBytes(this.receiveBuffer, plaintext);
+      const parsed = parseAirPlayEventRequests(this.receiveBuffer);
+      this.receiveBuffer = parsed.remaining;
+      const responses: Uint8Array[] = [];
+      const responseMeanings: string[] = [];
+      let hasNonHidRequest = false;
+      for (const request of parsed.requests) {
+        const requestNumber = ++this.receivedRequests;
+        const isHidReport = this.onRequest(request);
+        if (isHidReport) {
+          const summarizedReports = this.hidReportSummary.record(Date.now());
+          if (summarizedReports !== undefined) {
+            this.log(formatProtocolEvent('airplay.event.hid.summary',
+              'reports', summarizedReports,
+              'request', requestNumber,
+              'meaning', 'HID 输入已确认；按时间窗口汇总，省略逐包日志'
+            ));
+          }
+        } else {
+          hasNonHidRequest = true;
+          this.log(formatProtocolEvent('airplay.event.request',
+            'packet', requestNumber,
+            'method', request.method,
+            'target', request.target,
+            'cseq', request.cseq,
+            'bodyBytes', request.body.length,
+            'bodySummary', formatEventBodySummary(request.body),
+            'hidReport', false,
+            'meaning', '事件已交给 AirPlay 控制请求处理器'
+          ));
+        }
+        responses.push(buildAirPlayEventResponse(request.cseq, request.responseBody));
+        responseMeanings.push(`CSeq=${request.cseq} -> RTSP 200 OK`);
+      }
+      if (responses.length > 0) {
+        await this.sendPlaintext(
+          concatBytes(...responses),
+          hasNonHidRequest,
+          hasNonHidRequest ? responseMeanings.join('; ') : `HID event acknowledgements=${responses.length}`
+        );
+      }
+    } finally {
+      this.logProcessingDelay(Date.now() - processingStartedAt);
+    }
+  }
+
+  private logQueueDelay(queueWaitMs: number): void {
+    const now = Date.now();
+    if (queueWaitMs < 100 || now - this.lastQueueDelayLogAt < 1000) {
       return;
     }
-    const plaintext = await cipher.decrypt(data);
-    this.receiveBuffer = concatBytes(this.receiveBuffer, plaintext);
-    const parsed = parseAirPlayEventRequests(this.receiveBuffer);
-    this.receiveBuffer = parsed.remaining;
-    const responses: Uint8Array[] = [];
-    const responseMeanings: string[] = [];
-    for (const request of parsed.requests) {
-      const requestNumber = ++this.receivedRequests;
-      const isHidReport = this.onRequest(request);
-      this.log(formatProtocolEvent('airplay.event.request',
-        'packet', requestNumber,
-        'method', request.method,
-        'target', request.target,
-        'cseq', request.cseq,
-        'bodyBytes', request.body.length,
-        'bodySummary', formatEventBodySummary(request.body),
-        'hidReport', isHidReport,
-        'meaning', isHidReport
-          ? '事件已作为 HID 输入处理；为保护交互数据不记录载荷'
-          : '事件已交给 AirPlay 控制请求处理器'
-      ));
-      responses.push(buildAirPlayEventResponse(request.cseq, request.responseBody));
-      responseMeanings.push(`CSeq=${request.cseq} -> RTSP 200 OK`);
+    this.lastQueueDelayLogAt = now;
+    this.log(formatProtocolEvent('airplay.event.receive.queue-delay',
+      'queueWaitMs', queueWaitMs,
+      'pendingChunks', this.pendingReceiveChunks,
+      'meaning', '事件 TCP 分块在串行接收队列中的等待时间超过 100ms'
+    ));
+  }
+
+  private logProcessingDelay(processingMs: number): void {
+    const now = Date.now();
+    if (processingMs < 100 || now - this.lastProcessingDelayLogAt < 1000) {
+      return;
     }
-    if (responses.length > 0) {
-      await this.sendPlaintext(concatBytes(...responses), true, responseMeanings.join('; '));
-    }
+    this.lastProcessingDelayLogAt = now;
+    this.log(formatProtocolEvent('airplay.event.receive.processing-delay',
+      'processingMs', processingMs,
+      'pendingChunks', this.pendingReceiveChunks,
+      'meaning', '事件 TCP 分块解密、解析或应答耗时超过 100ms'
+    ));
   }
 
   private async sendPlaintext(

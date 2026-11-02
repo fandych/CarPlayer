@@ -227,6 +227,8 @@ export class Iap2SenderSession {
   private readonly onEndpoint: (endpoint: WirelessAirPlayEndpoint | undefined) => void;
   private readonly mfiVerifier: MfiVerifier;
   private receiveQueue: Promise<void> = Promise.resolve();
+  private pendingReceiveChunks: number = 0;
+  private lastReceiveQueueDelayLogAt: number = 0;
   private readonly deviceAddress: string;
   private readonly deviceName: string;
   private readonly deviceUuid: string;
@@ -327,18 +329,34 @@ export class Iap2SenderSession {
       'transport', 'RFCOMM',
       'chunkBytes', receivedBytes.length
     ));
+    const receivedAt = Date.now();
+    this.pendingReceiveChunks++;
     const pendingReceive = this.receiveQueue.then(async (): Promise<void> => {
-      if (!this.started) {
-        return;
+      const queueWaitMs = Date.now() - receivedAt;
+      const now = Date.now();
+      if (queueWaitMs >= 100 && now - this.lastReceiveQueueDelayLogAt >= 1000) {
+        this.lastReceiveQueueDelayLogAt = now;
+        this.log(formatProtocolEvent('iap2.transport.receive.queue-delay',
+          'queueWaitMs', queueWaitMs,
+          'pendingChunks', this.pendingReceiveChunks,
+          'meaning', 'RFCOMM 分块在 iAP2 串行接收队列中的等待时间超过 100ms'
+        ));
       }
-      const events: (Iap2LinkFrame | undefined)[] = [];
-      this.linkDecoder.push(receivedBytes, (frame: Iap2LinkFrame | undefined): void => { events.push(frame); });
-      for (const frame of events) {
-        if (frame) {
-          await this.receiveLinkFrame(frame);
-        } else {
-          await this.receiveDetectionMarker();
+      try {
+        if (!this.started) {
+          return;
         }
+        const events: (Iap2LinkFrame | undefined)[] = [];
+        this.linkDecoder.push(receivedBytes, (frame: Iap2LinkFrame | undefined): void => { events.push(frame); });
+        for (const frame of events) {
+          if (frame) {
+            await this.receiveLinkFrame(frame);
+          } else {
+            await this.receiveDetectionMarker();
+          }
+        }
+      } finally {
+        this.pendingReceiveChunks--;
       }
     });
     this.receiveQueue = pendingReceive.catch((): void => {});

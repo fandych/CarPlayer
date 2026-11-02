@@ -10,6 +10,12 @@ export function projectionDisplayDensity(width: number): number {
   return Math.max(0.5, Math.min(3, width / 960));
 }
 
+export function projectionDisplayToggleTarget(
+  currentlyOnPhone: boolean, phoneDisplayId: number, virtualDisplayId: number
+): number {
+  return currentlyOnPhone ? virtualDisplayId : phoneDisplayId;
+}
+
 export class CarPlayVirtualDisplay {
   private screenId: number = -1;
   private log: (message: string) => void = (_message: string): void => {};

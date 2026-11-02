@@ -11,9 +11,13 @@ import {
   ProjectionMapSurface
 } from './ProjectionDashboard';
 import {
-  isProjectionAppLaunchable, ProjectionApp, PROJECTION_APP_CANDIDATES
+  isProjectionAppLaunchable,
+  projectionAppLaunchTarget,
+  ProjectionApp,
+  PROJECTION_APP_CANDIDATES
 } from './ProjectionAppCatalog';
 import { ProjectionShakeDetector } from '../video/ProjectionShakeDetector';
+import { projectionDisplayToggleTarget } from '../video/CarPlayVirtualDisplay';
 
 const DOMAIN: number = 0xCA22;
 
@@ -38,6 +42,7 @@ struct ProjectionHome {
   private activeAppSurface?: ProjectionMapSurface;
   private appSurfaceAttached: boolean = false;
   private appSurfaceGeneration: number = 0;
+  private activeAppMoveExistingInstance: boolean = false;
   @State private appOnPhone: boolean = false;
   private appSwitching: boolean = false;
   private sensorStarted: boolean = false;
@@ -52,6 +57,7 @@ struct ProjectionHome {
   private mapApp?: ProjectionApp;
   private mapDisplayGeneration: number = 0;
   private activeMapSurface: ProjectionMapSurface | undefined = undefined;
+  @State private mapOnPhone: boolean = false;
 
   aboutToAppear(): void {
     AppStorage.setOrCreate('carplayNavigationPreview', false);
@@ -90,21 +96,32 @@ struct ProjectionHome {
     AppStorage.setOrCreate('carplayEmbeddedAppContentHeight', this.appContentHeight);
   }
 
-  private async launchApp(app: ProjectionApp, displayId: number): Promise<void> {
+  private async launchApp(
+    app: ProjectionApp, displayId: number, preserveExistingInstance: boolean = false
+  ): Promise<void> {
     if (!isProjectionAppLaunchable(app) || !app.launchTarget) {
       throw new Error(app.unavailableReason ?? `${app.label} 的启动入口尚未验证`);
     }
     const hostContext = this.getUIContext().getHostContext() as common.UIAbilityContext;
-    const target = app.launchTarget;
+    const target = projectionAppLaunchTarget(app, preserveExistingInstance);
+    if (!target) {
+      throw new Error(preserveExistingInstance
+        ? `${app.label} 未核验为可复用的单实例 Ability；为保护导航状态，已拒绝重新启动`
+        : `${app.label} 没有可用的启动入口`);
+    }
     if (target.kind === 'ability') {
       if (!target.bundleName || !target.abilityName) {
         throw new Error(`${app.label} 的已验证 Ability 目标不完整`);
       }
       await hostContext.startAbility({
         bundleName: target.bundleName,
+        moduleName: target.moduleName ?? app.moduleName,
         abilityName: target.abilityName
       }, { displayId });
       return;
+    }
+    if (preserveExistingInstance) {
+      throw new Error(`${app.label} 只有 URI 启动入口，无法安全迁移现有实例`);
     }
     if (!target.uri) {
       throw new Error(`${app.label} 的已验证 App Link 目标为空`);
@@ -129,7 +146,11 @@ struct ProjectionHome {
     }
     try {
       if (this.activeApp && !this.appOnPhone) {
-        await this.launchApp(this.activeApp, display.getDefaultDisplaySync().id);
+        await this.launchApp(
+          this.activeApp,
+          display.getDefaultDisplaySync().id,
+          this.activeApp.appId === 'amap'
+        );
         this.appOnPhone = true;
       }
     } catch (error) {
@@ -205,7 +226,8 @@ struct ProjectionHome {
       this.activeAppSurface = surface;
       this.appSurfaceAttached = true;
       if (this.activeApp) {
-        await this.launchApp(this.activeApp, screenId);
+        await this.launchApp(this.activeApp, screenId, this.activeAppMoveExistingInstance);
+        this.activeAppMoveExistingInstance = false;
         this.appOnPhone = false;
         this.launchMessage = '';
       }
@@ -233,6 +255,10 @@ struct ProjectionHome {
     if (this.activeApp?.uri === app.uri && !this.appOnPhone && this.appDisplayId > 0) {
       return;
     }
+    this.activeAppMoveExistingInstance = app.appId === 'amap' && (
+      (this.activeApp?.appId === 'amap' && (this.appOnPhone || this.appDisplayId > 0)) ||
+      (this.mapApp?.appId === 'amap' && this.mapDisplayId > 0)
+    );
     const keepNavigationSource = AppStorage.get<string>('carplayDashboardView') === 'split' &&
       app.category === 'music';
     if (this.mapDisplayId > 0 && !keepNavigationSource) {
@@ -250,7 +276,8 @@ struct ProjectionHome {
     if (this.appDisplayId > 0) {
       this.appSwitching = true;
       try {
-        await this.launchApp(app, this.appDisplayId);
+        await this.launchApp(app, this.appDisplayId, this.activeAppMoveExistingInstance);
+        this.activeAppMoveExistingInstance = false;
         this.appOnPhone = false;
         this.publishAppTouchBounds(this.activeAppSurface);
         this.launchMessage = `${app.label}启动请求已受理；目标屏显示仍需车机验证`;
@@ -273,6 +300,7 @@ struct ProjectionHome {
       await this.releaseAppDisplay();
       this.activeApp = undefined;
       this.activeAppLabel = '';
+      this.activeAppMoveExistingInstance = false;
       this.launchMessage = '';
     } finally {
       this.appSwitching = false;
@@ -295,8 +323,10 @@ struct ProjectionHome {
     }
     this.appSwitching = true;
     try {
-      const target = this.appOnPhone ? this.appDisplayId : display.getDefaultDisplaySync().id;
-      await this.launchApp(app, target);
+      const target = projectionDisplayToggleTarget(
+        this.appOnPhone, display.getDefaultDisplaySync().id, this.appDisplayId
+      );
+      await this.launchApp(app, target, app.appId === 'amap');
       this.appOnPhone = !this.appOnPhone;
       this.publishAppTouchBounds(this.activeAppSurface);
       this.launchMessage = this.appOnPhone
@@ -311,8 +341,36 @@ struct ProjectionHome {
     }
   }
 
+  private async toggleMapDisplay(): Promise<void> {
+    const app = this.mapApp;
+    const screenId = this.mapDisplayId;
+    if (!app || screenId <= 0 || this.appSwitching) {
+      return;
+    }
+    this.appSwitching = true;
+    try {
+      const target = projectionDisplayToggleTarget(
+        this.mapOnPhone, display.getDefaultDisplaySync().id, screenId
+      );
+      await this.launchApp(app, target, app.appId === 'amap');
+      this.mapOnPhone = !this.mapOnPhone;
+      if (this.activeMapSurface) {
+        this.publishMapTouchBounds(this.activeMapSurface);
+      }
+      this.launchMessage = this.mapOnPhone
+        ? `${app.label}手机端启动请求已受理`
+        : `${app.label}目标屏启动请求已受理；实际显示仍需验证`;
+      this.logProjection(`地图应用切换请求已受理：${app.label}, displayId=${target}`);
+    } catch (error) {
+      this.launchMessage = `地图应用切换失败：${error instanceof Error ? error.message : String(error)}`;
+      this.logProjection(this.launchMessage);
+    } finally {
+      this.appSwitching = false;
+    }
+  }
+
   private publishMapTouchBounds(surface: ProjectionMapSurface): void {
-    AppStorage.setOrCreate('carplayEmbeddedMapDisplayId', this.mapDisplayId);
+    AppStorage.setOrCreate('carplayEmbeddedMapDisplayId', this.mapOnPhone ? -1 : this.mapDisplayId);
     AppStorage.setOrCreate('carplayEmbeddedMapLeft', surface.left);
     AppStorage.setOrCreate('carplayEmbeddedMapTop', surface.top);
     AppStorage.setOrCreate('carplayEmbeddedMapWidth', surface.width);
@@ -322,8 +380,10 @@ struct ProjectionHome {
   private async releaseMapDisplay(restoreToPhone: boolean = true): Promise<void> {
     const displayId = this.mapDisplayId;
     const app = this.mapApp;
+    const restoreAppToPhone = restoreToPhone && !this.mapOnPhone;
     this.mapApp = undefined;
     this.mapDisplayId = -1;
+    this.mapOnPhone = false;
     this.activeMapSurface = undefined;
     AppStorage.setOrCreate('carplayEmbeddedMapDisplayId', -1);
     AppStorage.setOrCreate('carplayEmbeddedMapLeft', 0);
@@ -331,9 +391,9 @@ struct ProjectionHome {
     AppStorage.setOrCreate('carplayEmbeddedMapWidth', 0);
     AppStorage.setOrCreate('carplayEmbeddedMapHeight', 0);
     if (displayId >= 0) {
-      if (app && restoreToPhone) {
+      if (app && restoreAppToPhone) {
         try {
-          await this.launchApp(app, display.getDefaultDisplaySync().id);
+          await this.launchApp(app, display.getDefaultDisplaySync().id, app.appId === 'amap');
         } catch (error) {
           this.logProjection(`释放地图屏前恢复链接失败：${error instanceof Error ? error.message : String(error)}`);
         }
@@ -373,6 +433,10 @@ struct ProjectionHome {
         : '所选导航应用入口不可用';
       return;
     }
+    const preserveExistingAmap = mapApp.appId === 'amap' && (
+      (this.activeApp?.appId === 'amap' && (this.appOnPhone || this.appDisplayId > 0)) ||
+      (this.mapApp?.appId === 'amap' && this.mapDisplayId > 0)
+    );
     if (this.mapDisplayId >= 0 && this.activeMapSurface?.surfaceId === surface.surfaceId &&
       this.activeMapSurface.width === surface.width && this.activeMapSurface.height === surface.height) {
       this.activeMapSurface = surface;
@@ -401,6 +465,9 @@ struct ProjectionHome {
         surfaceId: surface.surfaceId,
         supportsFocus: true
       });
+      if (!Number.isInteger(displayId) || displayId <= 0) {
+        throw new Error('HarmonyOS 返回了无效的地图虚拟屏 ID');
+      }
       if (generation !== this.mapDisplayGeneration) {
         await display.destroyVirtualScreen(displayId);
         return;
@@ -412,17 +479,25 @@ struct ProjectionHome {
       this.publishMapTouchBounds(surface);
 
       this.mapApp = mapApp;
-      await this.launchApp(mapApp, displayId);
+      await this.launchApp(mapApp, displayId, preserveExistingAmap);
       if (generation === this.mapDisplayGeneration) {
+        this.mapOnPhone = false;
         this.mapMessage = '';
         this.launchMessage = `${mapApp.label}启动请求已受理；目标屏显示仍需车机验证`;
         this.logProjection(`${mapApp.label}启动请求已受理：displayId=${displayId}; 目标屏实显仍需验证`);
       }
     } catch (error) {
-      if (displayId >= 0 && this.mapDisplayId !== displayId) {
-        try {
+      if (displayId >= 0) {
+        if (this.mapDisplayId === displayId) {
+          await this.releaseMapDisplay(false);
+        } else {
+          try {
           await display.destroyVirtualScreen(displayId);
-        } catch (_cleanupError) {
+          } catch (cleanupError) {
+            this.logProjection(
+              `清理未接管的地图虚拟屏失败：${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`
+            );
+          }
         }
       }
       if (generation === this.mapDisplayGeneration) {
@@ -471,9 +546,13 @@ struct ProjectionHome {
           activeAppLabel: this.activeAppLabel,
           activeAppUri: this.activeApp?.uri ?? '',
           appOnPhone: this.appOnPhone,
+          mapAppLabel: this.mapApp?.label ?? '',
+          mapAppUri: this.mapApp?.uri ?? '',
+          mapOnPhone: this.mapOnPhone,
           viewAreaOriginX: this.projectionViewAreaX,
           viewAreaOriginY: this.projectionViewAreaY,
           onToggleAppDisplay: (): void => { void this.toggleAppDisplay(); },
+          onToggleMapDisplay: (): void => { void this.toggleMapDisplay(); },
           onHomeClick: (): void => { void this.returnHome(); },
           onBackClick: (): void => this.back(),
           onReceiverHomeClick: (): void => { emitter.emit(CARPLAY_RECEIVER_HOME_EVENT); },

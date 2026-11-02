@@ -5,6 +5,7 @@ export interface ProjectionApp {
   appId: string;
   uri: string;
   bundleName?: string;
+  moduleName?: string;
   abilityName?: string;
   launchTarget?: ProjectionLaunchTarget;
   launchState: ProjectionLaunchState;
@@ -21,13 +22,28 @@ export interface ProjectionApp {
 export interface ProjectionLaunchTarget {
   kind: 'ability' | 'appLink';
   bundleName?: string;
+  moduleName?: string;
   abilityName?: string;
+  isSingleton?: boolean;
   uri?: string;
   probeUri?: string;
 }
 
+export interface ProjectionInstalledAbility {
+  moduleName: string;
+  abilityName: string;
+  isMainElement: boolean;
+  enabled: boolean;
+  exported: boolean;
+  isSingleton: boolean;
+}
+
+export type ProjectionAbilityLookup =
+  (bundleName: string) => Promise<ProjectionInstalledAbility[]>;
+
 export const PROJECTION_MAP_URI: string = 'carplay-client://v1/apps/amap/launch';
-const AMAP_LAUNCH_URI: string = 'amapuri://com.amap.hmapp/open';
+const AMAP_LAUNCH_URI: string = 'amapuri://';
+const HUAWEI_MUSIC_LAUNCH_URI: string = 'hwmusic://com.huawei.hmsapp.music';
 
 export const PROJECTION_VEHICLE_APPS: ProjectionApp[] = [
   { appId: 'shell-home', uri: 'carplay-client://v1/shell/home', launchState: 'VERIFIED',
@@ -49,7 +65,8 @@ export const PROJECTION_APP_CANDIDATES: ProjectionApp[] = [
     appId: 'amap', uri: PROJECTION_MAP_URI, bundleName: 'com.amap.hmapp', abilityName: 'EntryAbility',
     launchState: 'UNVERIFIED',
     launchTarget: {
-      kind: 'ability', bundleName: 'com.amap.hmapp', abilityName: 'EntryAbility', probeUri: AMAP_LAUNCH_URI
+      kind: 'ability', bundleName: 'com.amap.hmapp', abilityName: 'EntryAbility',
+      isSingleton: true, probeUri: AMAP_LAUNCH_URI
     },
     unavailableReason: '当前设备尚未核验高德地图的 bundle/Ability 入口',
     label: '高德地图', mark: '高', color: '#308A6E', category: 'map', icon: 'app.media.app_amap'
@@ -67,17 +84,15 @@ export const PROJECTION_APP_CANDIDATES: ProjectionApp[] = [
   },
   {
     appId: 'tencent-map', uri: 'carplay-client://v1/apps/tencent-map/launch', launchState: 'UNVERIFIED',
-    launchTarget: { kind: 'appLink', uri: 'qqmap://map/routeplan' },
-    unavailableReason: '当前设备未解析到旧源码中的 qqmap://map/routeplan 入口',
+    launchTarget: { kind: 'appLink', uri: 'qqmap://' },
+    unavailableReason: '当前设备未解析到 qqmap:// 入口',
     label: '腾讯地图', mark: '腾', color: '#3977A5', category: 'map', icon: 'app.media.app_tencent_map'
   },
   {
     appId: 'huawei-music', uri: 'carplay-client://v1/apps/huawei-music/launch',
     bundleName: 'com.huawei.hmsapp.music', abilityName: 'MainAbility', launchState: 'UNVERIFIED',
-    launchTarget: {
-      kind: 'ability', bundleName: 'com.huawei.hmsapp.music', abilityName: 'MainAbility', probeUri: 'hwmusic://'
-    },
-    unavailableReason: '当前设备尚未核验华为音乐的 bundle/Ability 入口',
+    launchTarget: { kind: 'appLink', uri: HUAWEI_MUSIC_LAUNCH_URI },
+    unavailableReason: '当前设备尚未核验华为音乐的 hwmusic URI 入口',
     label: '华为音乐', mark: '音', color: '#C56648', category: 'music', icon: 'app.media.app_huawei_music'
   },
   {
@@ -94,8 +109,8 @@ export const PROJECTION_APP_CANDIDATES: ProjectionApp[] = [
   },
   {
     appId: 'kugou-music', uri: 'carplay-client://v1/apps/kugou-music/launch', launchState: 'UNVERIFIED',
-    launchTarget: { kind: 'appLink', uri: 'kugou://' },
-    unavailableReason: '当前设备未解析到旧源码中的 kugou:// 入口',
+    launchTarget: { kind: 'appLink', uri: 'kugou://m.kugou.com' },
+    unavailableReason: '当前设备未解析到 kugou://m.kugou.com 入口',
     label: '酷狗音乐', mark: 'K', color: '#D5A837', category: 'music', icon: 'app.media.app_kugou'
   },
   {
@@ -125,7 +140,8 @@ export const PROJECTION_APP_CANDIDATES: ProjectionApp[] = [
     appId: 'eastmoney', uri: 'carplay-client://v1/apps/eastmoney/launch',
     bundleName: 'com.eastmoney.hmn.berlin', abilityName: 'EntryAbility', launchState: 'UNVERIFIED',
     launchTarget: {
-      kind: 'ability', bundleName: 'com.eastmoney.hmn.berlin', abilityName: 'EntryAbility', probeUri: 'emoh://'
+      kind: 'ability', bundleName: 'com.eastmoney.hmn.berlin', abilityName: 'EntryAbility',
+      probeUri: 'emoh://eastmoney.com'
     },
     unavailableReason: '当前设备尚未核验东方财富的 bundle/Ability 入口',
     label: '东方财富', mark: '财', color: '#C84D44', category: 'finance', icon: 'app.media.app_eastmoney'
@@ -154,6 +170,9 @@ function copyProjectionApp(source: ProjectionApp): ProjectionApp {
   if (source.bundleName !== undefined) {
     copy.bundleName = source.bundleName;
   }
+  if (source.moduleName !== undefined) {
+    copy.moduleName = source.moduleName;
+  }
   if (source.abilityName !== undefined) {
     copy.abilityName = source.abilityName;
   }
@@ -176,28 +195,69 @@ function copyProjectionApp(source: ProjectionApp): ProjectionApp {
 }
 
 export async function resolveProjectionApps(
-  canOpenLink: (uri: string) => boolean
+  canOpenLink: (uri: string) => boolean,
+  lookupInstalledAbilities?: ProjectionAbilityLookup
 ): Promise<ProjectionApp[]> {
   return Promise.all(PROJECTION_APP_CANDIDATES.map(async (candidate: ProjectionApp): Promise<ProjectionApp> => {
     const target = candidate.launchTarget;
     if (!target) {
       return candidate;
     }
+    const resolved = copyProjectionApp(candidate);
+    let abilityLookupSucceeded = false;
+    let abilityLookupError = '';
+    if (target.kind === 'ability' && target.bundleName && lookupInstalledAbilities) {
+      try {
+        const abilities = await lookupInstalledAbilities(target.bundleName);
+        abilityLookupSucceeded = true;
+        const isLaunchable = (ability: ProjectionInstalledAbility): boolean =>
+          ability.enabled && ability.exported && ability.moduleName.length > 0 && ability.abilityName.length > 0;
+        const expectedAbility = abilities.find((item: ProjectionInstalledAbility): boolean =>
+          isLaunchable(item) && item.abilityName === target.abilityName);
+        const ability = candidate.appId === 'amap'
+          ? expectedAbility
+          : expectedAbility ??
+            abilities.find((item: ProjectionInstalledAbility): boolean => isLaunchable(item) && item.isMainElement) ??
+            abilities.find((item: ProjectionInstalledAbility): boolean => isLaunchable(item));
+        if (ability) {
+          resolved.moduleName = ability.moduleName;
+          resolved.abilityName = ability.abilityName;
+          resolved.launchTarget = {
+            kind: 'ability',
+            bundleName: target.bundleName,
+            moduleName: ability.moduleName,
+            abilityName: ability.abilityName,
+            isSingleton: ability.isSingleton,
+            probeUri: target.probeUri
+          };
+          resolved.launchState = 'VERIFIED';
+          resolved.unavailableReason = undefined;
+          return resolved;
+        }
+      } catch (error) {
+        abilityLookupError = error instanceof Error ? error.message : String(error);
+      }
+    }
     try {
       const probeUri = target.kind === 'ability' ? target.probeUri : target.uri;
       const available = probeUri !== undefined && canOpenLink(probeUri);
-      const resolved = copyProjectionApp(candidate);
       resolved.launchState = available ? 'VERIFIED' : 'UNVERIFIED';
       if (available) {
         resolved.unavailableReason = undefined;
+        if (target.kind === 'ability' && probeUri !== undefined && candidate.appId !== 'amap') {
+          resolved.launchTarget = { kind: 'appLink', uri: probeUri };
+        }
+      } else if (abilityLookupError.length > 0) {
+        resolved.unavailableReason = `检查已安装应用的启动 Ability 失败：${abilityLookupError}`;
+      } else if (abilityLookupSucceeded) {
+        resolved.unavailableReason = `${candidate.label} 已安装，但没有可外部启动的 Ability 或可用链接`;
       }
       return resolved;
     } catch (error) {
-      const unresolved = copyProjectionApp(candidate);
-      unresolved.launchState = 'UNVERIFIED';
-      unresolved.unavailableReason =
+      resolved.launchState = 'UNVERIFIED';
+      resolved.unavailableReason =
         `检查启动入口失败：${error instanceof Error ? error.message : String(error)}`;
-      return unresolved;
+      return resolved;
     }
   }));
 }
@@ -209,6 +269,58 @@ export function projectionAppCatalog(available: ProjectionApp[]): ProjectionApp[
 
 export function isProjectionAppLaunchable(app: ProjectionApp): boolean {
   return app.launchState === 'VERIFIED' && app.launchTarget !== undefined;
+}
+
+export function isProjectionAppInstanceMigratable(app: ProjectionApp): boolean {
+  const target = app.launchTarget;
+  return app.appId === 'amap' && target?.kind === 'ability' && target.isSingleton === true;
+}
+
+export function projectionAppLaunchTarget(
+  app: ProjectionApp, preserveExistingInstance: boolean = false
+): ProjectionLaunchTarget | undefined {
+  const target = app.launchTarget;
+  if (!isProjectionAppLaunchable(app) || !target) {
+    return undefined;
+  }
+  if (preserveExistingInstance) {
+    return isProjectionAppInstanceMigratable(app) ? target : undefined;
+  }
+  if (app.appId === 'amap' && target.kind === 'ability') {
+    return target.probeUri ? { kind: 'appLink', uri: target.probeUri } : undefined;
+  }
+  return target;
+}
+
+export function findLaunchableProjectionApp(
+  apps: ProjectionApp[],
+  category: ProjectionAppCategory,
+  preferredUri?: string,
+  preferredBundleName?: string
+): ProjectionApp | undefined {
+  if (preferredUri !== undefined) {
+    const preferred = apps.find((app: ProjectionApp): boolean =>
+      app.category === category && app.uri === preferredUri);
+    if (preferred) {
+      return isProjectionAppLaunchable(preferred) ? preferred : undefined;
+    }
+  }
+  if (preferredBundleName !== undefined) {
+    const preferred = apps.find((app: ProjectionApp): boolean =>
+      app.category === category && app.bundleName === preferredBundleName);
+    if (preferred) {
+      return isProjectionAppLaunchable(preferred) ? preferred : undefined;
+    }
+  }
+  return apps.find((app: ProjectionApp): boolean =>
+    app.category === category && isProjectionAppLaunchable(app));
+}
+
+export function activeProjectionMusicApp(
+  apps: ProjectionApp[], activeAppUri: string
+): ProjectionApp | undefined {
+  const app = apps.find((candidate: ProjectionApp): boolean => candidate.uri === activeAppUri);
+  return app && app.category === 'music' && isProjectionAppLaunchable(app) ? app : undefined;
 }
 
 export function includeMediaSessionApp(

@@ -425,21 +425,51 @@ test('third-party launch targets come from the reference and URI probes control 
   assert.equal(amap.launchTarget.kind, 'ability');
   assert.equal(amap.launchTarget.bundleName, 'com.amap.hmapp');
   assert.equal(amap.launchTarget.abilityName, 'EntryAbility');
-  assert.equal(amap.launchTarget.probeUri, 'amapuri://com.amap.hmapp/open');
+  assert.equal(amap.launchTarget.probeUri, 'amapuri://');
   assert.equal(PROJECTION_APP_CANDIDATES.find(app => app.appId === 'baidu-map').launchTarget.uri,
     'baidumap://map');
+  assert.equal(PROJECTION_APP_CANDIDATES.find(app => app.appId === 'tencent-map').launchTarget.uri,
+    'qqmap://');
+  const huaweiMusic = PROJECTION_APP_CANDIDATES.find(app => app.appId === 'huawei-music');
+  assert.equal(huaweiMusic.bundleName, 'com.huawei.hmsapp.music');
+  assert.equal(huaweiMusic.abilityName, 'MainAbility');
+  assert.equal(huaweiMusic.launchTarget.uri, 'hwmusic://com.huawei.hmsapp.music');
+  assert.equal(PROJECTION_APP_CANDIDATES.find(app => app.appId === 'kugou-music').launchTarget.uri,
+    'kugou://m.kugou.com');
+  assert.equal(PROJECTION_APP_CANDIDATES.find(app => app.appId === 'eastmoney').launchTarget.probeUri,
+    'emoh://eastmoney.com');
   assert.deepEqual(PROJECTION_VEHICLE_APPS.map(app => app.view), ['receiver', 'settings', 'themes', 'split']);
   const probedLinks = [];
   const resolved = await resolveProjectionApps(uri => {
     probedLinks.push(uri);
-    return ['amapuri://com.amap.hmapp/open', 'baidumap://map', 'hwmusic://', 'qqmusic://'].includes(uri);
+    return [
+      'amapuri://',
+      'baidumap://map',
+      'qqmap://',
+      'hwmusic://com.huawei.hmsapp.music',
+      'qqmusic://',
+      'orpheus://',
+      'kugou://m.kugou.com',
+      'snssdk1128://',
+      'kwai://',
+      'emoh://eastmoney.com',
+      'tenvideo2://'
+    ].includes(uri);
   });
   assert.deepEqual(resolved.filter(app => app.launchState === 'VERIFIED').map(app => app.appId),
-    ['amap', 'baidu-map', 'huawei-music', 'qq-music']);
-  assert.ok(probedLinks.includes('amapuri://com.amap.hmapp/open'));
+    ['amap', 'baidu-map', 'tencent-map', 'huawei-music', 'qq-music', 'netease-music', 'kugou-music',
+      'douyin', 'kuaishou', 'eastmoney', 'tencent-video']);
+  assert.ok(probedLinks.includes('amapuri://'));
   assert.ok(probedLinks.includes('baidumap://map'));
-  assert.ok(probedLinks.includes('hwmusic://'));
+  assert.ok(probedLinks.includes('qqmap://'));
+  assert.ok(probedLinks.includes('hwmusic://com.huawei.hmsapp.music'));
   assert.ok(probedLinks.includes('qqmusic://'));
+  assert.ok(probedLinks.includes('orpheus://'));
+  assert.ok(probedLinks.includes('kugou://m.kugou.com'));
+  assert.ok(probedLinks.includes('snssdk1128://'));
+  assert.ok(probedLinks.includes('kwai://'));
+  assert.ok(probedLinks.includes('emoh://eastmoney.com'));
+  assert.ok(probedLinks.includes('tenvideo2://'));
   assert.equal(resolved.find(app => app.appId === 'petal-maps').launchTarget, undefined);
   const moduleManifest = fs.readFileSync(path.join(sourceRoot, '../module.json5'), 'utf8');
   for (const scheme of [
@@ -1019,6 +1049,7 @@ test('vehicle overlays work while unverified third-party launch requests stay di
   });
   const target = new Target();
   target.touchBounds = new Map();
+  target.showDockActionMessage = () => {};
   target.onHomeClick = () => { throw new Error('must not release an existing app for a vehicle page'); };
   target.showDashboardView('apps');
   assert.equal(stored.get('carplayDashboardView'), 'apps');
@@ -1175,6 +1206,9 @@ test('all HID reports in a TCP read are dispatched before awaiting any response 
   channel.receiveBuffer = new Uint8Array(0);
   channel.cipher = { async decrypt(data) { return data; } };
   channel.log = () => {};
+  channel.logQueueDelay = () => {};
+  channel.logProcessingDelay = () => {};
+  channel.hidReportSummary = { record: () => 1 };
   const handled = [];
   channel.onRequest = request => { handled.push(request.cseq); return true; };
   let release;
@@ -1186,7 +1220,7 @@ test('all HID reports in a TCP read are dispatched before awaiting any response 
     assert.deepEqual([...bytes], [1, 2, 3]);
     await gate;
   };
-  const operation = channel.handleIncoming(new Uint8Array([0]));
+  const operation = channel.handleIncoming(new Uint8Array([0]), Date.now());
   await Promise.resolve();
   assert.deepEqual(handled, [1, 2, 3]);
   release();
@@ -1600,7 +1634,7 @@ test('home selects a map preview and shows only navigation and AVSession music c
   });
   const target = new Target();
   target.apps = [map];
-  target.activeAppUri = 'hwmusic://';
+  target.activeAppUri = 'hwmusic://com.huawei.hmsapp.music';
   target.activeAppLabel = 'Music';
   const opened = [];
   target.onAppClick = app => opened.push(app.uri);
@@ -2248,8 +2282,14 @@ test('phone media volume changes update car gain and the route releases its subs
 });
 
 test('Dock supports Apps, Home, split and map/music alternative menus', () => {
+  const { findLaunchableProjectionApp, isProjectionAppLaunchable } = loadEts('pages/ProjectionAppCatalog.ets');
   const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard',
-    ['activateDock', 'isDashboardHome', 'categoryApp'], { HOME_APP: { uri: 'home' }, PROJECTION_MAP_URI: 'amap' });
+    ['activateDock', 'isDashboardHome', 'categoryApp', 'launchableCategoryApp'], {
+      HOME_APP: { uri: 'home' },
+      PROJECTION_MAP_URI: 'amap',
+      findLaunchableProjectionApp,
+      isProjectionAppLaunchable
+    });
   const dashboardSource = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
   assert.match(dashboardSource, /Scroll\(this\.dockScroller\)/);
   assert.match(dashboardSource, /\.width\(vertical \? '100%' : 64\)/);
@@ -2261,13 +2301,22 @@ test('Dock supports Apps, Home, split and map/music alternative menus', () => {
   assert.match(dashboardSource, /DockItem\('split', '分屏', 'app\.media\.ic_split'/);
   assert.doesNotMatch(dashboardSource, /DockItem\([\s\S]{0,800}?\.layoutWeight\(1\)/);
   assert.match(dashboardSource, /accessibilityText\(this\.appOnPhone \? '切换地图到虚拟屏' : '切换地图到手机'\)/);
-  assert.match(dashboardSource, /'map', 'toggleDisplay', newArea, \(\): void => this\.onToggleAppDisplay\(\)/);
+  assert.match(dashboardSource, /'map', 'toggleDisplay', newArea, \(\): void => this\.onToggleMapDisplay\(\)/);
+  assert.match(dashboardSource, /this\.onToggleAppDisplay\(\)/);
   const target = new Target();
   target.apps = [
-    { uri: 'amap', category: 'map' }, { uri: 'baidu', category: 'map' },
-    { uri: 'music', category: 'music' }, { uri: 'otherMusic', category: 'music' }
+    { appId: 'amap', uri: 'amap', category: 'map', launchState: 'VERIFIED',
+      launchTarget: { kind: 'ability', bundleName: 'com.amap.hmapp', abilityName: 'EntryAbility' } },
+    { appId: 'baidu-map', uri: 'baidu', category: 'map', launchState: 'VERIFIED',
+      launchTarget: { kind: 'appLink', uri: 'baidumap://map' } },
+    { appId: 'huawei-music', uri: 'music', category: 'music', launchState: 'VERIFIED',
+      launchTarget: { kind: 'appLink', uri: 'hwmusic://com.huawei.hmsapp.music' } },
+    { appId: 'other-music', uri: 'otherMusic', category: 'music', launchState: 'VERIFIED',
+      launchTarget: { kind: 'appLink', uri: 'other-music://' } }
   ];
   target.mediaState = {};
+  target.selectedMapUri = 'amap';
+  target.selectedMusicUri = 'music';
   target.activeAppLabel = '';
   target.dashboardView = 'home';
   const actions = [];
@@ -2311,22 +2360,27 @@ test('Apps grid includes only launchable third-party apps and adapts from three 
   }
 });
 
-test('split dashboard defaults to 3:1 and supports the three map/music ratios', () => {
+test('split dashboard hides ratio controls and requires an opened music app', () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
-  assert.match(source, /@State splitMapWeight: number = 3/);
-  assert.match(source, /@State splitMusicWeight: number = 1/);
-  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', ['selectSplitRatio']);
+  assert.doesNotMatch(source, /splitMapWeight|splitMusicWeight|selectSplitRatio|Text\('2:2'\)|Text\('3:1'\)|Text\('4:1'\)/);
+  assert.match(source, /\.layoutWeight\(2\)/);
+  assert.match(source, /\.layoutWeight\(1\)/);
+  assert.match(source, /if \(view === 'split' && !this\.activeMusicApp\(\)\)/);
+  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', ['showDashboardView'], {
+    AppStorage: { get: () => -1, setOrCreate: () => {} }
+  });
   const target = new Target();
-  target.splitMapWeight = 3;
-  target.splitMusicWeight = 1;
-  target.selectSplitRatio(2, 2);
-  assert.deepEqual([target.splitMapWeight, target.splitMusicWeight], [2, 2]);
-  target.selectSplitRatio(4, 1);
-  assert.deepEqual([target.splitMapWeight, target.splitMusicWeight], [4, 1]);
-  target.selectSplitRatio(1, 3);
-  assert.deepEqual([target.splitMapWeight, target.splitMusicWeight], [4, 1], 'unsupported ratios must be ignored');
-  assert.match(source, /layoutWeight\(this\.splitMapWeight\)/);
-  assert.match(source, /layoutWeight\(this\.splitMusicWeight\)/);
+  target.dashboardView = 'home';
+  target.touchBounds = new Map();
+  target.activeMusicApp = () => undefined;
+  target.showDockActionMessage = message => { target.dockActionMessage = message; };
+  target.showDashboardView('split');
+  assert.equal(target.dashboardView, 'home');
+  assert.match(target.dockActionMessage, /音乐 app/);
+  target.activeMusicApp = () => ({ appId: 'huawei-music' });
+  target.setNavigationPreview = () => {};
+  target.showDashboardView('split');
+  assert.equal(target.dashboardView, 'split');
 });
 
 test('socket shutdown deadlines settle stalled operations instead of hanging recovery', async () => {
@@ -2347,7 +2401,7 @@ test('audio closes its socket before waiting for a blocked packet write', async 
   assert.equal(sender.socket, undefined);
 });
 
-test('shake opens the existing app link on the target display and preserves state on failure', async () => {
+test('shake toggles the existing app display and preserves state on failure', async () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionHome.ets'), 'utf8');
   assert.match(source, /@State private appOnPhone: boolean = false/);
   const parsed = ts.createSourceFile('ProjectionHome.ts',
@@ -2359,23 +2413,25 @@ test('shake opens the existing app link on the target display and preserves stat
     compilerOptions: { target: ts.ScriptTarget.ES2020 }
   }).outputText;
   const Target = vm.runInNewContext(`${javascript}\nTarget`, {
-    display: { getDefaultDisplaySync: () => ({ id: 0 }) }
+    display: { getDefaultDisplaySync: () => ({ id: 0 }) },
+    projectionDisplayToggleTarget: (currentlyOnPhone, phoneDisplayId, virtualDisplayId) =>
+      currentlyOnPhone ? virtualDisplayId : phoneDisplayId
   });
   const target = new Target();
   target.appSwitching = false;
   target.appOnPhone = true;
   target.appDisplayId = 12;
-  target.activeApp = { uri: 'hwmusic://', label: 'Music' };
+  target.activeApp = { appId: 'huawei-music', uri: 'hwmusic://com.huawei.hmsapp.music', label: 'Music' };
   target.logProjection = () => {};
   target.publishAppTouchBounds = () => {};
   const opened = [];
   target.launchApp = async (app, displayId) => opened.push([app.uri, displayId]);
   await target.toggleAppDisplay();
-  assert.deepEqual(opened, [['hwmusic://', 12]]);
+  assert.deepEqual(opened, [['hwmusic://com.huawei.hmsapp.music', 12]]);
   assert.equal(target.appOnPhone, false);
   await target.toggleAppDisplay();
   assert.equal(target.appOnPhone, true);
-  assert.deepEqual(opened[1], ['hwmusic://', 0]);
+  assert.deepEqual(opened[1], ['hwmusic://com.huawei.hmsapp.music', 0]);
   target.launchApp = async () => { throw new Error('open rejected'); };
   await target.toggleAppDisplay();
   assert.equal(target.appOnPhone, true);
@@ -2384,6 +2440,7 @@ test('shake opens the existing app link on the target display and preserves stat
 });
 
 test('projection launches only verified targets on the requested display', async () => {
+  const { projectionAppLaunchTarget } = loadEts('pages/ProjectionAppCatalog.ets');
   const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionHome.ets'), 'utf8');
   const parsed = ts.createSourceFile('ProjectionHome.ts',
     source.replace('struct ProjectionHome {', 'class ProjectionHome {'), ts.ScriptTarget.Latest, true);
@@ -2394,7 +2451,8 @@ test('projection launches only verified targets on the requested display', async
     compilerOptions: { target: ts.ScriptTarget.ES2020 }
   }).outputText;
   const Target = vm.runInNewContext(`${javascript}\nTarget`, {
-    isProjectionAppLaunchable: app => app.launchState === 'VERIFIED' && !!app.launchTarget
+    isProjectionAppLaunchable: app => app.launchState === 'VERIFIED' && !!app.launchTarget,
+    projectionAppLaunchTarget
   });
   const calls = [];
   const target = new Target();
@@ -2423,6 +2481,38 @@ test('projection launches only verified targets on the requested display', async
     options: { displayId: 15 } });
   assert.equal(Object.hasOwn(calls[1].want, 'uri'), false);
   assert.equal(Object.hasOwn(calls[1].want, 'flags'), false);
+  const amap = {
+    appId: 'amap',
+    uri: 'carplay-client://v1/apps/amap/launch',
+    bundleName: 'com.amap.hmapp',
+    moduleName: 'entry',
+    abilityName: 'EntryAbility',
+    label: '高德地图',
+    launchState: 'VERIFIED',
+    launchTarget: {
+      kind: 'ability',
+      bundleName: 'com.amap.hmapp',
+      moduleName: 'entry',
+      abilityName: 'EntryAbility',
+      isSingleton: true,
+      probeUri: 'amapuri://'
+    }
+  };
+  await target.launchApp(amap, 18);
+  assert.deepEqual(calls[2], {
+    want: { action: 'ohos.want.action.viewData', uri: 'amapuri://' },
+    options: { displayId: 18 }
+  });
+  await target.launchApp(amap, 19, true);
+  assert.deepEqual(calls[3], {
+    want: { bundleName: 'com.amap.hmapp', moduleName: 'entry', abilityName: 'EntryAbility' },
+    options: { displayId: 19 }
+  });
+  const nonSingletonAmap = {
+    ...amap,
+    launchTarget: { ...amap.launchTarget, isSingleton: false }
+  };
+  await assert.rejects(target.launchApp(nonSingletonAmap, 20, true), /拒绝重新启动/);
   await assert.rejects(target.launchApp({
     appId: 'amap',
     uri: 'carplay-client://v1/apps/amap/launch',
