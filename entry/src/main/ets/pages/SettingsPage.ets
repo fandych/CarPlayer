@@ -63,13 +63,15 @@ export struct SettingsPage {
         Column({ space: 12 }) {
           TextInput({ text: this.deviceName, placeholder: '设备名称' })
             .height(46)
-            .backgroundColor('#F4F6F2')
-            .borderRadius(10)
+            .backgroundColor('#FFFFFF88')
+            .borderRadius(14)
+            .border({ width: 1, color: '#FFFFFFCC' })
             .onChange((value: string) => this.onDeviceNameChange(value))
           TextInput({ text: this.bluetoothAddress, placeholder: '真实蓝牙 MAC，例如 AA:BB:CC:DD:EE:FF' })
             .height(46)
-            .backgroundColor('#F4F6F2')
-            .borderRadius(10)
+            .backgroundColor('#FFFFFF88')
+            .borderRadius(14)
+            .border({ width: 1, color: '#FFFFFFCC' })
             .onChange((value: string) => this.onBluetoothAddressChange(value))
           Text('系统占位地址 02:00:00:00:00:00 不可用于 CarPlay 身份。')
             .fontSize(12)
@@ -82,8 +84,9 @@ export struct SettingsPage {
         }
         .width('100%')
         .padding(16)
-        .borderRadius(16)
-        .backgroundColor('#FFFFFF')
+        .borderRadius(20)
+        .backgroundColor('#FFFFFF99')
+        .border({ width: 1, color: '#FFFFFFCC' })
         SectionHeading({ title: '音频输出', subtitle: '下次连接生效' })
         Row({ space: 12 }) {
           Column({ space: 5 }) {
@@ -102,7 +105,10 @@ export struct SettingsPage {
             .accessibilityText('使用蓝牙音频')
         }
         .width('100%')
-        .padding({ top: 8, bottom: 8 })
+        .padding(16)
+        .borderRadius(20)
+        .backgroundColor('#FFFFFF77')
+        .border({ width: 1, color: '#FFFFFFCC' })
         SectionHeading({ title: '受限系统能力', subtitle: '清单声明不代表 ACL 已批准；获批后重启应用并刷新状态' })
         Column({ space: 6 }) {
           ForEach(this.restrictedPermissionStatus, (status: string) => {
@@ -115,8 +121,9 @@ export struct SettingsPage {
         }
         .width('100%')
         .padding(12)
-        .borderRadius(12)
-        .backgroundColor('#FFFFFF')
+        .borderRadius(18)
+        .backgroundColor('#FFFFFF88')
+        .border({ width: 1, color: '#FFFFFFCC' })
         SectionHeading({ title: '安全与诊断', subtitle: '按天归档并保留 10 天；日志页显示最近 300 行' })
         Row({ space: 12 }) {
           Column({ space: 5 }) {
@@ -136,8 +143,9 @@ export struct SettingsPage {
         }
         .width('100%')
         .padding(16)
-        .borderRadius(12)
-        .backgroundColor('#FFF4E9')
+        .borderRadius(18)
+        .backgroundColor('#FFF4E9B8')
+        .border({ width: 1, color: '#FFFFFFCC' })
         if (this.trustedMfiFingerprints.length > 0) {
           Column({ space: 8 }) {
             Text('已固定的 MFi 证书指纹')
@@ -162,8 +170,9 @@ export struct SettingsPage {
           }
           .width('100%')
           .padding(16)
-          .borderRadius(14)
-          .backgroundColor('#FFFFFF')
+          .borderRadius(18)
+          .backgroundColor('#FFFFFF88')
+          .border({ width: 1, color: '#FFFFFFCC' })
         }
         InfoCard({
           title: '凭据保护',

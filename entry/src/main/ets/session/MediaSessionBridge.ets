@@ -82,6 +82,7 @@ export class MediaSessionBridge {
   private controller?: avSession.AVSessionController;
   private sessionId: string = '';
   private refreshing: boolean = false;
+  private refreshOperation?: Promise<ProjectionMediaSnapshot>;
   private closed: boolean = false;
   private watchingSessions: boolean = false;
   private readonly onChange: () => void;
@@ -91,7 +92,25 @@ export class MediaSessionBridge {
   }
 
   async refresh(): Promise<ProjectionMediaSnapshot> {
-    if (this.closed || this.refreshing) {
+    if (this.closed) {
+      return this.snapshot;
+    }
+    if (this.refreshOperation) {
+      return this.refreshOperation;
+    }
+    const operation = this.refreshInternal();
+    this.refreshOperation = operation;
+    try {
+      return await operation;
+    } finally {
+      if (this.refreshOperation === operation) {
+        this.refreshOperation = undefined;
+      }
+    }
+  }
+
+  private async refreshInternal(): Promise<ProjectionMediaSnapshot> {
+    if (this.closed) {
       return this.snapshot;
     }
     this.refreshing = true;

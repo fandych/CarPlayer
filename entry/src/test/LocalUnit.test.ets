@@ -92,7 +92,7 @@ export default function localUnitTest() {
     });
 
     it('restores reference app targets and keeps them disabled before device checks', 0, async (): Promise<void> => {
-      expect(PROJECTION_APP_CANDIDATES.length).assertEqual(13);
+      expect(PROJECTION_APP_CANDIDATES.length).assertEqual(14);
       expect(PROJECTION_APP_CANDIDATES[0].uri).assertEqual(PROJECTION_MAP_URI);
       expect(PROJECTION_APP_CANDIDATES[0].launchTarget?.bundleName).assertEqual('com.amap.hmapp');
       expect(PROJECTION_APP_CANDIDATES[1].launchTarget?.uri).assertEqual('baidumap://map');

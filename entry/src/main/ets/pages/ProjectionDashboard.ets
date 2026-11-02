@@ -108,6 +108,7 @@ export struct ProjectionDashboard {
   onHomeClick: () => void = (): void => {};
   onBackClick: () => void = (): void => {};
   onReceiverHomeClick: () => void = (): void => {};
+  onMediaLog: (message: string) => void = (_message: string): void => {};
   onAppSurfaceChange: (surface: ProjectionMapSurface | undefined) => void =
     (_surface: ProjectionMapSurface | undefined): void => {};
   onMapSurfaceChange: (surface: ProjectionMapSurface | undefined) => void =
@@ -180,6 +181,7 @@ export struct ProjectionDashboard {
   private statusTimer: number = -1;
   private mediaTimer: number = -1;
   private mediaSessionBridge?: MediaSessionBridge;
+  private lastLoggedMediaSignature: string = '';
   private readonly mapXComponentController: XComponentController = new XComponentController();
   private readonly appXComponentController: XComponentController = new XComponentController();
   private appSurfaceId: string = '';
@@ -574,6 +576,7 @@ export struct ProjectionDashboard {
       if (this.mediaSessionBridge === bridge) {
         this.mediaState = state;
         this.apps = includeMediaSessionApp(this.apps, state.bundleName, state.abilityName);
+        this.logMediaSnapshotIfChanged(state);
       }
       return true;
     } catch (error) {
@@ -586,9 +589,36 @@ export struct ProjectionDashboard {
     }
   }
 
+  private logMediaSnapshotIfChanged(state: ProjectionMediaSnapshot): void {
+    if (!state.bundleName) {
+      this.lastLoggedMediaSignature = '';
+      return;
+    }
+    const signature = [
+      state.bundleName,
+      state.abilityName ?? '',
+      state.title,
+      state.artist,
+      state.isPlaying
+    ].join('|');
+    if (signature === this.lastLoggedMediaSignature) {
+      return;
+    }
+    this.lastLoggedMediaSignature = signature;
+    this.onMediaLog(
+      `媒体信息：${state.bundleName}/${state.abilityName ?? ''}；曲目=${state.title}；` +
+        `歌手=${state.artist || '未知歌手'}；状态=${state.isPlaying ? '播放中' : '已暂停'}`
+    );
+  }
+
   private async sendMediaCommand(command: ProjectionMediaCommand): Promise<void> {
     const bridge = this.mediaSessionBridge;
-    if (!bridge || !this.mediaState.commands.includes(command)) {
+    if (!bridge) {
+      this.mediaActionMessage = '媒体控制器尚未就绪，请稍后重试';
+      return;
+    }
+    if (!this.mediaState.commands.includes(command)) {
+      this.mediaActionMessage = `当前音乐应用未开放${command}控制`;
       return;
     }
     try {
@@ -630,6 +660,14 @@ export struct ProjectionDashboard {
 
   private toggleDockPosition(): void {
     this.dockPosition = this.dockPosition === 'bottom' ? 'left' : 'bottom';
+  }
+
+  private glassPanelColor(): string {
+    return `${projectionTheme(this.theme).panel}D6`;
+  }
+
+  private glassSurfaceColor(): string {
+    return `${projectionTheme(this.theme).surface}D6`;
   }
 
   private cycleDayNightMode(): void {
@@ -1060,7 +1098,8 @@ export struct ProjectionDashboard {
         .padding({ top: 8, bottom: 8, left: 5, right: 5 })
         .alignItems(HorizontalAlign.Center)
         .border({ width: { right: 0.5 }, color: '#FFFFFF18' })
-        .backgroundColor(projectionTheme(this.theme).surface)
+        .backgroundColor(this.glassSurfaceColor())
+        .border({ width: 1, color: '#FFFFFF20' })
       }
       .width('11%').constraintSize({ minWidth: 48, maxWidth: 66 }).height('100%')
       .scrollable(ScrollDirection.Vertical).scrollBar(BarState.Off)
@@ -1089,7 +1128,8 @@ export struct ProjectionDashboard {
         .padding({ left: 8, right: 8, top: 4, bottom: 4 })
         .justifyContent(FlexAlign.Center)
         .border({ width: { top: 0.5 }, color: '#FFFFFF18' })
-        .backgroundColor(projectionTheme(this.theme).surface)
+        .backgroundColor(this.glassSurfaceColor())
+        .border({ width: 1, color: '#FFFFFF20' })
       }
       .width('100%').height(64)
       .scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off)
@@ -1134,7 +1174,6 @@ export struct ProjectionDashboard {
     .height(88)
     .justifyContent(FlexAlign.Center)
     .borderRadius(8)
-    .backgroundColor(projectionTheme(this.theme).panel)
     .opacity(app.launchState === 'UNVERIFIED' ? 0.62 : 1)
     .onClick(() => this.selectApp(app))
     .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
@@ -1208,7 +1247,6 @@ export struct ProjectionDashboard {
               }
             }
             .width('100%').height(54).padding({ left: 10, right: 10 }).borderRadius(8)
-            .backgroundColor('#FFFFFF0D')
             .onClick((): void => this.selectApp(app))
             .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
               app.category === 'map' ? 'maps' : 'music', app.uri, newArea, (): void => this.selectApp(app)))
@@ -1407,7 +1445,8 @@ export struct ProjectionDashboard {
             .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
               'settings', 'dockPosition', newArea, (): void => this.toggleDockPosition()))
         }
-        .height(68).padding(12).borderRadius(8).backgroundColor(projectionTheme(this.theme).panel)
+        .height(68).padding(12).borderRadius(16).backgroundColor(this.glassPanelColor())
+        .border({ width: 1, color: '#FFFFFF26' })
         Row({ space: 10 }) {
           Image($r('app.media.ic_day_night')).width(28).height(28).objectFit(ImageFit.Contain)
           Column({ space: 4 }) {
@@ -1443,7 +1482,8 @@ export struct ProjectionDashboard {
                 'settings', 'dayNightNight', newArea, (): void => this.selectDayNightMode('NIGHT')))
           }
         }
-        .height(76).padding(12).borderRadius(8).backgroundColor(projectionTheme(this.theme).panel)
+        .height(76).padding(12).borderRadius(16).backgroundColor(this.glassPanelColor())
+        .border({ width: 1, color: '#FFFFFF26' })
         Column({ space: 4 }) {
           Text(this.vehicleDisplayUuid.length > 0
             ? `显示安全边距 · ${this.vehicleDisplayUuid.slice(-8)}` : '显示安全边距 · 默认')
@@ -1457,8 +1497,9 @@ export struct ProjectionDashboard {
         }
         .width('100%')
         .padding(14)
-        .borderRadius(8)
-        .backgroundColor(projectionTheme(this.theme).panel)
+        .borderRadius(16)
+        .backgroundColor(this.glassPanelColor())
+        .border({ width: 1, color: '#FFFFFF26' })
         Column({ space: 4 }) {
           Text(this.vehicleDisplayUuid.length > 0
             ? `异形屏内容校准 · ${this.vehicleDisplayUuid.slice(-8)}` : '异形屏内容校准')
@@ -1473,8 +1514,9 @@ export struct ProjectionDashboard {
         }
         .width('100%')
         .padding(14)
-        .borderRadius(8)
-        .backgroundColor(projectionTheme(this.theme).panel)
+        .borderRadius(16)
+        .backgroundColor(this.glassPanelColor())
+        .border({ width: 1, color: '#FFFFFF26' })
         Row({ space: 12 }) {
           Column({ space: 4 }) {
             Text('投屏分辨率').fontSize(14).fontColor('#DCE4DE')
@@ -1502,8 +1544,9 @@ export struct ProjectionDashboard {
         }
         .width('100%')
         .padding(14)
-        .borderRadius(8)
-        .backgroundColor(projectionTheme(this.theme).panel)
+        .borderRadius(16)
+        .backgroundColor(this.glassPanelColor())
+        .border({ width: 1, color: '#FFFFFF26' })
         Text(this.resolutionSelectionMessage || this.projectionResolutionMessage ||
           (this.projectionModeOptions.length > 1
             ? `车机原生 ${this.projectionNativeWidth}×${this.projectionNativeHeight}；档位按显示 UUID 独立保存`
@@ -1524,7 +1567,8 @@ export struct ProjectionDashboard {
               'settings', 'bluetoothAudio', newArea,
               (): void => { this.useBluetoothAudio = !this.useBluetoothAudio; }))
         }
-        .height(68).padding(12).borderRadius(8).backgroundColor(projectionTheme(this.theme).panel)
+        .height(68).padding(12).borderRadius(16).backgroundColor(this.glassPanelColor())
+        .border({ width: 1, color: '#FFFFFF26' })
         Row({ space: 16 }) {
           Text('编码帧率').fontSize(14).fontColor('#DCE4DE').layoutWeight(1)
           Select([{ value: '15 fps' }, { value: '24 fps' }, { value: '30 fps' }, { value: '60 fps' }])
@@ -1532,7 +1576,8 @@ export struct ProjectionDashboard {
             .onSelect((index: number): void => { this.encoderFps = [15, 24, 30, 60][index]; })
             .width(120).height(42).font({ size: 13 })
         }
-        .height(64).padding(12).borderRadius(8).backgroundColor(projectionTheme(this.theme).panel)
+        .height(64).padding(12).borderRadius(16).backgroundColor(this.glassPanelColor())
+        .border({ width: 1, color: '#FFFFFF26' })
         Row({ space: 16 }) {
           Text('采集刷新率').fontSize(14).fontColor('#DCE4DE').layoutWeight(1)
           Select([{ value: '30 Hz' }, { value: '60 Hz' }])
@@ -1540,7 +1585,8 @@ export struct ProjectionDashboard {
             .onSelect((index: number): void => { this.captureFps = [30, 60][index]; })
             .width(120).height(42).font({ size: 13 })
         }
-        .height(64).padding(12).borderRadius(8).backgroundColor(projectionTheme(this.theme).panel)
+        .height(64).padding(12).borderRadius(16).backgroundColor(this.glassPanelColor())
+        .border({ width: 1, color: '#FFFFFF26' })
         Text('下次连接生效').fontSize(12).fontColor('#AAB8AF')
         if (this.activeEncoderFps > 0) {
           Text(`当前 ${this.activeEncoderFps} fps / ${this.activeCaptureFps} Hz`)
@@ -1610,7 +1656,9 @@ export struct ProjectionDashboard {
         }
       }
       .layoutWeight(1).width('100%').padding(12).borderRadius(8)
-      .backgroundColor('#2364BD').clip(true)
+      .backgroundColor('#2364BDCC')
+      .border({ width: 1, color: '#FFFFFF40' })
+      .clip(true)
 
       Column({ space: 8 }) {
         Row({ space: 8 }) {
@@ -1656,7 +1704,8 @@ export struct ProjectionDashboard {
         }
       }
       .layoutWeight(1).width('100%').padding(12).borderRadius(8)
-      .backgroundColor(projectionTheme(this.theme).panel)
+      .backgroundColor(this.glassPanelColor())
+      .border({ width: 1, color: '#FFFFFF20' })
     }
     .width('32%').constraintSize({ minWidth: 118, maxWidth: 250 }).height('100%')
   }

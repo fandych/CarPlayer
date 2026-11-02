@@ -33,6 +33,7 @@ export interface SessionEvents {
   onAirPlayService: (service: AirPlayService) => void;
   onAirPlayMediaSession: (info: AirPlayMediaSessionInfo) => void;
   onProjectionReady: (displayId: number, width: number, height: number) => Promise<void>;
+  onProjectionStopping?: () => Promise<void>;
   onProjectionStopped: () => void;
   requestMfiTrust: (info: MfiTrustPromptInfo) => Promise<boolean>;
   persistMfiFingerprint: (fingerprint: string) => Promise<void>;
@@ -1017,6 +1018,13 @@ export class SessionController {
   private async stopProjection(): Promise<void> {
     const displayId = this.projectionDisplay.id;
     const failures: string[] = [];
+    if (displayId >= 0 && this.events.onProjectionStopping) {
+      try {
+        await this.events.onProjectionStopping();
+      } catch (error) {
+        this.events.onLog(`离车时暂停音乐失败：${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
     this.touchInput.stop();
     emitter.off(CARPLAY_RECEIVER_HOME_EVENT, this.receiverHomeHandler);
     this.activePairing?.setTouchReportHandler(undefined);

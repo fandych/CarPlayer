@@ -1,6 +1,7 @@
 import common from '@ohos.app.ability.common';
 import fileFs from '@ohos.file.fs';
 import picker from '@ohos.file.picker';
+import avSession from '@ohos.multimedia.avsession';
 import promptAction from '@ohos.promptAction';
 import { AirPlayMediaSessionInfo } from '../airplay/AirPlayMediaSession';
 import { MfiTrustPromptInfo } from '../iap2/MfiVerifier';
@@ -774,6 +775,7 @@ struct Index {
           throw new Error(`CarPlay 虚拟屏已创建，但投影首页启动失败：${message}`);
         }
       },
+      onProjectionStopping: (): Promise<void> => this.pauseActiveMediaOnProjectionStop(),
       onProjectionStopped: (): void => {
         this.projectionDisplayId = -1;
         AppStorage.setOrCreate('carplayProjectionActiveModeId', '');
@@ -793,6 +795,41 @@ struct Index {
       this.skipMfiChallengeVerification
     );
     return this.controller;
+  }
+
+  private async pauseActiveMediaOnProjectionStop(): Promise<void> {
+    const descriptors = await avSession.getAllSessionDescriptors();
+    const activeSession = descriptors.find((descriptor: avSession.AVSessionDescriptor): boolean =>
+      descriptor.isTopSession && descriptor.isActive && descriptor.type === 'audio') ??
+      descriptors.find((descriptor: avSession.AVSessionDescriptor): boolean =>
+        descriptor.isActive && descriptor.type === 'audio');
+    if (!activeSession) {
+      return;
+    }
+
+    const mediaController = await avSession.createController(activeSession.sessionId);
+    try {
+      const playbackState = await mediaController.getAVPlaybackState();
+      if (playbackState.state !== avSession.PlaybackState.PLAYBACK_STATE_PLAY) {
+        return;
+      }
+      const commands = await mediaController.getValidCommands();
+      if (!commands.includes('pause')) {
+        this.logProtocol('media',
+          `离车时无法暂停音乐：${activeSession.elementName.bundleName} 未开放 pause 控制`, 'WARN');
+        return;
+      }
+      await mediaController.sendControlCommand({ command: 'pause' });
+      this.logProtocol('media',
+        `离车时已暂停音乐：${activeSession.elementName.bundleName}/${activeSession.elementName.abilityName}`);
+    } finally {
+      try {
+        await mediaController.destroy();
+      } catch (error) {
+        this.logProtocol('media',
+          `释放离车媒体控制器失败：${error instanceof Error ? error.message : String(error)}`, 'WARN');
+      }
+    }
   }
 
   private async disconnectAirPlay(): Promise<void> {

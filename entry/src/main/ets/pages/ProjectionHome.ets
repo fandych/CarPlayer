@@ -560,6 +560,7 @@ struct ProjectionHome {
           onMapSurfaceChange: (surface): void => {
             void this.updateMapSurface(surface);
           },
+          onMediaLog: (message): void => this.logProjection(message),
           onAppClick: (app): void => {
             void this.selectApp(app);
           }

@@ -73,7 +73,7 @@ test('capture, encoder, Dock, safe-area and day/night settings stay within suppo
 test('projection settings provide spacious controls and a direct icon-led day/night selector', () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
   assert.match(source, /app\.media\.ic_day_night/);
-  assert.match(source, /\.height\(76\)\.padding\(12\)\.borderRadius\(8\)/);
+  assert.match(source, /\.height\(76\)\.padding\(12\)\.borderRadius\(16\)\.backgroundColor\(this\.glassPanelColor\(\)\)/);
   assert.match(source, /\.height\(42\)\.padding\(\{ left: 9, right: 9 \}\)/);
   const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', ['selectDayNightMode']);
   const target = new Target();
@@ -415,7 +415,7 @@ test('vehicle Bluetooth audio touch area is active only on the settings page', (
 test('third-party launch targets come from the reference and URI probes control availability', async () => {
   const { PROJECTION_APP_CANDIDATES, PROJECTION_VEHICLE_APPS, resolveProjectionApps } =
     loadEts('pages/ProjectionAppCatalog.ets');
-  assert.equal(PROJECTION_APP_CANDIDATES.length, 13);
+  assert.equal(PROJECTION_APP_CANDIDATES.length, 14);
   for (const app of PROJECTION_APP_CANDIDATES) {
     assert.ok(app.icon, app.label);
     assert.match(app.uri, /^carplay-client:\/\/v1\/apps\//);
@@ -434,6 +434,17 @@ test('third-party launch targets come from the reference and URI probes control 
   assert.equal(huaweiMusic.bundleName, 'com.huawei.hmsapp.music');
   assert.equal(huaweiMusic.abilityName, 'MainAbility');
   assert.equal(huaweiMusic.launchTarget.uri, 'hwmusic://com.huawei.hmsapp.music');
+  const petal = PROJECTION_APP_CANDIDATES.find(app => app.appId === 'petal-maps');
+  assert.equal(petal.label, '地图');
+  assert.equal(petal.bundleName, 'com.huawei.hmos.maps.app');
+  assert.equal(petal.launchTarget.uri, 'petalmaps://');
+  const tangxin = PROJECTION_APP_CANDIDATES.find(app => app.appId === 'tangshui-music');
+  assert.equal(tangxin.bundleName, 'com.salmon.sweetmusic');
+  assert.equal(tangxin.launchTarget.uri, 'sweetmusic://');
+  const kuwo = PROJECTION_APP_CANDIDATES.find(app => app.appId === 'kuwo-music');
+  assert.equal(kuwo.bundleName, 'com.hmkuwo.cn');
+  assert.equal(kuwo.abilityName, 'KuWoAbility');
+  assert.equal(kuwo.launchTarget.uri, 'kwapp://');
   assert.equal(PROJECTION_APP_CANDIDATES.find(app => app.appId === 'kugou-music').launchTarget.uri,
     'kugou://m.kugou.com');
   assert.equal(PROJECTION_APP_CANDIDATES.find(app => app.appId === 'eastmoney').launchTarget.probeUri,
@@ -445,11 +456,14 @@ test('third-party launch targets come from the reference and URI probes control 
     return [
       'amapuri://',
       'baidumap://map',
+      'petalmaps://',
       'qqmap://',
       'hwmusic://com.huawei.hmsapp.music',
       'qqmusic://',
       'orpheus://',
       'kugou://m.kugou.com',
+      'sweetmusic://',
+      'kwapp://',
       'snssdk1128://',
       'kwai://',
       'emoh://eastmoney.com',
@@ -457,24 +471,26 @@ test('third-party launch targets come from the reference and URI probes control 
     ].includes(uri);
   });
   assert.deepEqual(resolved.filter(app => app.launchState === 'VERIFIED').map(app => app.appId),
-    ['amap', 'baidu-map', 'tencent-map', 'huawei-music', 'qq-music', 'netease-music', 'kugou-music',
-      'douyin', 'kuaishou', 'eastmoney', 'tencent-video']);
+    ['amap', 'baidu-map', 'petal-maps', 'tencent-map', 'huawei-music', 'qq-music', 'netease-music',
+      'kugou-music', 'tangshui-music', 'kuwo-music', 'douyin', 'kuaishou', 'eastmoney', 'tencent-video']);
   assert.ok(probedLinks.includes('amapuri://'));
   assert.ok(probedLinks.includes('baidumap://map'));
+  assert.ok(probedLinks.includes('petalmaps://'));
   assert.ok(probedLinks.includes('qqmap://'));
   assert.ok(probedLinks.includes('hwmusic://com.huawei.hmsapp.music'));
   assert.ok(probedLinks.includes('qqmusic://'));
   assert.ok(probedLinks.includes('orpheus://'));
   assert.ok(probedLinks.includes('kugou://m.kugou.com'));
+  assert.ok(probedLinks.includes('sweetmusic://'));
+  assert.ok(probedLinks.includes('kwapp://'));
   assert.ok(probedLinks.includes('snssdk1128://'));
   assert.ok(probedLinks.includes('kwai://'));
   assert.ok(probedLinks.includes('emoh://eastmoney.com'));
   assert.ok(probedLinks.includes('tenvideo2://'));
-  assert.equal(resolved.find(app => app.appId === 'petal-maps').launchTarget, undefined);
   const moduleManifest = fs.readFileSync(path.join(sourceRoot, '../module.json5'), 'utf8');
   for (const scheme of [
-    'amapuri', 'baidumap', 'hwmusic', 'qqmap', 'qqmusic', 'orpheus', 'kugou', 'snssdk1128', 'kwai', 'emoh',
-    'tenvideo2'
+    'amapuri', 'baidumap', 'petalmaps', 'hwmusic', 'qqmap', 'qqmusic', 'orpheus', 'kugou', 'sweetmusic',
+    'kwapp', 'snssdk1128', 'kwai', 'emoh', 'tenvideo2'
   ]) {
     assert.match(moduleManifest, new RegExp(`"${scheme}"`), `querySchemes must include ${scheme}`);
   }
@@ -1176,6 +1192,88 @@ test('an active media session does not imply a verified app launch target', () =
   assert.equal(includeMediaSessionApp(apps, 'com.huawei.hmsapp.music', 'MainAbility').length, 2);
   assert.equal(includeMediaSessionApp(apps), apps);
   assert.equal(maps.length, 1);
+});
+
+test('active media metadata is logged once per track or playback-state change', () => {
+  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard',
+    ['logMediaSnapshotIfChanged']);
+  const target = new Target();
+  target.lastLoggedMediaSignature = '';
+  const logs = [];
+  target.onMediaLog = message => logs.push(message);
+  const snapshot = {
+    bundleName: 'com.huawei.hmsapp.music',
+    abilityName: 'MainAbility',
+    title: 'Track One',
+    artist: 'Artist',
+    isPlaying: true
+  };
+  target.logMediaSnapshotIfChanged(snapshot);
+  target.logMediaSnapshotIfChanged(snapshot);
+  target.logMediaSnapshotIfChanged({ ...snapshot, title: 'Track Two' });
+  assert.equal(logs.length, 2);
+  assert.match(logs[0], /Track One/);
+  assert.match(logs[1], /Track Two/);
+});
+
+test('leaving projection pauses the active media session without terminating its app', async () => {
+  const commands = [];
+  let destroyed = false;
+  const avSession = {
+    PlaybackState: { PLAYBACK_STATE_PLAY: 2 },
+    getAllSessionDescriptors: async () => [{
+      isTopSession: true,
+      isActive: true,
+      type: 'audio',
+      sessionId: 'music-session',
+      elementName: { bundleName: 'com.huawei.hmsapp.music', abilityName: 'MainAbility' }
+    }],
+    createController: async () => ({
+      getAVPlaybackState: async () => ({ state: 2 }),
+      getValidCommands: async () => ['pause'],
+      sendControlCommand: async command => { commands.push(command.command); },
+      destroy: async () => { destroyed = true; }
+    })
+  };
+  const Target = loadMethods('pages/Index.ets', 'Index', ['pauseActiveMediaOnProjectionStop'], { avSession });
+  const target = new Target();
+  const logs = [];
+  target.logProtocol = (_stage, message) => logs.push(message);
+  await target.pauseActiveMediaOnProjectionStop();
+  assert.deepEqual(commands, ['pause']);
+  assert.equal(destroyed, true);
+  assert.ok(logs.some(message => message.includes('离车时已暂停音乐')));
+});
+
+test('media controls wait for the in-flight session refresh instead of using a stale snapshot', async () => {
+  let descriptorCalls = 0;
+  let resolveDescriptors;
+  const avSession = {
+    getAllSessionDescriptors() {
+      descriptorCalls++;
+      return new Promise(resolve => { resolveDescriptors = resolve; });
+    },
+    onSessionCreate() {},
+    onSessionDestroy() {},
+    onTopSessionChange() {}
+  };
+  const { MediaSessionBridge } = loadEts('session/MediaSessionBridge.ets', {
+    '@ohos.multimedia.avsession': avSession
+  });
+  const bridge = new MediaSessionBridge();
+  const first = bridge.refresh();
+  let secondSettled = false;
+  const second = bridge.refresh().then(snapshot => {
+    secondSettled = true;
+    return snapshot;
+  });
+  assert.equal(descriptorCalls, 1);
+  await Promise.resolve();
+  assert.equal(secondSettled, false);
+  resolveDescriptors([]);
+  const snapshots = await Promise.all([first, second]);
+  assert.equal(snapshots[0].message, '未检测到活动音乐会话');
+  assert.equal(snapshots[1].message, '未检测到活动音乐会话');
 });
 
 test('all HID reports in a TCP read are dispatched before awaiting any response write', async () => {
@@ -2164,15 +2262,21 @@ test('audio drops stale PCM before encryption, advances sample time and cannot r
   }
 });
 
-test('unknown app candidates remain unverified without a source-backed launch target', async () => {
+test('Petal Maps and installed music apps use the URI entries observed on the phone', async () => {
   const { resolveProjectionApps } = loadEts('pages/ProjectionAppCatalog.ets');
-  const resolved = await resolveProjectionApps(() => true);
+  const resolved = await resolveProjectionApps(uri =>
+    ['petalmaps://', 'sweetmusic://', 'kwapp://'].includes(uri));
   const petal = resolved.find(app => app.appId === 'petal-maps');
   const tangshui = resolved.find(app => app.appId === 'tangshui-music');
-  assert.equal(petal.launchTarget, undefined);
-  assert.equal(petal.launchState, 'UNVERIFIED');
-  assert.equal(tangshui.launchTarget, undefined);
-  assert.equal(tangshui.launchState, 'UNVERIFIED');
+  const kuwo = resolved.find(app => app.appId === 'kuwo-music');
+  assert.equal(petal.label, '地图');
+  assert.equal(petal.launchTarget.uri, 'petalmaps://');
+  assert.equal(petal.launchState, 'VERIFIED');
+  assert.equal(tangshui.label, '溏心音乐');
+  assert.equal(tangshui.launchTarget.uri, 'sweetmusic://');
+  assert.equal(tangshui.launchState, 'VERIFIED');
+  assert.equal(kuwo.launchTarget.uri, 'kwapp://');
+  assert.equal(kuwo.launchState, 'VERIFIED');
 });
 
 test('car volume gain preserves signed PCM, silence and source ownership', () => {

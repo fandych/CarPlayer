@@ -37,7 +37,8 @@ export struct InfoCard {
     }
     .width('100%')
     .padding(16)
-    .borderRadius(14)
-    .backgroundColor('#FFFFFF')
+    .borderRadius(18)
+    .backgroundColor('#FFFFFF99')
+    .border({ width: 1, color: '#FFFFFFCC' })
   }
 }

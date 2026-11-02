@@ -78,9 +78,11 @@ export const PROJECTION_APP_CANDIDATES: ProjectionApp[] = [
     label: '百度地图', mark: '百', color: '#4774A1', category: 'map', icon: 'app.media.app_baidu'
   },
   {
-    appId: 'petal-maps', uri: 'carplay-client://v1/apps/petal-maps/launch', launchState: 'UNVERIFIED',
-    unavailableReason: '旧源码没有可复用的公开启动入口',
-    label: 'Petal 地图', mark: 'P', color: '#5186B7', category: 'map', icon: 'app.media.ic_navigation'
+    appId: 'petal-maps', uri: 'carplay-client://v1/apps/petal-maps/launch',
+    bundleName: 'com.huawei.hmos.maps.app', abilityName: 'EntryAbility', launchState: 'UNVERIFIED',
+    launchTarget: { kind: 'appLink', uri: 'petalmaps://' },
+    unavailableReason: '当前设备未解析到地图应用的 petalmaps:// 入口',
+    label: '地图', mark: '图', color: '#5186B7', category: 'map', icon: 'app.media.ic_navigation'
   },
   {
     appId: 'tencent-map', uri: 'carplay-client://v1/apps/tencent-map/launch', launchState: 'UNVERIFIED',
@@ -114,9 +116,18 @@ export const PROJECTION_APP_CANDIDATES: ProjectionApp[] = [
     label: '酷狗音乐', mark: 'K', color: '#D5A837', category: 'music', icon: 'app.media.app_kugou'
   },
   {
-    appId: 'tangshui-music', uri: 'carplay-client://v1/apps/tangshui-music/launch', launchState: 'UNVERIFIED',
-    unavailableReason: '旧源码没有可复用的公开启动入口',
-    label: '糖水音乐', mark: '糖', color: '#A875B5', category: 'music', icon: 'app.media.ic_music'
+    appId: 'tangshui-music', uri: 'carplay-client://v1/apps/tangshui-music/launch',
+    bundleName: 'com.salmon.sweetmusic', abilityName: 'EntryAbility', launchState: 'UNVERIFIED',
+    launchTarget: { kind: 'appLink', uri: 'sweetmusic://' },
+    unavailableReason: '当前设备未解析到溏心音乐的 sweetmusic:// 入口',
+    label: '溏心音乐', mark: '溏', color: '#A875B5', category: 'music', icon: 'app.media.ic_music'
+  },
+  {
+    appId: 'kuwo-music', uri: 'carplay-client://v1/apps/kuwo-music/launch',
+    bundleName: 'com.hmkuwo.cn', abilityName: 'KuWoAbility', launchState: 'UNVERIFIED',
+    launchTarget: { kind: 'appLink', uri: 'kwapp://' },
+    unavailableReason: '当前设备未解析到酷我音乐的 kwapp:// 入口',
+    label: '酷我音乐', mark: '酷', color: '#6E8FB4', category: 'music', icon: 'app.media.ic_music'
   },
   {
     appId: 'douyin', uri: 'carplay-client://v1/apps/douyin/launch',
