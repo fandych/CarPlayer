@@ -918,6 +918,7 @@ test('wireless iAP2 groups parse credentials and retain untrusted UUID identitie
   const session = loadEts('session/Iap2SenderSession.ets', {
     '../protocol/Iap2Codec': codec,
     '@ohos.security.cryptoFramework': {},
+    '@ohos.data.preferences': {},
     '@ohos.i18n': { System: { getSystemLanguage: () => 'zh-Hans' } },
     '../iap2/MfiVerifier': { MfiVerifier: class {} },
     './ProtocolLogger': { formatProtocolEvent: () => '', formatRawBytesDiagnostic: () => '' }
@@ -1418,6 +1419,406 @@ test('wireless startup availability waits without arming a start-request deadlin
   assert.equal(announcements, 1);
 });
 
+test('iAP2 probes legacy Wi-Fi for sparse lists and only skips it for complete new-protocol lists', () => {
+  const { shouldProbeLegacyWifi } = loadEts('session/Iap2SenderSession.ets', {
+    '../protocol/Iap2Codec': {},
+    '@ohos.security.cryptoFramework': {},
+    '@ohos.data.preferences': {},
+    '@ohos.i18n': {},
+    '../iap2/MfiVerifier': {},
+    './ProtocolLogger': {}
+  });
+  assert.equal(shouldProbeLegacyWifi([0x4301], [0x4300]), true);
+  assert.equal(shouldProbeLegacyWifi(Array(10).fill(0x4301), Array(10).fill(0x4300)), false);
+  assert.equal(shouldProbeLegacyWifi(Array(10).fill(0x4301), [0x5702, ...Array(9).fill(0x4300)]), true);
+});
+
+test('iAP2 retries 0x5702 after device greetings before falling back to 0x4300', async () => {
+  const timers = [];
+  let timerId = 0;
+  const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
+    ['startWifiConfigurationTimer'], {
+      MESSAGE: { WIFI_REQUEST: 0x5702 },
+      setTimeout: (callback, delayMs) => {
+        timers.push({ callback, delayMs });
+        return ++timerId;
+      },
+      clearTimeout: () => {}
+    });
+  const target = new Target();
+  const actions = [];
+  target.started = true;
+  target.authenticated = true;
+  target.deviceAnnouncementSent = false;
+  target.wifiConfigurationRescueGeneration = 0;
+  target.log = () => {};
+  target.errorDetails = error => error.message;
+  target.sendDeviceStateGreetings = async force => { actions.push(`greetings:${force}`); };
+  target.sendControl = async messageId => { actions.push(messageId); };
+  target.sendDeviceAnnouncement = async () => { actions.push('announce'); };
+  target.startWifiConfigurationTimer('0x5703', true);
+  assert.equal(timers[0].delayMs, 1500);
+
+  const runNextTimer = async () => {
+    timers.shift().callback();
+    for (let turn = 0; turn < 5; turn++) await Promise.resolve();
+  };
+  await runNextTimer();
+  assert.deepEqual(actions, ['greetings:true']);
+  assert.equal(timers[0].delayMs, 1300);
+  await runNextTimer();
+  assert.deepEqual(actions, ['greetings:true', 0x5702]);
+  assert.equal(timers[0].delayMs, 1500);
+  await runNextTimer();
+  assert.deepEqual(actions, ['greetings:true', 0x5702, 'announce']);
+});
+
+test('Buick B233 identity selects strict MFi and encodes two availability groups', async () => {
+  const concatBytes = (...parts) => {
+    const result = new Uint8Array(parts.reduce((length, part) => length + part.length, 0));
+    let offset = 0;
+    for (const part of parts) {
+      result.set(part, offset);
+      offset += part.length;
+    }
+    return result;
+  };
+  const encodeParameter = (id, value) => {
+    const result = new Uint8Array(value.length + 4);
+    result[0] = result.length >>> 8;
+    result[1] = result.length & 0xff;
+    result[2] = id >>> 8;
+    result[3] = id & 0xff;
+    result.set(value, 4);
+    return result;
+  };
+  const decodeParameters = bytes => {
+    const result = [];
+    for (let offset = 0; offset < bytes.length;) {
+      const length = (bytes[offset] << 8) | bytes[offset + 1];
+      assert.ok(length >= 4 && offset + length <= bytes.length);
+      result.push({ id: (bytes[offset + 2] << 8) | bytes[offset + 3], value: bytes.slice(offset + 4, offset + length) });
+      offset += length;
+    }
+    return result;
+  };
+  const encodeUtf8 = text => new TextEncoder().encode(text);
+  const decodeString = bytes => new TextDecoder().decode(bytes).replace(/\0.*$/s, '');
+  const codec = {
+    concatBytes,
+    decodeIap2Parameters: decodeParameters,
+    decodeIap2String: decodeString,
+    encodeUtf8,
+    encodeIap2Control: () => new Uint8Array(0),
+    encodeIap2LinkFrame: () => new Uint8Array(0),
+    formatIap2LinkPayloadDiagnostic: () => '',
+    formatIap2MessageDiagnostic: () => '',
+    formatIap2RawFrameDiagnostic: () => '',
+    groupedParameter: (id, children) => encodeParameter(id, concatBytes(...children)),
+    Iap2ControlDecoder: class {},
+    Iap2LinkDecoder: class {},
+    numberParameter: (id, number, width) => {
+      const value = new Uint8Array(width);
+      for (let index = width - 1; index >= 0; index--) {
+        value[index] = number & 0xff;
+        number = Math.floor(number / 256);
+      }
+      return encodeParameter(id, value);
+    },
+    stringParameter: (id, text) => encodeParameter(id, concatBytes(encodeUtf8(text), new Uint8Array([0])))
+  };
+  const session = loadEts('session/Iap2SenderSession.ets', {
+    '../protocol/Iap2Codec': codec,
+    '@ohos.security.cryptoFramework': {},
+    '@ohos.data.preferences': {},
+    '@ohos.i18n': { System: { getSystemLanguage: () => 'zh-CN' } },
+    '../iap2/MfiVerifier': { MfiVerifier: class {} },
+    './ProtocolLogger': { formatProtocolEvent: () => '', formatRawBytesDiagnostic: () => '' }
+  });
+  const identity = 'Buick B233 SAIC General Motors';
+  assert.equal(session.isBuickB233Identity(identity), true);
+  assert.equal(session.isBuickB233Identity('Buick SAIC General Motors'), false);
+  assert.equal(session.isBuickB233Identity('B233 SAIC General Motors'), false);
+  const NewProtocolTarget = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
+    ['requestWifiConfiguration'], {
+      MESSAGE: { CARPLAY_AVAILABILITY: 0x4300, CARPLAY_START_SESSION: 0x4301,
+        WIFI_REQUEST: 0x5702, WIFI_CONFIGURATION: 0x5703 },
+      shouldProbeLegacyWifi: session.shouldProbeLegacyWifi
+    });
+  const newProtocolTarget = new NewProtocolTarget();
+  newProtocolTarget.accessorySendMessages = Array(10).fill(0x4301);
+  newProtocolTarget.accessoryReceiveMessages = Array(10).fill(0x4300);
+  newProtocolTarget.log = () => {};
+  let newProtocolAnnouncements = 0;
+  newProtocolTarget.sendDeviceAnnouncement = async () => { newProtocolAnnouncements++; };
+  newProtocolTarget.sendControl = async () => { throw new Error('complete new-protocol lists must skip 0x5702'); };
+  await newProtocolTarget.requestWifiConfiguration();
+  assert.equal(newProtocolAnnouncements, 1);
+
+  const deviceIdentifier = '0123456789ABCDEF01234567';
+  const bluetoothAddress = 'AA:BB:CC:DD:EE:FF';
+  const groups = decodeParameters(session.encodeBuickB233AvailabilityBody(deviceIdentifier, bluetoothAddress));
+  assert.deepEqual(groups.map(group => group.id), [0, 1]);
+  assert.equal(decodeString(decodeParameters(groups[0].value)[1].value), deviceIdentifier);
+  assert.equal(decodeString(decodeParameters(groups[1].value)[1].value), bluetoothAddress);
+  assert.throws(() => session.encodeBuickB233AvailabilityBody(deviceIdentifier, '02:00:00:00:00:00'));
+  assert.throws(() => session.encodeBuickB233AvailabilityBody(deviceIdentifier, '00:00:00:00:00:00'));
+
+  const normalize = value => value.toLowerCase().replace(/\s+/g, ' ').trim();
+  const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
+    ['chooseChallengeLength', 'prioritizeStoredChallengeLength'], {
+      isBuickB233Identity: session.isBuickB233Identity,
+      normalizeAccessoryIdentity: normalize,
+      readAccessoryIdentity: bytes => new TextDecoder().decode(bytes),
+      prioritizeStoredChallengeLength: async () => {}
+    });
+  const target = new Target();
+  target.log = () => {};
+  await target.chooseChallengeLength(new TextEncoder().encode(identity));
+  assert.deepEqual(Array.from(target.challengeLengths), [32]);
+  await target.chooseChallengeLength(new TextEncoder().encode('Audi MIB3'));
+  assert.deepEqual(Array.from(target.challengeLengths), [20, 32, 16]);
+
+  let digestInput;
+  const IdentifierTarget = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
+    ['buickCarPlayDeviceIdentifier'], {
+      cryptoFramework: { createMd: algorithm => {
+        assert.equal(algorithm, 'SHA256');
+        return {
+          update: async ({ data }) => { digestInput = new TextDecoder().decode(data); },
+          digest: async () => ({ data: Uint8Array.from({ length: 32 }, (_, index) => index) })
+        };
+      } },
+      encodeUtf8
+    });
+  const identifierTarget = new IdentifierTarget();
+  identifierTarget.deviceAddress = bluetoothAddress.toLowerCase();
+  assert.equal(await identifierTarget.buickCarPlayDeviceIdentifier(), '000102030405060708090A0B');
+  assert.equal(digestInput, 'CarDeck-CarPlay:AA:BB:CC:DD:EE:FF');
+});
+
+test('MFi challenge memory prioritizes and persists a successful length by hashed receiver identity', async () => {
+  const stored = new Map();
+  const writes = [];
+  let flushed = 0;
+  const store = {
+    get: async (key, fallback) => stored.get(key) ?? fallback,
+    put: async (key, value) => { stored.set(key, value); writes.push([key, value]); },
+    flush: async () => { flushed++; }
+  };
+  const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
+    ['prioritizeStoredChallengeLength', 'persistSuccessfulChallengeLength'], {
+      cryptoFramework: { createMd: () => ({
+        update: async () => {},
+        digest: async () => ({ data: Uint8Array.from({ length: 32 }, (_, index) => index) })
+      }) },
+      encodeUtf8: text => new TextEncoder().encode(text),
+      preferences: { getPreferences: async (_context, name) => {
+        assert.equal(name, 'carplayer_mfi_challenge_memory');
+        return store;
+      } }
+    });
+  const target = new Target();
+  target.context = {};
+  target.accessoryIdentity = 'receiver model manufacturer';
+  target.challengeLengths = [20, 32, 16];
+  target.challengeLength = 20;
+  target.buickB233Receiver = false;
+  target.log = () => {};
+  target.errorDetails = error => error.message;
+  stored.set('receiver_000102030405060708090a0b', 32);
+  await target.prioritizeStoredChallengeLength();
+  assert.deepEqual(Array.from(target.challengeLengths), [32, 20, 16]);
+  assert.equal(target.challengeLength, 32);
+  await target.persistSuccessfulChallengeLength(32);
+  assert.deepEqual(writes, [['receiver_000102030405060708090a0b', 32]]);
+  assert.equal(flushed, 1);
+});
+
+test('Buick B233 bypasses the legacy Wi-Fi request even with sparse capabilities', async () => {
+  const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
+    ['requestWifiConfiguration'], { shouldProbeLegacyWifi: () => true });
+  const target = new Target();
+  target.buickB233Receiver = true;
+  target.log = () => {};
+  target.errorDetails = error => error.message;
+  let announcements = 0;
+  let controls = 0;
+  target.sendDeviceAnnouncement = async () => { announcements++; };
+  target.sendControl = async () => { controls++; };
+  await target.requestWifiConfiguration();
+  assert.equal(announcements, 1);
+  assert.equal(controls, 0);
+});
+
+test('Buick B233 re-identification is one-shot and buffers an early 0x4301', async () => {
+  const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
+    ['receiveControlMessage'], {
+      MESSAGE: { IDENTIFICATION_INFORMATION: 0x1d01, IDENTIFICATION_ACCEPTED: 0x1d02,
+        MFI_CERTIFICATE_REQUEST: 0xaa00, CARPLAY_START_SESSION: 0x4301 },
+      formatIap2MessageDiagnostic: () => '',
+      isBuickB233Identity: value => value.includes('buick') && value.includes('b233') &&
+        value.includes('saic general motors'),
+      normalizeAccessoryIdentity: value => value.toLowerCase().replace(/\s+/g, ' ').trim(),
+      readAccessoryIdentity: bytes => new TextDecoder().decode(bytes)
+    });
+  const target = new Target();
+  target.log = () => {};
+  target.chooseChallengeLength = () => {};
+  target.logMfiMessageCapabilities = () => {};
+  target.clearMfiChallenge = () => {};
+  target.clearMfiCertificateTimer = () => {};
+  target.clearBuickStartSessionTimer = () => {};
+  target.startMfiCertificateTimer = () => {};
+  const sent = [];
+  target.sendControl = async messageId => { sent.push(messageId); };
+  target.accessoryIdentity = 'buick b233 saic general motors';
+  target.buickB233Receiver = true;
+  target.buickAvailabilitySent = true;
+  target.authenticated = true;
+
+  await target.receiveControlMessage(0x1d01, new TextEncoder().encode(target.accessoryIdentity));
+  assert.equal(target.authenticated, true);
+  assert.deepEqual(sent, []);
+  target.buickWaitingForStartSession = true;
+  target.buickReidentificationWindowOpen = false;
+  await target.receiveControlMessage(0x1d01, new TextEncoder().encode(target.accessoryIdentity));
+  assert.equal(target.authenticated, true);
+  assert.deepEqual(sent, []);
+  target.buickReidentificationWindowOpen = true;
+  await target.receiveControlMessage(0x1d01, new TextEncoder().encode('Audi MIB3'));
+  assert.equal(target.authenticated, true);
+  assert.deepEqual(sent, []);
+  await target.receiveControlMessage(0x1d01, new TextEncoder().encode(target.accessoryIdentity));
+  assert.equal(target.buickReauthenticationInProgress, true);
+  assert.equal(target.buickReidentificationUsed, true);
+  assert.deepEqual(sent, [0x1d02, 0xaa00]);
+  await target.receiveControlMessage(0x1d01, new TextEncoder().encode(target.accessoryIdentity));
+  assert.deepEqual(sent, [0x1d02, 0xaa00]);
+  await target.receiveControlMessage(0x4301, new Uint8Array([1, 2, 3]));
+  assert.deepEqual(Array.from(target.pendingBuickStartSession), [1, 2, 3]);
+});
+
+test('Buick B233 echoes only the first DETECT marker while waiting for 0x4301', async () => {
+  const marker = new Uint8Array([0xff, 0x55, 0x02, 0x00, 0xee, 0x10]);
+  const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
+    ['receiveDetectionMarker'], { LINK_MARKER: marker, formatRawBytesDiagnostic: () => '' });
+  const target = new Target();
+  const sent = [];
+  const logs = [];
+  target.log = message => logs.push(message);
+  target.sendBytes = async bytes => { sent.push(Array.from(bytes)); };
+  target.buickB233Receiver = true;
+  target.buickWaitingForStartSession = true;
+  target.buickMarkerEchoSent = false;
+  target.started = true;
+  target.identificationRequested = true;
+
+  await target.receiveDetectionMarker();
+  await target.receiveDetectionMarker();
+  assert.deepEqual(sent, [Array.from(marker)]);
+  assert.equal(target.started, true);
+  assert.equal(target.identificationRequested, true);
+  assert.equal(target.buickMarkerEchoSent, true);
+  assert.ok(logs.some(message => message.includes('忽略重复 DETECT marker')));
+});
+
+test('Buick B233 T21 reports a redacted 0x4300 fingerprint and keeps a silent link alive', async () => {
+  const timers = [];
+  const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
+    ['startBuickStartSessionWaitTimer', 'clearBuickStartSessionTimer'], {
+      setTimeout: (callback, delayMs) => { timers.push({ callback, delayMs }); return timers.length; },
+      clearTimeout: () => {}
+    });
+  const target = new Target();
+  const logs = [];
+  target.log = message => logs.push(message);
+  target.controlAckSnapshot = () => 'link=up outstanding=7 queued=0 window=1 rxSeq=6';
+  target.started = true;
+  target.sessionGeneration = 4;
+  target.buickWaitingForStartSession = true;
+  target.buickReidentificationWindowOpen = true;
+  target.buickAvailabilitySentAt = Date.now() - 30000;
+  target.buickAvailabilityFrameDigest = 'a1b2c3d4e5f60708';
+  target.buickMarkerEchoSent = true;
+
+  target.startBuickStartSessionWaitTimer(4);
+  assert.equal(timers[0].delayMs, 30000);
+  timers[0].callback();
+  assert.ok(logs.some(message => message.includes('T21') && message.includes('outstanding=7')));
+  assert.ok(logs.some(message => message.includes('frameSHA256prefix=a1b2c3d4e5f60708')));
+  assert.equal(target.started, true);
+  assert.equal(target.buickWaitingForStartSession, true);
+  assert.equal(target.buickReidentificationWindowOpen, false);
+});
+
+test('Buick B233 T21 digest failures do not block availability sending', async () => {
+  const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
+    ['controlFrameDigest'], {
+      cryptoFramework: { createMd: () => { throw new Error('digest unavailable'); } },
+      encodeIap2Control: () => new Uint8Array([0x40, 0x40])
+    });
+  const target = new Target();
+  const logs = [];
+  target.log = message => logs.push(message);
+  target.errorDetails = error => error.message;
+  assert.equal(await target.controlFrameDigest(0x4300, new Uint8Array([1])), 'unavailable');
+  assert.ok(logs.some(message => message.includes('不影响发送')));
+});
+
+test('Buick B233 announcements use separate initial and recovery message orders', async () => {
+  const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
+    ['sendDeviceAnnouncement', 'sendDeviceStateGreetings'], {
+      MESSAGE: { WIRELESS_UPDATE: 0x4e0d, DEVICE_LANGUAGE_UPDATE: 0x4e0a,
+        DEVICE_INFORMATION_UPDATE: 0x4e09, DEVICE_TIME_UPDATE: 0x4e0b,
+        DEVICE_UUID_UPDATE: 0x4e0c, CARPLAY_AVAILABILITY: 0x4300 },
+      concatBytes: (...parts) => Uint8Array.from(parts.flatMap(part => Array.from(part))),
+      currentDeviceLanguage: () => 'zh-CN',
+      encodeBuickB233AvailabilityBody: () => new Uint8Array([0x43, 0x00]),
+      numberParameter: () => new Uint8Array([1]),
+      stringParameter: () => new Uint8Array([2]),
+      setTimeout: callback => { callback(); return 1; }
+    });
+  const target = new Target();
+  target.started = true;
+  target.authenticated = true;
+  target.sessionGeneration = 1;
+  target.deviceName = 'iPhone';
+  target.deviceUuid = 'test-device';
+  target.deviceAddress = 'AA:BB:CC:DD:EE:FF';
+  target.parameter = (_id, value) => value;
+  const logs = [];
+  target.log = message => logs.push(message);
+  target.waitForControlQueueDrain = async () => true;
+  target.controlFrameDigest = async () => '0123456789abcdef';
+  target.controlAckSnapshot = () => 'outstanding=none queued=0';
+  target.startBuickStartSessionWaitTimer = () => {};
+  target.clearBuickStartSessionTimer = () => {};
+  target.buickCarPlayDeviceIdentifier = async () => 'A'.repeat(24);
+  const sent = [];
+  target.sendControl = async messageId => { sent.push(messageId); };
+  target.buickB233Receiver = true;
+
+  await target.sendDeviceAnnouncement();
+  assert.deepEqual(sent, [0x4e0a, 0x4e09, 0x4e0b, 0x4e0c, 0x4300]);
+  assert.equal(target.buickWaitingForStartSession, true);
+  assert.equal(target.buickReidentificationWindowOpen, true);
+  assert.ok(logs.some(message => message.includes('frameSHA256prefix=0123456789abcdef')));
+  sent.length = 0;
+  target.deviceAnnouncementSent = false;
+  target.deviceStateGreetingsSent = false;
+  target.buickReidentificationUsed = true;
+  await target.sendDeviceAnnouncement();
+  assert.deepEqual(sent, [0x4e0c, 0x4e0a, 0x4e0b, 0x4e09, 0x4300]);
+  sent.length = 0;
+  target.deviceAnnouncementSent = false;
+  target.deviceStateGreetingsSent = false;
+  target.buickB233Receiver = false;
+  target.buickReidentificationUsed = false;
+  await target.sendDeviceAnnouncement();
+  assert.deepEqual(sent, [0x4e0d, 0x4e0a, 0x4e09, 0x4e0b, 0x4e0c, 0x4300]);
+});
+
 test('wireless startup never publishes an unknown identity as a pairing public key', () => {
   const { makeAirPlayServiceFromEndpoint } = loadEts('session/SessionController.ets', {},
     'makeAirPlayServiceFromEndpoint');
@@ -1435,9 +1836,10 @@ test('wireless startup candidates wait for matching mDNS keys and still reject k
     'normalizeDeviceIdentifier');
   const { correlateAirPlayIdentity } = loadEts('network/AirPlayIdentityCorrelation.ets');
   const Target = loadMethods('session/SessionController.ets', 'SessionController',
-    ['refreshDiscoveredAirPlay'], { makeAirPlayServiceFromEndpoint, normalizeDeviceIdentifier,
+    ['refreshDiscoveredAirPlay', 'makeAirPlayGatewayFallback'], { makeAirPlayServiceFromEndpoint, normalizeDeviceIdentifier,
       correlateAirPlayIdentity });
   const target = new Target();
+  target.wifiNetworkLease = {};
   target.events = { onLog() {} };
   target.iap2AirPlayEndpoint = { addresses: ['fe80::1'], port: 7000,
     deviceIdentifier: 'AA:BB:CC:DD:EE:FF', publicKey: '', sourceVersion: '450.14' };
@@ -1461,6 +1863,30 @@ test('wireless startup candidates wait for matching mDNS keys and still reject k
   assert.equal(rejected, true);
 });
 
+test('wireless gateway fallback uses only the selected WLAN route and never invents a pairing key', () => {
+  const { makeAirPlayServiceFromEndpoint } = loadEts('session/SessionController.ets', {},
+    'makeAirPlayServiceFromEndpoint');
+  const Target = loadMethods('session/SessionController.ets', 'SessionController',
+    ['refreshDiscoveredAirPlay', 'makeAirPlayGatewayFallback'], { makeAirPlayServiceFromEndpoint });
+  const target = new Target();
+  target.events = { onLog() {} };
+  target.wifiNetworkLease = { defaultGatewayAddress: '192.168.49.1' };
+  target.iap2AirPlayEndpoint = { addresses: [], port: 0, deviceIdentifier: 'AA:BB:CC:DD:EE:FF',
+    publicKey: '', unrecognizedIdentity: 'untrusted-identity', sourceVersion: '450.14' };
+  target.mdnsAirPlayService = undefined;
+  target.airPlayIdentityConflict = false;
+  target.refreshDiscoveredAirPlay();
+  assert.equal(target.discoveredAirPlay.host, '192.168.49.1');
+  assert.equal(target.discoveredAirPlay.port, 7000);
+  assert.equal(target.discoveredAirPlay.txt.deviceid, 'AA:BB:CC:DD:EE:FF');
+  assert.equal(Object.hasOwn(target.discoveredAirPlay.txt, 'pk'), false);
+
+  target.wifiNetworkLease.defaultGatewayAddress = undefined;
+  target.iap2AirPlayEndpoint = undefined;
+  target.refreshDiscoveredAirPlay();
+  assert.equal(target.discoveredAirPlay, undefined);
+});
+
 test('wireless startup rejects malformed and unauthenticated start requests', async () => {
   let valid = false;
   const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
@@ -1475,6 +1901,7 @@ test('wireless startup rejects malformed and unauthenticated start requests', as
   target.log = () => {};
   target.authenticated = true;
   target.errorDetails = error => error.message;
+  target.clearWifiConfigurationTimer = () => {};
   target.hasValidDeviceAddress = () => true;
   target.sendTransportIdentifier = async () => {};
   let invitations = 0;
@@ -1566,11 +1993,16 @@ test('wireless WLAN selection cancels pending acquisition and ignores late avail
   assert.equal(unregistered, 1);
 });
 
-test('wireless discovery starts before network selection but pairing waits for the selected WLAN', async () => {
+test('wireless discovery and ctrl advertisement start only after network selection', async () => {
   const Target = loadMethods('session/SessionController.ets', 'SessionController', ['joinVehicleWifi']);
   const target = new Target();
   const actions = [];
   target.running = true;
+  target.wifiJoinGeneration = 0;
+  target.wifiReconnectTimer = -1;
+  target.wifiReconnectAttempts = 0;
+  target.clearWifiReconnectTimer = () => {};
+  target.scheduleWifiReconnect = () => {};
   target.deviceAddress = '40:06:34:E5:ED:EA';
   target.credentials = { ssid: 'BUICK_7841', password: 'test-password', securityType: 3, channel: 149 };
   target.iap2 = { isAuthenticationComplete: true, async onWifiConnected() { actions.push('iap2'); } };
@@ -1584,20 +2016,69 @@ test('wireless discovery starts before network selection but pairing waits for t
     actions.push('network');
     return new Promise(resolve => { finishNetwork = resolve; });
   } };
+  target.refreshDiscoveredAirPlay = () => { actions.push('refresh'); };
   target.connectAirPlay = async () => { actions.push('pair'); };
   const joining = target.joinVehicleWifi();
   for (let turn = 0; turn < 20 && !finishNetwork; turn++) await Promise.resolve();
-  assert.deepEqual(actions, ['iap2', 'advertise', 'discovery', 'network']);
+  assert.deepEqual(actions, ['iap2', 'network']);
   assert.notEqual(target.vehicleWifiConnected, true);
   finishNetwork({ netId: 3 });
   await joining;
   assert.equal(target.vehicleWifiConnected, true);
+  assert.deepEqual(actions, ['iap2', 'network', 'refresh', 'discovery', 'advertise', 'pair']);
   assert.equal(actions.at(-1), 'pair');
   target.vehicleWifiConnected = false;
   target.wifiNetworkLease.acquire = async () => { throw new Error('no matching WLAN'); };
   await assert.rejects(target.joinVehicleWifi(), /无法确认 WLAN 选路/);
   assert.equal(target.vehicleWifiConnected, false);
   assert.equal(actions.filter(action => action === 'pair').length, 1);
+});
+
+test('selected WLAN loss cleans up AirPlay and schedules a bounded Wi-Fi rejoin', async () => {
+  const timers = [];
+  let timerId = 0;
+  const Target = loadMethods('session/SessionController.ets', 'SessionController',
+    ['handleVehicleWifiLost', 'scheduleWifiReconnect'], {
+      setTimeout: (callback, delayMs) => {
+        timers.push({ callback, delayMs });
+        return ++timerId;
+      },
+      clearTimeout: () => {}
+    });
+  const target = new Target();
+  const actions = [];
+  let rejoins = 0;
+  target.running = true;
+  target.credentials = { ssid: 'CAR_HOTSPOT', password: 'hidden' };
+  target.wifiReconnectTimer = -1;
+  target.wifiReconnectAttempts = 0;
+  target.wifiLostCleanupInProgress = false;
+  target.clearWifiReconnectTimer = () => {};
+  target.airPlayGeneration = 0;
+  target.airPlayConnectAttempted = true;
+  target.airPlayConnectInProgress = true;
+  target.vehicleWifiConnected = true;
+  target.inviteReceived = true;
+  target.events = { onStatus() {}, onLog() {} };
+  target.clearAirPlayTimers = () => {};
+  target.stopProjection = async () => { actions.push('projection'); };
+  target.wifiNetworkLease = { release: async () => { actions.push('lease'); } };
+  target.activePairing = {
+    stopMediaSession: async () => { actions.push('media'); },
+    close: async () => { actions.push('pairing'); }
+  };
+  target.discovery = { stop: () => { actions.push('discovery'); } };
+  target.ctrlAdvertiser = { stop: async () => { actions.push('advertiser'); } };
+  target.joinVehicleWifi = async () => { rejoins++; };
+
+  await target.handleVehicleWifiLost('selected network lost');
+  assert.equal(target.vehicleWifiConnected, false);
+  assert.equal(target.inviteReceived, false);
+  assert.deepEqual(actions, ['media', 'projection', 'pairing', 'discovery', 'advertiser', 'lease']);
+  assert.equal(timers[0].delayMs, 1000);
+  timers.shift().callback();
+  for (let turn = 0; turn < 5; turn++) await Promise.resolve();
+  assert.equal(rejoins, 1);
 });
 
 test('shake switching ignores vibration, requires three pulses, and cools down', () => {
@@ -3151,4 +3632,38 @@ test('accessory changeModes requests are granted and reflected in the mode state
   const restored = Modes.applyChangeModes(next, dict({ resources: { kind: 'array', arrayValue: [
     dict({ resourceID: integer(2), transferType: integer(4) })] } }));
   assert.equal(restored.audioEntity, 1);
+});
+
+test('wireless network lease exposes only the selected network default gateway', async () => {
+  let ipv6Only = false;
+  const { WifiNetworkLease } = loadEts('network/WifiNetworkLease.ets', {
+    '@ohos.net.connection': {
+      NetBearType: { BEARER_WIFI: 1 },
+      async getNetCapabilities() { return { bearerTypes: [1] }; },
+      async getConnectionProperties() {
+        return {
+          interfaceName: 'wlan0',
+          linkAddresses: [
+            { address: { address: '10.36.232.67' } },
+            { address: { address: 'fe80::2' } }
+          ],
+          routes: ipv6Only ? [
+            { isDefaultRoute: true, hasGateway: true, gateway: { address: 'fe80::1' } }
+          ] : [
+            { isDefaultRoute: false, hasGateway: true, gateway: { address: '10.36.232.1' } },
+            { isDefaultRoute: true, hasGateway: true, gateway: { address: '10.36.232.1' } },
+            { isDefaultRoute: true, hasGateway: false, gateway: { address: 'fe80::1' } }
+          ]
+        };
+      }
+    }
+  });
+  const lease = new WifiNetworkLease();
+  const addresses = await lease.getMatchingLocalAddresses({ netId: 3 }, '10.36.232.67');
+  lease.localAddresses = addresses;
+  assert.equal(lease.defaultGatewayAddress, '10.36.232.1');
+  const ipv6OnlyLease = new WifiNetworkLease();
+  ipv6Only = true;
+  ipv6OnlyLease.localAddresses = await ipv6OnlyLease.getMatchingLocalAddresses({ netId: 3 }, '10.36.232.67');
+  assert.equal(ipv6OnlyLease.defaultGatewayAddress, 'fe80::1%wlan0');
 });

@@ -68,12 +68,17 @@ export class SessionController {
   private inviteReceived: boolean = false;
   private vehicleWifiConnected: boolean = false;
   private wifiJoinInProgress: boolean = false;
+  private wifiJoinGeneration: number = 0;
   private airPlayConnectInProgress: boolean = false;
   private airPlayConnectAttempted: boolean = false;
   private airPlayGeneration: number = 0;
   private airPlayReconnectTimer: number = -1;
   private airPlayStableTimer: number = -1;
   private airPlayReconnectAttempts: number = 0;
+  private wifiReconnectTimer: number = -1;
+  private wifiReconnectAttempts: number = 0;
+  private wifiLostCleanupInProgress: boolean = false;
+  private lastGatewayFallbackSignature: string = '';
   private pendingAirPlayDisconnect: string = '';
   private readonly deviceAddress: string;
   private readonly deviceName: string;
@@ -132,9 +137,12 @@ export class SessionController {
     this.running = true;
     this.inviteReceived = false;
     this.wifiJoinInProgress = false;
+    this.wifiJoinGeneration++;
     this.airPlayConnectInProgress = false;
     this.airPlayConnectAttempted = false;
     this.vehicleWifiConnected = false;
+    this.wifiReconnectAttempts = 0;
+    this.clearWifiReconnectTimer();
     this.discoveredAirPlay = undefined;
     this.mdnsAirPlayService = undefined;
     this.iap2AirPlayEndpoint = undefined;
@@ -168,7 +176,9 @@ export class SessionController {
     advanceSessionGeneration();
     this.running = false;
     this.airPlayGeneration++;
+    this.wifiJoinGeneration++;
     this.clearAirPlayTimers();
+    this.clearWifiReconnectTimer();
     this.pendingAirPlayDisconnect = '';
     this.airPlayConnectAttempted = false;
     this.wifiJoinInProgress = false;
@@ -278,6 +288,10 @@ export class SessionController {
   }
 
   async joinVehicleWifi(): Promise<void> {
+    if (this.wifiLostCleanupInProgress) {
+      this.events.onLog('车机 Wi-Fi 丢失清理仍在进行，暂不启动新的网络加入');
+      return;
+    }
     if (this.vehicleWifiConnected) {
       this.events.onLog('车机 Wi-Fi 已连接，忽略重复加入请求');
       return;
@@ -303,6 +317,8 @@ export class SessionController {
       return;
     }
     this.wifiJoinInProgress = true;
+    this.clearWifiReconnectTimer();
+    const joinGeneration = ++this.wifiJoinGeneration;
     const credentials: WifiCredentials = {
       ssid: this.credentials.ssid,
       password: this.credentials.password,
@@ -311,11 +327,11 @@ export class SessionController {
     };
     try {
       await this.requestPermissions(['ohos.permission.GET_WIFI_INFO']);
-      if (!this.running) {
+      if (!this.running || joinGeneration !== this.wifiJoinGeneration) {
         return;
       }
       await this.requestPermissions(['ohos.permission.SET_WIFI_INFO']);
-      if (!this.running) {
+      if (!this.running || joinGeneration !== this.wifiJoinGeneration) {
         return;
       }
       try {
@@ -325,7 +341,7 @@ export class SessionController {
           `未获 GET_NETWORK_INFO 授权，保留原 Wi-Fi 连接流程：${error instanceof Error ? error.message : String(error)}`
         );
       }
-      if (!this.running) {
+      if (!this.running || joinGeneration !== this.wifiJoinGeneration) {
         return;
       }
       this.events.onStatus(`正在自动连接车机 Wi-Fi：${credentials.ssid}`);
@@ -333,28 +349,22 @@ export class SessionController {
         credentials,
         (message: string): void => this.events.onLog(message)
       );
-      if (!this.running) {
+      if (!this.running || joinGeneration !== this.wifiJoinGeneration) {
         return;
       }
-      if (this.iap2 !== iap2) {
+      if (this.iap2 !== iap2 || joinGeneration !== this.wifiJoinGeneration) {
         return;
       }
       await iap2.onWifiConnected();
-      if (!this.running || this.iap2 !== iap2) {
+      if (!this.running || this.iap2 !== iap2 || joinGeneration !== this.wifiJoinGeneration) {
         return;
       }
-      await this.startControlAdvertisement();
-      if (!this.running || this.iap2 !== iap2) {
-        return;
-      }
-      this.startAirPlayDiscovery();
       this.events.onLog(`正在请求指定 WLAN 网络：${credentials.ssid}`);
       try {
         const handle = await this.wifiNetworkLease.acquire(
           credentials.ssid,
           (message: string): void => {
-            this.vehicleWifiConnected = false;
-            this.events.onLog(message);
+            void this.handleVehicleWifiLost(message);
           },
           (message: string): void => this.events.onLog(message),
           result.ipAddress
@@ -363,15 +373,133 @@ export class SessionController {
       } catch (error) {
         throw new Error(`车机 Wi-Fi 已连接，但无法确认 WLAN 选路：${error instanceof Error ? error.message : String(error)}`);
       }
-      if (!this.running || this.iap2 !== iap2) {
+      if (!this.running || this.iap2 !== iap2 || joinGeneration !== this.wifiJoinGeneration) {
         return;
       }
       this.vehicleWifiConnected = true;
+      this.clearWifiReconnectTimer();
+      this.wifiReconnectAttempts = 0;
+      this.lastGatewayFallbackSignature = '';
+      this.refreshDiscoveredAirPlay();
       this.events.onStatus(`已连接车机 Wi-Fi：${result.ssid}`);
       this.events.onLog(`车机 Wi-Fi 已连接，本机地址 ${result.ipAddress}`);
+      this.startAirPlayDiscovery();
+      await this.startControlAdvertisement();
+      if (!this.running || this.iap2 !== iap2 || joinGeneration !== this.wifiJoinGeneration) {
+        return;
+      }
       await this.connectAirPlay();
+    } catch (error) {
+      if (this.running && this.credentials && !this.vehicleWifiConnected && !this.wifiLostCleanupInProgress) {
+        this.scheduleWifiReconnect(`Wi-Fi 加入失败：${error instanceof Error ? error.message : String(error)}`);
+      }
+      throw error instanceof Error ? error : new Error(String(error));
     } finally {
-      this.wifiJoinInProgress = false;
+      if (joinGeneration === this.wifiJoinGeneration) {
+        this.wifiJoinInProgress = false;
+      }
+    }
+  }
+
+  private async handleVehicleWifiLost(message: string): Promise<void> {
+    if (!this.running || this.wifiLostCleanupInProgress) {
+      return;
+    }
+    this.wifiLostCleanupInProgress = true;
+    this.wifiJoinGeneration++;
+    this.wifiJoinInProgress = false;
+    this.clearWifiReconnectTimer();
+    this.vehicleWifiConnected = false;
+    this.inviteReceived = false;
+    this.airPlayConnectAttempted = false;
+    this.airPlayConnectInProgress = false;
+    const generation = ++this.airPlayGeneration;
+    this.clearAirPlayTimers();
+    this.discoveredAirPlay = undefined;
+    this.mdnsAirPlayService = undefined;
+    const pairing = this.activePairing;
+    this.activePairing = undefined;
+    const discovery = this.discovery;
+    this.discovery = undefined;
+    const advertiser = this.ctrlAdvertiser;
+    this.ctrlAdvertiser = undefined;
+    this.events.onStatus('车机 Wi-Fi 中断，正在清理并重连');
+    this.events.onLog(`车机 WLAN 丢失：${message}`);
+    try {
+      if (pairing) {
+        try {
+          await pairing.stopMediaSession(true);
+        } catch (error) {
+          this.events.onLog(`Wi-Fi 丢失后停止 AirPlay 媒体失败：${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      try {
+        await this.stopProjection();
+      } catch (error) {
+        this.events.onLog(`Wi-Fi 丢失后清理投屏失败：${error instanceof Error ? error.message : String(error)}`);
+      }
+      if (pairing) {
+        try {
+          await pairing.close();
+        } catch (error) {
+          this.events.onLog(`Wi-Fi 丢失后关闭 AirPlay 会话失败：${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      try {
+        discovery?.stop();
+      } catch (error) {
+        this.events.onLog(`Wi-Fi 丢失后停止 mDNS 发现失败：${error instanceof Error ? error.message : String(error)}`);
+      }
+      try {
+        await advertiser?.stop();
+      } catch (error) {
+        this.events.onLog(`Wi-Fi 丢失后停止控制广播失败：${error instanceof Error ? error.message : String(error)}`);
+      }
+      try {
+        await this.wifiNetworkLease.release();
+      } catch (error) {
+        this.events.onLog(`Wi-Fi 丢失后释放旧网络 lease 失败：${error instanceof Error ? error.message : String(error)}`);
+      }
+    } finally {
+      this.wifiLostCleanupInProgress = false;
+      if (this.running && generation === this.airPlayGeneration) {
+        this.scheduleWifiReconnect('指定车机 WLAN 已丢失');
+      }
+    }
+  }
+
+  private scheduleWifiReconnect(reason: string): void {
+    if (!this.running || !this.credentials || this.wifiReconnectTimer >= 0) {
+      return;
+    }
+    if (this.wifiReconnectAttempts >= 5) {
+      this.events.onStatus('车机 Wi-Fi 自动重连已暂停，请手动重试');
+      this.events.onLog(`车机 Wi-Fi 自动重连达到 5 次上限；最近原因：${reason}`);
+      return;
+    }
+    const attempt = this.wifiReconnectAttempts + 1;
+    const delayMs = Math.min(15000, 1000 * (2 ** this.wifiReconnectAttempts));
+    this.wifiReconnectAttempts = attempt;
+    this.events.onLog(`车机 Wi-Fi ${reason}；${delayMs / 1000} 秒后重连 (${attempt}/5)`);
+    this.wifiReconnectTimer = setTimeout((): void => {
+      this.wifiReconnectTimer = -1;
+      if (!this.running || !this.credentials) {
+        return;
+      }
+      if (this.wifiJoinInProgress) {
+        this.scheduleWifiReconnect('等待当前 Wi-Fi 加入流程结束');
+        return;
+      }
+      void this.joinVehicleWifi().catch((error: Error): void => {
+        this.events.onLog(`车机 Wi-Fi 自动重连失败：${error.message}`);
+      });
+    }, delayMs);
+  }
+
+  private clearWifiReconnectTimer(): void {
+    if (this.wifiReconnectTimer >= 0) {
+      clearTimeout(this.wifiReconnectTimer);
+      this.wifiReconnectTimer = -1;
     }
   }
 
@@ -467,7 +595,8 @@ export class SessionController {
       this.trustedMfiFingerprints,
       this.events.requestMfiTrust,
       this.events.persistMfiFingerprint,
-      this.skipMfiChallengeVerification
+      this.skipMfiChallengeVerification,
+      this.context
     );
     void this.iap2.start().catch((error: Error): void => this.reportError(error));
   }
@@ -540,13 +669,13 @@ export class SessionController {
     const endpoint = this.iap2AirPlayEndpoint;
     const mdnsService = this.mdnsAirPlayService;
     if (!endpoint) {
-      this.discoveredAirPlay = mdnsService;
+      this.discoveredAirPlay = mdnsService ?? this.makeAirPlayGatewayFallback();
       return;
     }
 
     const endpointService = endpoint.publicKey ? makeAirPlayServiceFromEndpoint(endpoint) : undefined;
     if (!mdnsService) {
-      this.discoveredAirPlay = endpointService;
+      this.discoveredAirPlay = endpointService ?? this.makeAirPlayGatewayFallback(endpoint);
       return;
     }
 
@@ -614,6 +743,33 @@ export class SessionController {
       port: mdnsService.port,
       txt
     };
+  }
+
+  private makeAirPlayGatewayFallback(endpoint?: WirelessAirPlayEndpoint): AirPlayService | undefined {
+    const gateway = this.wifiNetworkLease.defaultGatewayAddress;
+    if (!gateway) {
+      return undefined;
+    }
+    const port = endpoint?.port || 7000;
+    if (port < 1 || port > 65535) {
+      return undefined;
+    }
+    const txt: Record<string, string> = {};
+    if (endpoint?.deviceIdentifier) {
+      txt['deviceid'] = endpoint.deviceIdentifier;
+    }
+    if (endpoint?.publicKey && /^(?:0x)?[0-9a-fA-F]{64}$/.test(endpoint.publicKey)) {
+      txt['pk'] = endpoint.publicKey;
+    }
+    const signature = `${gateway}:${port}:${txt['deviceid'] ?? ''}:${txt['pk'] ?? ''}`;
+    if (signature !== this.lastGatewayFallbackSignature) {
+      this.lastGatewayFallbackSignature = signature;
+      this.events.onLog(
+        `mDNS AirPlay 服务尚未出现；尝试已选车机 WLAN gateway ${gateway}:${port}，` +
+          `receiver 公钥${txt['pk'] ? '已知' : '未知，不伪造'}`
+      );
+    }
+    return { name: 'CarPlay gateway fallback', host: gateway, addresses: [gateway], port, txt };
   }
 
   private rejectAirPlayIdentityConflict(reason: string): void {

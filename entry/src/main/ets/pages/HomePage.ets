@@ -37,6 +37,11 @@ export struct HomePage {
           .height(258)
           .borderRadius(129)
           .backgroundColor(this.ringColor)
+          .scale({
+            x: this.status === 'connecting' ? 1.025 : 1,
+            y: this.status === 'connecting' ? 1.025 : 1
+          })
+          .animation({ duration: 320, curve: Curve.EaseOut })
         Column()
           .width(218)
           .height(218)
@@ -44,10 +49,21 @@ export struct HomePage {
           .backgroundColor('#F8FAF7')
           .border({ width: 1, color: this.statusColor })
         Column({ space: 9 }) {
-          Text(this.statusIcon)
-            .fontSize(48)
-            .fontColor(this.statusColor)
-            .fontWeight(FontWeight.Lighter)
+          Stack({ alignContent: Alignment.Center }) {
+            if (this.status === 'connecting') {
+              LoadingProgress()
+                .width(44)
+                .height(44)
+                .color(this.statusColor)
+            } else {
+              Text(this.statusIcon)
+                .fontSize(48)
+                .fontColor(this.statusColor)
+                .fontWeight(FontWeight.Lighter)
+            }
+          }
+          .width(58)
+          .height(58)
           Text(this.status === 'closed' ? '开启 CarPlayer' :
             (this.status === 'connected' ? '断开连接' : '关闭 CarPlayer'))
             .fontSize(13)

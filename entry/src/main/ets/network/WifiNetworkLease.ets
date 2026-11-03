@@ -3,6 +3,9 @@ import connection from '@ohos.net.connection';
 interface LocalNetworkAddresses {
   ipv4?: string;
   ipv6?: string;
+  gatewayIpv4?: string;
+  gatewayIpv6?: string;
+  interfaceName?: string;
 }
 
 interface NetworkErrorWithCode extends Error {
@@ -26,6 +29,10 @@ export class WifiNetworkLease {
   private generation: number = 0;
   private localAddresses?: LocalNetworkAddresses;
   private log: (message: string) => void = (_message: string): void => {};
+
+  get defaultGatewayAddress(): string | undefined {
+    return this.localAddresses?.gatewayIpv4 ?? this.localAddresses?.gatewayIpv6;
+  }
 
   async acquire(
     ssid: string,
@@ -148,13 +155,27 @@ export class WifiNetworkLease {
       return undefined;
     }
     const properties = await connection.getConnectionProperties(handle);
-    const localAddresses: LocalNetworkAddresses = {};
+    const localAddresses: LocalNetworkAddresses = { interfaceName: properties.interfaceName };
     for (const link of properties.linkAddresses ?? []) {
       const address = link.address.address;
       if (address.includes(':')) {
         localAddresses.ipv6 = address;
       } else if (address === selectedLocalAddress) {
         localAddresses.ipv4 = address;
+      }
+    }
+    for (const route of properties.routes ?? []) {
+      if (!route.isDefaultRoute || !route.hasGateway) {
+        continue;
+      }
+      const gateway = route.gateway.address;
+      if (gateway.includes(':')) {
+        const isLinkLocal = /^fe[89ab][0-9a-f]:/i.test(gateway);
+        localAddresses.gatewayIpv6 = isLinkLocal && !gateway.includes('%') && properties.interfaceName
+          ? `${gateway}%${properties.interfaceName}`
+          : gateway;
+      } else {
+        localAddresses.gatewayIpv4 = gateway;
       }
     }
     return localAddresses.ipv4 ? localAddresses : undefined;

@@ -1,8 +1,11 @@
+import common from '@ohos.app.ability.common';
+import preferences from '@ohos.data.preferences';
 import {
   concatBytes,
   decodeIap2Parameters,
   decodeIap2String,
   encodeUtf8,
+  groupedParameter,
   encodeIap2Control,
   encodeIap2LinkFrame,
   formatIap2LinkPayloadDiagnostic,
@@ -118,10 +121,41 @@ export function shouldProbeLegacyWifi(accessorySends?: number[], accessoryReceiv
   if (accessorySends === undefined || accessoryReceives === undefined) {
     return true;
   }
-  const declaredCount = accessorySends.length + accessoryReceives.length;
-  return accessoryReceives.includes(MESSAGE.WIFI_REQUEST) ||
-    accessorySends.includes(MESSAGE.WIFI_CONFIGURATION) ||
-    (declaredCount > 0 && declaredCount < 10);
+  const declaresLegacyWifi = accessoryReceives.includes(MESSAGE.WIFI_REQUEST) ||
+    accessorySends.includes(MESSAGE.WIFI_CONFIGURATION);
+  const completeCapabilityLists = accessorySends.length >= 10 && accessoryReceives.length >= 10;
+  return declaresLegacyWifi || !completeCapabilityLists;
+}
+
+export function isBuickB233Identity(identity: string): boolean {
+  const normalized = identity.toLowerCase().replace(/\s+/g, ' ');
+  return normalized.includes('buick') && normalized.includes('b233') &&
+    normalized.includes('saic general motors');
+}
+
+function normalizeAccessoryIdentity(identity: string): string {
+  return identity.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function readAccessoryIdentity(body: Uint8Array): string {
+  return decodeIap2Parameters(body)
+    .filter((parameter) => parameter.id <= 2)
+    .map((parameter) => decodeIap2String(parameter.value))
+    .join(' ')
+    .trim();
+}
+
+export function encodeBuickB233AvailabilityBody(deviceIdentifier: string, bluetoothAddress: string): Uint8Array {
+  if (!/^[0-9A-F]{24}$/.test(deviceIdentifier)) {
+    throw new Error('Buick B233 CarPlay device identifier must be 24 uppercase hex characters');
+  }
+  if (!/^(?!02:00:00:00:00:00$)(?!00:00:00:00:00:00$)([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(bluetoothAddress)) {
+    throw new Error('Buick B233 CarPlay availability requires a real Bluetooth MAC');
+  }
+  return concatBytes(
+    groupedParameter(0, [numberParameter(0, 1, 1), stringParameter(1, deviceIdentifier)]),
+    groupedParameter(1, [numberParameter(0, 1, 1), stringParameter(1, bluetoothAddress)])
+  );
 }
 
 export function parseMfiCertificatePayload(body: Uint8Array): Uint8Array {
@@ -232,6 +266,7 @@ export class Iap2SenderSession {
   private readonly deviceAddress: string;
   private readonly deviceName: string;
   private readonly deviceUuid: string;
+  private readonly context?: common.UIAbilityContext;
   private nextSequence: number = 99;
   private readonly unacknowledgedFrames: Map<number, Iap2LinkFrame> = new Map();
   private readonly outOfOrderFrames: Map<number, Iap2LinkFrame> = new Map();
@@ -243,6 +278,15 @@ export class Iap2SenderSession {
   private mfiVerified: boolean = false;
   private mfiAuthenticationFailed: boolean = false;
   private identificationRequested: boolean = false;
+  private accessoryIdentity: string = '';
+  private buickB233Receiver: boolean = false;
+  private buickAvailabilitySent: boolean = false;
+  private buickWaitingForStartSession: boolean = false;
+  private buickReidentificationWindowOpen: boolean = false;
+  private buickMarkerEchoSent: boolean = false;
+  private buickReidentificationUsed: boolean = false;
+  private buickReauthenticationInProgress: boolean = false;
+  private pendingBuickStartSession?: Uint8Array;
   private lastDetectionResponseAt: number = 0;
   private peerSyncSequence?: number;
   private peerSyncResponse?: Iap2LinkFrame;
@@ -258,6 +302,7 @@ export class Iap2SenderSession {
   private accessorySendMessages?: number[];
   private accessoryReceiveMessages?: number[];
   private deviceAnnouncementSent: boolean = false;
+  private deviceAnnouncementInProgress: boolean = false;
   private challengeLength: number = 32;
   private challengeLengths: number[] = [32, 20, 16];
   private challengeIndex: number = 0;
@@ -271,6 +316,11 @@ export class Iap2SenderSession {
   private mfiCertificateTimer?: number;
   private mfiCertificateRequestCount: number = 0;
   private wifiConfigurationTimer?: number;
+  private wifiConfigurationRescueGeneration: number = 0;
+  private deviceStateGreetingsSent: boolean = false;
+  private buickStartSessionWaitTimer?: number;
+  private buickAvailabilitySentAt: number = 0;
+  private buickAvailabilityFrameDigest: string = '';
 
   constructor(
     sendBytes: (bytes: Uint8Array) => Promise<void>,
@@ -284,7 +334,8 @@ export class Iap2SenderSession {
     trustedMfiFingerprints: string[] = [],
     requestMfiTrust?: (info: MfiTrustPromptInfo) => Promise<boolean>,
     persistMfiFingerprint?: (fingerprint: string) => Promise<void>,
-    skipMfiChallengeVerification: boolean = false
+    skipMfiChallengeVerification: boolean = false,
+    context?: common.UIAbilityContext
   ) {
     this.sendBytes = sendBytes;
     this.log = log;
@@ -293,6 +344,7 @@ export class Iap2SenderSession {
     this.deviceAddress = deviceAddress;
     this.deviceName = deviceName;
     this.deviceUuid = deviceUuid;
+    this.context = context;
     this.mfiVerifier = new MfiVerifier(
       log,
       allowMfiIntermediateDownload,
@@ -317,6 +369,22 @@ export class Iap2SenderSession {
     }
     this.started = true;
     this.detectionRetryCount = 0;
+    this.accessoryIdentity = '';
+    this.buickB233Receiver = false;
+    this.buickAvailabilitySent = false;
+    this.buickWaitingForStartSession = false;
+    this.buickReidentificationWindowOpen = false;
+    this.buickMarkerEchoSent = false;
+    this.buickReidentificationUsed = false;
+    this.buickReauthenticationInProgress = false;
+    this.pendingBuickStartSession = undefined;
+    this.deviceAnnouncementSent = false;
+    this.deviceAnnouncementInProgress = false;
+    this.deviceStateGreetingsSent = false;
+    this.wifiConfigurationRescueGeneration++;
+    this.clearBuickStartSessionTimer();
+    this.buickAvailabilityFrameDigest = '';
+    this.buickAvailabilitySentAt = 0;
     this.log(formatRawBytesDiagnostic('TX', 'RFCOMM iAP2 marker', LINK_MARKER));
     await this.sendBytes(LINK_MARKER.slice());
     this.log('已发送 iAP2 检测标记，等待车机发起链路同步');
@@ -365,6 +433,16 @@ export class Iap2SenderSession {
 
   private async receiveDetectionMarker(): Promise<void> {
     this.log(formatRawBytesDiagnostic('RX', 'RFCOMM iAP2 marker', LINK_MARKER));
+    if (this.buickB233Receiver && this.buickWaitingForStartSession) {
+      if (!this.buickMarkerEchoSent) {
+        this.buickMarkerEchoSent = true;
+        this.log('Buick B233 T31：等待 0x4301 时首次收到 DETECT marker，仅回送一次 marker 并保持 iAP2 会话');
+        await this.sendBytes(LINK_MARKER.slice());
+      } else {
+        this.log('Buick B233 T31：忽略重复 DETECT marker，保持当前 0x4300 等待，不重启链路');
+      }
+      return;
+    }
     const now = Date.now();
     if (this.lastDetectionResponseAt > 0 && now - this.lastDetectionResponseAt < 500) {
       this.log('忽略短时间内重复的 iAP2 检测标记，避免回声循环');
@@ -468,12 +546,31 @@ export class Iap2SenderSession {
       this.authenticated = false;
       this.mfiVerified = false;
       this.started = false;
+      this.buickB233Receiver = false;
+      this.buickAvailabilitySent = false;
+      this.buickReidentificationUsed = false;
+      this.buickReauthenticationInProgress = false;
+      this.pendingBuickStartSession = undefined;
+      this.deviceAnnouncementSent = false;
+      this.deviceAnnouncementInProgress = false;
+      this.deviceStateGreetingsSent = false;
+      this.wifiConfigurationRescueGeneration++;
+      this.buickWaitingForStartSession = false;
+      this.buickReidentificationWindowOpen = false;
+      this.buickMarkerEchoSent = false;
+      this.clearBuickStartSessionTimer();
   }
 
   private async receiveLinkFrame(frame: Iap2LinkFrame): Promise<void> {
     this.log(formatIap2RawFrameDiagnostic('RX', frame));
     this.log(formatIap2FrameInterpretation('RX', frame));
     if ((frame.control & 0x10) !== 0) {
+      if (this.buickB233Receiver && this.buickWaitingForStartSession) {
+        this.log(
+          `Buick B233 T21：iAP2 link reset while waiting 0x4301；${this.controlAckSnapshot()} ` +
+            `frameSHA256prefix=${this.buickAvailabilityFrameDigest}`
+        );
+      }
       this.cancel();
       throw new Error('车机发送 iAP2 链路复位，已终止当前认证会话');
     }
@@ -636,6 +733,44 @@ export class Iap2SenderSession {
         clearTimeout(this.identificationTimer);
         this.identificationTimer = undefined;
       }
+      if (this.buickB233Receiver && this.buickReidentificationUsed) {
+        this.log('Buick B233 已使用本轮唯一一次二次识别机会；忽略额外 0x1D01');
+        return;
+      }
+      if (this.buickB233Receiver && this.authenticated && this.buickAvailabilitySent &&
+        (!this.buickWaitingForStartSession || !this.buickReidentificationWindowOpen)) {
+        this.log('Buick B233 收到 T20 重识别窗口外的 0x1D01；不重置认证状态或重启握手');
+        return;
+      }
+      if (this.buickB233Receiver && this.authenticated && this.buickAvailabilitySent &&
+        this.buickWaitingForStartSession && this.buickReidentificationWindowOpen) {
+        const repeatedIdentity = readAccessoryIdentity(body);
+        if (!isBuickB233Identity(repeatedIdentity) ||
+          normalizeAccessoryIdentity(repeatedIdentity) !== normalizeAccessoryIdentity(this.accessoryIdentity)) {
+          this.log('Buick B233 0x4300 后收到身份不匹配的 0x1D01；拒绝重置当前会话');
+          return;
+        }
+        this.buickReidentificationUsed = true;
+        this.buickReauthenticationInProgress = true;
+        this.authenticated = false;
+        this.mfiVerified = false;
+        this.mfiAuthenticationFailed = false;
+        this.validatedAccessoryCertificate = undefined;
+        this.clearMfiChallenge();
+        this.clearMfiCertificateTimer();
+        this.mfiCertificateRequestCount = 0;
+        this.challengeIndex = 0;
+        this.deviceAnnouncementSent = false;
+        this.buickAvailabilitySent = false;
+        this.buickWaitingForStartSession = false;
+        this.buickReidentificationWindowOpen = false;
+        this.buickMarkerEchoSent = false;
+        this.clearBuickStartSessionTimer();
+        this.deviceStateGreetingsSent = false;
+        this.transportIdentifierSent = false;
+        this.transportIdentifierPending = false;
+        this.log('Buick B233 在 0x4301 等待期间重新发送同一 0x1D01；按实机握手重做一次 MFi');
+      }
       this.chooseChallengeLength(body);
       this.logMfiMessageCapabilities(body);
       await this.sendControl(MESSAGE.IDENTIFICATION_ACCEPTED);
@@ -700,6 +835,7 @@ export class Iap2SenderSession {
         );
         return;
       }
+      await this.prioritizeStoredChallengeLength();
       this.challengeIndex = 0;
       await this.sendMfiChallenge();
       return;
@@ -751,6 +887,7 @@ export class Iap2SenderSession {
         clearTimeout(this.wifiConfigurationTimer);
         this.wifiConfigurationTimer = undefined;
       }
+      this.wifiConfigurationRescueGeneration++;
       let credentials: WifiCredentials;
       try {
         credentials = this.parseWifi(body);
@@ -772,6 +909,14 @@ export class Iap2SenderSession {
     }
     if (messageId === MESSAGE.CARPLAY_START_SESSION) {
       if (!this.authenticated) {
+        if (this.buickReauthenticationInProgress && this.buickB233Receiver) {
+          this.pendingBuickStartSession = body.slice();
+          this.buickWaitingForStartSession = false;
+          this.buickReidentificationWindowOpen = false;
+          this.clearBuickStartSessionTimer();
+          this.log('Buick B233 二次 MFi 尚未完成；暂存提前到达的 0x4301');
+          return;
+        }
         this.log('忽略 MFi 认证完成前收到的 CarPlay 会话请求');
         return;
       }
@@ -785,6 +930,16 @@ export class Iap2SenderSession {
         this.log('收到 CarPlay 会话请求，但真实蓝牙 MAC 未配置；不发送空传输身份');
         return;
       }
+      this.clearWifiConfigurationTimer();
+      if (this.buickB233Receiver && this.buickWaitingForStartSession) {
+        this.buickWaitingForStartSession = false;
+        this.buickReidentificationWindowOpen = false;
+        this.clearBuickStartSessionTimer();
+        this.log(
+          `Buick B233 T21：收到 0x4301，等待耗时=${Date.now() - this.buickAvailabilitySentAt}ms；` +
+            `${this.controlAckSnapshot()} frameSHA256prefix=${this.buickAvailabilityFrameDigest}`
+        );
+      }
       try {
         const credentials = parseWirelessSessionCredentials(body);
         if (credentials) {
@@ -792,7 +947,6 @@ export class Iap2SenderSession {
             `从 0x4301 wireless group 解析网络：SSID=${credentials.ssid}，` +
               `security=${credentials.securityType}，channel=${credentials.channel}，密码已隐藏`
           );
-          this.clearWifiConfigurationTimer();
           this.onWifi(credentials);
         } else {
           this.log('0x4301 未包含有效 wireless group SSID；继续使用端点和 mDNS 信息');
@@ -895,6 +1049,12 @@ export class Iap2SenderSession {
     for (const pending of Array.from(this.unacknowledgedFrames.values())) {
       const attempts = (this.retransmitCounts.get(pending.sequence) ?? 0) + 1;
       if (attempts > this.peerMaxRetransmissions) {
+        if (this.buickB233Receiver && this.buickWaitingForStartSession) {
+          this.log(
+            `Buick B233 T21：iAP2 链路在等待 0x4301 时失效；${this.controlAckSnapshot()} ` +
+              `frameSHA256prefix=${this.buickAvailabilityFrameDigest}`
+          );
+        }
         this.log(`ERROR: iAP2 序号 ${pending.sequence} 重传 ${this.peerMaxRetransmissions} 次仍未确认；链路视为失效`);
         this.cancel();
         return;
@@ -923,6 +1083,12 @@ export class Iap2SenderSession {
     this.log(formatIap2RawFrameDiagnostic('TX', frame, includeMarker));
     this.log(formatIap2FrameInterpretation('TX', frame));
     await this.sendBytes(includeMarker ? concatBytes(LINK_MARKER, encodedFrame) : encodedFrame);
+      if (this.buickB233Receiver && this.buickWaitingForStartSession) {
+        this.log(
+          `Buick B233 T21：iAP2 link reset while waiting 0x4301；${this.controlAckSnapshot()} ` +
+            `frameSHA256prefix=${this.buickAvailabilityFrameDigest}`
+        );
+      }
     if (frame.control === 0x40 && frame.payload.length > 0) {
       this.unacknowledgedFrames.set(frame.sequence, {
         control: frame.control,
@@ -952,14 +1118,17 @@ export class Iap2SenderSession {
   }
 
   private chooseChallengeLength(body: Uint8Array): void {
-    const params = decodeIap2Parameters(body);
-    let identity = '';
-    for (const param of params) {
-      if (param.id <= 2) {
-        identity += `${decodeIap2String(param.value)} `;
-      }
+    const identity = readAccessoryIdentity(body);
+    const normalized = normalizeAccessoryIdentity(identity);
+    this.accessoryIdentity = normalized;
+    this.buickB233Receiver = isBuickB233Identity(identity);
+    if (this.buickB233Receiver) {
+      this.challengeLengths = [32];
+      this.challengeLength = 32;
+      this.challengeIndex = 0;
+      this.log('识别为 Buick B233；本车只尝试 32B MFi challenge');
+      return;
     }
-    const normalized = identity.toLowerCase();
     const prefers20ByteChallenge = normalized.includes('audi') ||
         normalized.includes('mib') ||
         normalized.includes('delphi') ||
@@ -969,6 +1138,48 @@ export class Iap2SenderSession {
     this.challengeLength = this.challengeLengths[0] ?? 32;
     this.challengeIndex = 0;
     this.log(`车机身份已读取，首选 MFi challenge ${this.challengeLength}B`);
+  }
+
+  private async prioritizeStoredChallengeLength(): Promise<void> {
+    if (!this.context || !this.accessoryIdentity || this.buickB233Receiver) {
+      return;
+    }
+    try {
+      const digest = cryptoFramework.createMd('SHA256');
+      await digest.update({ data: encodeUtf8(this.accessoryIdentity) });
+      const identityKey = Array.from((await digest.digest()).data.slice(0, 12))
+        .map((value: number): string => value.toString(16).padStart(2, '0')).join('');
+      const store = await preferences.getPreferences(this.context, 'carplayer_mfi_challenge_memory');
+      const rememberedValue: preferences.ValueType = await store.get(`receiver_${identityKey}`, 0);
+      const rememberedLength: number = typeof rememberedValue === 'number' ? rememberedValue : 0;
+      if (typeof rememberedLength !== 'number' || !this.challengeLengths.includes(rememberedLength)) {
+        return;
+      }
+      this.challengeLengths = [rememberedLength, ...this.challengeLengths.filter((length) => length !== rememberedLength)];
+      this.challengeLength = rememberedLength;
+      this.log(`按车机身份记忆优先使用 MFi challenge ${rememberedLength}B`);
+    } catch (error) {
+      this.log(`读取车机 MFi challenge 记忆失败：${this.errorDetails(error)}`);
+    }
+  }
+
+  private async persistSuccessfulChallengeLength(length: number): Promise<void> {
+    if (!this.context || !this.accessoryIdentity || this.buickB233Receiver ||
+      (length !== 16 && length !== 20 && length !== 32)) {
+      return;
+    }
+    try {
+      const digest = cryptoFramework.createMd('SHA256');
+      await digest.update({ data: encodeUtf8(this.accessoryIdentity) });
+      const identityKey = Array.from((await digest.digest()).data.slice(0, 12))
+        .map((value: number): string => value.toString(16).padStart(2, '0')).join('');
+      const store = await preferences.getPreferences(this.context, 'carplayer_mfi_challenge_memory');
+      await store.put(`receiver_${identityKey}`, length);
+      await store.flush();
+      this.log(`已为当前车机记忆成功的 ${length}B MFi challenge 长度`);
+    } catch (error) {
+      this.log(`保存车机 MFi challenge 记忆失败：${this.errorDetails(error)}`);
+    }
   }
 
   private async sendMfiChallenge(): Promise<void> {
@@ -1078,6 +1289,7 @@ export class Iap2SenderSession {
       return;
     }
     const generation = this.sessionGeneration;
+    const successfulChallengeLength = this.pendingMfiChallenge?.length ?? 0;
     try {
       await this.sendControl(MESSAGE.MFI_AUTHENTICATION_SUCCEEDED);
     } catch (error) {
@@ -1094,9 +1306,22 @@ export class Iap2SenderSession {
     this.mfiVerified = challengeVerified;
     this.validatedAccessoryCertificate = undefined;
     this.clearMfiChallenge();
+    void this.persistSuccessfulChallengeLength(successfulChallengeLength);
     this.log(challengeVerified
       ? 'MFi 证书信任校验及 challenge 签名验证均已通过；已发送 AA05'
       : 'WARN: 诊断模式跳过 challenge 验签；已发送 AA05 继续联调，但不会记录为已验证');
+    if (this.buickReauthenticationInProgress) {
+      this.buickReauthenticationInProgress = false;
+      const pendingStartSession = this.pendingBuickStartSession;
+      this.pendingBuickStartSession = undefined;
+      if (pendingStartSession) {
+        this.deviceAnnouncementSent = true;
+        this.buickAvailabilitySent = true;
+        this.log('Buick B233 二次认证期间收到 0x4301；认证完成后继续处理该启动请求');
+        await this.receiveControlMessage(MESSAGE.CARPLAY_START_SESSION, pendingStartSession);
+        return;
+      }
+    }
     try {
       await this.requestWifiConfiguration();
     } catch (error) {
@@ -1105,37 +1330,72 @@ export class Iap2SenderSession {
   }
 
   private async requestWifiConfiguration(): Promise<void> {
+    if (this.buickB233Receiver) {
+      this.log('识别为 Buick B233：跳过不兼容的 0x5702/0x5703 流程，直接发送 B233 格式 0x4300');
+      void this.sendDeviceAnnouncement().catch((error: Error): void => {
+        this.log(`Buick B233 0x4300 启动失败：${this.errorDetails(error)}`);
+      });
+      return;
+    }
     const accessorySends = this.accessorySendMessages;
     const accessoryReceives = this.accessoryReceiveMessages;
-    const supportsWirelessSession = accessoryReceives?.includes(MESSAGE.CARPLAY_AVAILABILITY) === true &&
-      accessorySends?.includes(MESSAGE.CARPLAY_START_SESSION) === true;
-    const capabilitiesKnown = accessorySends !== undefined && accessoryReceives !== undefined;
     const maySupportLegacyExchange = shouldProbeLegacyWifi(accessorySends, accessoryReceives);
-    const maySupportWirelessSession = !capabilitiesKnown || supportsWirelessSession ||
-      accessoryReceives?.includes(MESSAGE.CARPLAY_AVAILABILITY) === true ||
-      accessorySends?.includes(MESSAGE.CARPLAY_START_SESSION) === true;
 
-    if (maySupportWirelessSession && !maySupportLegacyExchange) {
-      this.log('车机声明新式 0x4300/0x4301 wireless session；发送设备状态与可用通知');
+    if (!maySupportLegacyExchange) {
+      this.log('两份完整能力清单均未声明旧式 Wi-Fi；按新协议发送 0x4300/0x4301');
       await this.sendDeviceAnnouncement();
       this.log('CarPlay 已声明可用，等待车机自动启动或用户选择 CarPlay；保持 iAP2 监听');
       return;
     }
     if (maySupportLegacyExchange) {
       await this.sendControl(MESSAGE.WIFI_REQUEST);
-      this.startWifiConfigurationTimer('0x5703', maySupportWirelessSession);
-      this.log('已发送 iAP2 0x5702 Wi-Fi 配置请求，等待车机 0x5703');
+      this.startWifiConfigurationTimer('0x5703', true);
+      this.log('已发送 iAP2 0x5702 Wi-Fi 配置请求，进入分段等待 0x5703');
       return;
     }
     this.log('车机能力表未声明可用的无线凭据流程；不发送未声明的 0x5702');
   }
 
-  private startWifiConfigurationTimer(expected: string, fallbackToWirelessSession: boolean = false): void {
-    this.clearWifiConfigurationTimer();
+  private startWifiConfigurationTimer(
+    expected: string,
+    fallbackToWirelessSession: boolean = false,
+    stage: number = 0
+  ): void {
+    if (this.wifiConfigurationTimer !== undefined) {
+      clearTimeout(this.wifiConfigurationTimer);
+      this.wifiConfigurationTimer = undefined;
+    }
+    const generation = ++this.wifiConfigurationRescueGeneration;
+    const delayMs = stage === 1 ? 1300 : 1500;
     this.wifiConfigurationTimer = setTimeout((): void => {
       this.wifiConfigurationTimer = undefined;
-      if (fallbackToWirelessSession && this.started && this.authenticated && !this.deviceAnnouncementSent) {
-        this.log(`车机未及时返回 ${expected}；尝试一次 0x4300/0x4301 无线会话分支`);
+      if (!this.started || !this.authenticated || generation !== this.wifiConfigurationRescueGeneration) {
+        return;
+      }
+      if (stage === 0) {
+        void this.sendDeviceStateGreetings(true).then((): void => {
+          if (this.started && this.authenticated && generation === this.wifiConfigurationRescueGeneration) {
+            this.log(`车机 ${expected} 首段等待超时；已补发设备状态问候，再等待一次`);
+            this.startWifiConfigurationTimer(expected, fallbackToWirelessSession, 1);
+          }
+        }).catch((error: Error): void => {
+          this.log(`补发车机设备状态问候失败：${this.errorDetails(error)}`);
+        });
+        return;
+      }
+      if (stage === 1) {
+        void this.sendControl(MESSAGE.WIFI_REQUEST).then((): void => {
+          if (this.started && this.authenticated && generation === this.wifiConfigurationRescueGeneration) {
+            this.log('设备状态问候后仍未收到 0x5703；已重发一次 0x5702');
+            this.startWifiConfigurationTimer(expected, fallbackToWirelessSession, 2);
+          }
+        }).catch((error: Error): void => {
+          this.log(`重发 0x5702 失败：${this.errorDetails(error)}`);
+        });
+        return;
+      }
+      if (fallbackToWirelessSession && !this.deviceAnnouncementSent) {
+        this.log(`重发 0x5702 后仍未收到 ${expected}；尝试一次 0x4300/0x4301 无线会话分支`);
         void this.sendDeviceAnnouncement()
           .then((): void => this.log('CarPlay 已声明可用，继续等待车机启动请求'))
           .catch((error: Error): void => {
@@ -1143,11 +1403,12 @@ export class Iap2SenderSession {
           });
         return;
       }
-      this.log(`等待车机 ${expected} 超过 6 秒；仍保持 iAP2 监听，迟到响应仍会处理`);
-    }, 6000);
+      this.log(`设备问候和一次 0x5702 重发后仍未收到 ${expected}；保持 iAP2 监听，迟到响应仍会处理`);
+    }, delayMs);
   }
 
   private clearWifiConfigurationTimer(): void {
+    this.wifiConfigurationRescueGeneration++;
     if (this.wifiConfigurationTimer !== undefined) {
       clearTimeout(this.wifiConfigurationTimer);
       this.wifiConfigurationTimer = undefined;
@@ -1155,12 +1416,64 @@ export class Iap2SenderSession {
   }
 
   private async sendDeviceAnnouncement(): Promise<void> {
-    if (this.deviceAnnouncementSent) {
+    if (this.deviceAnnouncementSent || this.deviceAnnouncementInProgress) {
       return;
     }
-    await this.sendControl(MESSAGE.WIRELESS_UPDATE, numberParameter(0, 1, 1));
-    await this.sendControl(MESSAGE.DEVICE_LANGUAGE_UPDATE, stringParameter(0, currentDeviceLanguage()));
-    await this.sendControl(MESSAGE.DEVICE_INFORMATION_UPDATE, stringParameter(0, this.deviceName));
+    this.deviceAnnouncementInProgress = true;
+    const generation = this.sessionGeneration;
+    try {
+      await this.sendDeviceStateGreetings(this.buickReidentificationUsed);
+
+      if (this.buickB233Receiver) {
+        if (!await this.waitForControlQueueDrain(3000)) {
+          throw new Error('B233 device-information ACK timed out before 0x4300');
+        }
+        await new Promise<void>((resolve): void => { setTimeout(resolve, 1500); });
+        if (!this.started || generation !== this.sessionGeneration || !this.authenticated) {
+          return;
+        }
+        const identifier = await this.buickCarPlayDeviceIdentifier();
+        const availability = encodeBuickB233AvailabilityBody(identifier, this.deviceAddress.toUpperCase());
+        this.buickAvailabilityFrameDigest = await this.controlFrameDigest(
+          MESSAGE.CARPLAY_AVAILABILITY, availability
+        );
+        if (!this.started || generation !== this.sessionGeneration || !this.authenticated) {
+          return;
+        }
+        this.log(
+          `Buick B233 T21：发送 0x4300 frameSHA256prefix=${this.buickAvailabilityFrameDigest} ` +
+            `preSend=${this.controlAckSnapshot()}`
+        );
+        await this.sendControl(MESSAGE.CARPLAY_AVAILABILITY, availability);
+        this.buickAvailabilitySent = true;
+        this.buickWaitingForStartSession = true;
+        this.buickReidentificationWindowOpen = true;
+        this.buickMarkerEchoSent = false;
+        this.buickAvailabilitySentAt = Date.now();
+        this.startBuickStartSessionWaitTimer(generation);
+        this.log(`Buick B233 双组 0x4300 已发送：bytes=${availability.length}，等待 0x4301`);
+      } else {
+        await this.sendControl(MESSAGE.CARPLAY_AVAILABILITY, this.parameter(1, concatBytes(
+          numberParameter(0, 1, 1),
+          stringParameter(1, this.deviceAddress)
+        )));
+      }
+      this.deviceAnnouncementSent = true;
+      this.log('已上报设备信息并发送 CarPlay 可用通知');
+    } finally {
+      if (generation === this.sessionGeneration) {
+        this.deviceAnnouncementInProgress = false;
+      }
+    }
+  }
+
+  private async sendDeviceStateGreetings(force: boolean = false): Promise<void> {
+    if (this.deviceStateGreetingsSent && !force) {
+      return;
+    }
+    if (!this.buickB233Receiver) {
+      await this.sendControl(MESSAGE.WIRELESS_UPDATE, numberParameter(0, 1, 1));
+    }
     const now = new Date();
     const epochSeconds = Math.floor(now.getTime() / 1000);
     const time = new Uint8Array(8);
@@ -1170,18 +1483,82 @@ export class Iap2SenderSession {
       remaining = Math.floor(remaining / 256);
     }
     const timeZoneMinutes = 0 - now.getTimezoneOffset();
-    await this.sendControl(MESSAGE.DEVICE_TIME_UPDATE, concatBytes(
+    const timeBody = concatBytes(
       this.parameter(0, time),
       numberParameter(1, timeZoneMinutes, 2),
       numberParameter(2, 0, 1)
-    ));
-    await this.sendControl(MESSAGE.DEVICE_UUID_UPDATE, stringParameter(0, this.deviceUuid));
-    await this.sendControl(MESSAGE.CARPLAY_AVAILABILITY, this.parameter(1, concatBytes(
-      numberParameter(0, 1, 1),
-      stringParameter(1, this.deviceAddress)
-    )));
-    this.deviceAnnouncementSent = true;
-    this.log('已上报设备信息并发送 CarPlay 可用通知');
+    );
+    if (this.buickB233Receiver && this.buickReidentificationUsed) {
+      await this.sendControl(MESSAGE.DEVICE_UUID_UPDATE, stringParameter(0, this.deviceUuid));
+      await this.sendControl(MESSAGE.DEVICE_LANGUAGE_UPDATE, stringParameter(0, currentDeviceLanguage()));
+      await this.sendControl(MESSAGE.DEVICE_TIME_UPDATE, timeBody);
+      await this.sendControl(MESSAGE.DEVICE_INFORMATION_UPDATE, stringParameter(0, this.deviceName));
+    } else {
+      await this.sendControl(MESSAGE.DEVICE_LANGUAGE_UPDATE, stringParameter(0, currentDeviceLanguage()));
+      await this.sendControl(MESSAGE.DEVICE_INFORMATION_UPDATE, stringParameter(0, this.deviceName));
+      await this.sendControl(MESSAGE.DEVICE_TIME_UPDATE, timeBody);
+      await this.sendControl(MESSAGE.DEVICE_UUID_UPDATE, stringParameter(0, this.deviceUuid));
+    }
+    this.deviceStateGreetingsSent = true;
+  }
+
+  private async waitForControlQueueDrain(timeoutMs: number): Promise<boolean> {
+    const deadline = Date.now() + timeoutMs;
+    while (this.started && Date.now() < deadline) {
+      if (this.outboundQueue.length === 0 && this.unacknowledgedFrames.size === 0) {
+        return true;
+      }
+      await new Promise<void>((resolve): void => { setTimeout(resolve, 50); });
+    }
+    return this.started && this.outboundQueue.length === 0 && this.unacknowledgedFrames.size === 0;
+  }
+
+  private controlAckSnapshot(): string {
+    const pending = Array.from(this.unacknowledgedFrames.keys());
+    return `link=${this.started ? 'up' : 'down'} outstanding=${pending.length > 0 ? pending.join(',') : 'none'} ` +
+      `queued=${this.outboundQueue.length} window=${this.peerMaxOutstanding} rxSeq=${this.lastReceivedSequence}`;
+  }
+
+  private async controlFrameDigest(messageId: number, body: Uint8Array): Promise<string> {
+    try {
+      const digest = cryptoFramework.createMd('SHA256');
+      await digest.update({ data: encodeIap2Control(messageId, body) });
+      return Array.from((await digest.digest()).data.slice(0, 8))
+        .map((value: number): string => value.toString(16).padStart(2, '0')).join('');
+    } catch (error) {
+      this.log(`Buick B233 T21：计算 0x4300 脱敏摘要失败，不影响发送：${this.errorDetails(error)}`);
+      return 'unavailable';
+    }
+  }
+
+  private startBuickStartSessionWaitTimer(generation: number): void {
+    this.clearBuickStartSessionTimer();
+    this.buickStartSessionWaitTimer = setTimeout((): void => {
+      this.buickStartSessionWaitTimer = undefined;
+      if (!this.started || generation !== this.sessionGeneration || !this.buickWaitingForStartSession) {
+        return;
+      }
+      this.log(
+        `Buick B233 T21：0x4301 等待超时，耗时=${Date.now() - this.buickAvailabilitySentAt}ms；` +
+          `${this.controlAckSnapshot()} frameSHA256prefix=${this.buickAvailabilityFrameDigest} ` +
+          `markerEchoSent=${this.buickMarkerEchoSent} reidentificationWindow=closed`
+      );
+      this.buickReidentificationWindowOpen = false;
+    }, 30000);
+  }
+
+  private clearBuickStartSessionTimer(): void {
+    if (this.buickStartSessionWaitTimer !== undefined) {
+      clearTimeout(this.buickStartSessionWaitTimer);
+      this.buickStartSessionWaitTimer = undefined;
+    }
+  }
+
+  private async buickCarPlayDeviceIdentifier(): Promise<string> {
+    const digest = cryptoFramework.createMd('SHA256');
+    await digest.update({ data: encodeUtf8(`CarDeck-CarPlay:${this.deviceAddress.toUpperCase()}`) });
+    const bytes = (await digest.digest()).data.slice(0, 12);
+    return Array.from(bytes).map((value: number): string => value.toString(16).padStart(2, '0')).join('').toUpperCase();
   }
 
   private clearMfiChallenge(): void {

@@ -6,11 +6,11 @@
         "type": "HarmonyOS",
         "material": {
           "storeFile": "C:/Users/fandych/DevEcoStudioProjects/CarPlayer/certs/CarPlayer.p12",
-          "storePassword": "0000001938ABFB46970D8FE5047E73D3C7CA313965B0A604C0A1301630B0ABBEBDCB13E40048466E1B",
+          "storePassword": "00000019D7D14E00B07AB6F3CE72F7104C1B975B490BF1655068939C7B156A4D006DB926685773C9F2",
           "keyAlias": "CarPlayer",
-          "keyPassword": "000000190D5081B552AB8491E0249D4630C10A6B4BC9ABEB2A6C878CD7CA777507BC41DF7335238F20",
+          "keyPassword": "00000019017F6F6CFFF049173D3CA6F726239798ED62582FDC40E6518E7779A2859DC2E99FCA10DD74",
           "signAlg": "SHA256withECDSA",
-          "profile": "C:/Users/fandych/DevEcoStudioProjects/CarPlayer/certs/v2DebugDebug.p7b",
+          "profile": "C:/Users/fandych/DevEcoStudioProjects/CarPlayer/certs/v2Debug.p7b",
           "certpath": "C:/Users/fandych/DevEcoStudioProjects/CarPlayer/certs/CarPlayerDebug.cer"
         }
       }
