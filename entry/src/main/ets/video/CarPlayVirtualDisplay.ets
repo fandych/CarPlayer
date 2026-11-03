@@ -1,13 +1,45 @@
 import display from '@ohos.display';
-import { isSupportedProjectionSize } from './ProjectionSettings';
+import {
+  isSupportedProjectionSize, PROJECTION_ENCODER_MAX_HEIGHT, PROJECTION_ENCODER_MAX_WIDTH
+} from './ProjectionSettings';
 
 export interface CarPlayDisplaySize {
   width: number;
   height: number;
 }
 
+export interface ProjectionContentDisplayConfig {
+  width: number;
+  height: number;
+  density: number;
+  scale: number;
+}
+
+const MAX_PROJECTION_DISPLAY_DENSITY: number = 3;
+
+export function projectionContentDisplayConfig(
+  width: number, height: number, density: number
+): ProjectionContentDisplayConfig {
+  if (!Number.isInteger(width) || width <= 0 || !Number.isInteger(height) || height <= 0 ||
+    !Number.isFinite(density) || density <= 0) {
+    throw new Error('Invalid virtual content display parameters');
+  }
+  const scale = Math.min(
+    2,
+    MAX_PROJECTION_DISPLAY_DENSITY / density,
+    PROJECTION_ENCODER_MAX_WIDTH / width,
+    PROJECTION_ENCODER_MAX_HEIGHT / height
+  );
+  return {
+    width: Math.max(1, Math.min(PROJECTION_ENCODER_MAX_WIDTH, Math.round(width * scale))),
+    height: Math.max(1, Math.min(PROJECTION_ENCODER_MAX_HEIGHT, Math.round(height * scale))),
+    density: density * scale,
+    scale
+  };
+}
+
 export function projectionDisplayDensity(width: number): number {
-  return Math.max(0.5, Math.min(3, width / 960));
+  return Math.max(0.5, Math.min(MAX_PROJECTION_DISPLAY_DENSITY, width / 960));
 }
 
 export function projectionDisplayToggleTarget(

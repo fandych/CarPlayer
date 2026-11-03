@@ -17,7 +17,9 @@ import {
   PROJECTION_APP_CANDIDATES
 } from './ProjectionAppCatalog';
 import { ProjectionShakeDetector } from '../video/ProjectionShakeDetector';
-import { projectionDisplayToggleTarget } from '../video/CarPlayVirtualDisplay';
+import {
+  projectionContentDisplayConfig, projectionDisplayToggleTarget
+} from '../video/CarPlayVirtualDisplay';
 import { projectionTheme, resolveNightMode } from '../video/ProjectionSettings';
 
 const DOMAIN: number = 0xCA22;
@@ -175,6 +177,16 @@ struct ProjectionHome {
       this.publishAppTouchBounds();
       return;
     }
+    let appDisplayReleased: boolean = false;
+    if (this.appDisplayId > 0 && this.activeAppSurface &&
+      (this.activeAppSurface.width !== surface.width || this.activeAppSurface.height !== surface.height)) {
+      const generation = ++this.appDisplayGeneration;
+      await this.releaseAppDisplay();
+      if (generation !== this.appDisplayGeneration) {
+        return;
+      }
+      appDisplayReleased = true;
+    }
     if (this.appDisplayId > 0 && this.activeAppSurface) {
       const screenId = this.appDisplayId;
       const surfaceGeneration = ++this.appSurfaceGeneration;
@@ -203,7 +215,9 @@ struct ProjectionHome {
     }
     const generation = ++this.appDisplayGeneration;
     this.appSwitching = true;
-    await this.releaseAppDisplay();
+    if (!appDisplayReleased) {
+      await this.releaseAppDisplay();
+    }
     if (generation !== this.appDisplayGeneration) {
       this.appSwitching = false;
       return;
@@ -211,12 +225,22 @@ struct ProjectionHome {
     let screenId = -1;
     try {
       const density = AppStorage.get<number>('carplayProjectionDensity');
-      if (!density || !Number.isFinite(density)) {
+      if (!density || !Number.isFinite(density) || density <= 0) {
         throw new Error('投影显示密度不可用');
       }
+      const renderConfig = projectionContentDisplayConfig(surface.width, surface.height, density);
+      this.logProjection(
+        `应用虚拟屏清晰度：surface=${surface.width}x${surface.height}, ` +
+          `render=${renderConfig.width}x${renderConfig.height}, density=${renderConfig.density}, ` +
+          `scale=${renderConfig.scale}`
+      );
       screenId = await display.createVirtualScreen({
-        name: 'CarPlayer app content', width: surface.width, height: surface.height,
-        density, surfaceId: surface.surfaceId, supportsFocus: true
+        name: 'CarPlayer app content',
+        width: renderConfig.width,
+        height: renderConfig.height,
+        density: renderConfig.density,
+        surfaceId: surface.surfaceId,
+        supportsFocus: true
       });
       await display.setVirtualScreenSurface(screenId, surface.surfaceId);
       await display.makeUnique(screenId);
@@ -225,8 +249,8 @@ struct ProjectionHome {
         return;
       }
       this.appDisplayId = screenId;
-      this.appContentWidth = surface.width;
-      this.appContentHeight = surface.height;
+      this.appContentWidth = renderConfig.width;
+      this.appContentHeight = renderConfig.height;
       this.activeAppSurface = surface;
       this.appSurfaceAttached = true;
       if (this.activeApp) {
@@ -284,7 +308,8 @@ struct ProjectionHome {
         this.activeAppMoveExistingInstance = false;
         this.appOnPhone = false;
         this.publishAppTouchBounds(this.activeAppSurface);
-        this.launchMessage = `${app.label}启动请求已受理；目标屏显示仍需车机验证`;
+        this.launchMessage = '';
+        this.logProjection(`${app.label}启动请求已受理；目标屏显示仍需车机验证`);
       } catch (error) {
         this.launchMessage = `无法启动${app.label}：${error instanceof Error ? error.message : String(error)}`;
         this.logProjection(this.launchMessage);
@@ -333,9 +358,7 @@ struct ProjectionHome {
       await this.launchApp(app, target, app.appId === 'amap');
       this.appOnPhone = !this.appOnPhone;
       this.publishAppTouchBounds(this.activeAppSurface);
-      this.launchMessage = this.appOnPhone
-        ? `${app.label}手机端启动请求已受理`
-        : `${app.label}目标屏启动请求已受理；实际显示仍需验证`;
+      this.launchMessage = '';
       this.logProjection(`应用启动请求已受理：${app.label}, displayId=${target}; target rendering is not verified`);
     } catch (error) {
       this.launchMessage = `应用链接打开失败：${error instanceof Error ? error.message : String(error)}`;
@@ -361,9 +384,7 @@ struct ProjectionHome {
       if (this.activeMapSurface) {
         this.publishMapTouchBounds(this.activeMapSurface);
       }
-      this.launchMessage = this.mapOnPhone
-        ? `${app.label}手机端启动请求已受理`
-        : `${app.label}目标屏启动请求已受理；实际显示仍需验证`;
+      this.launchMessage = '';
       this.logProjection(`地图应用切换请求已受理：${app.label}, displayId=${target}`);
     } catch (error) {
       this.launchMessage = `地图应用切换失败：${error instanceof Error ? error.message : String(error)}`;
@@ -458,14 +479,20 @@ struct ProjectionHome {
       this.mapMessage = '地图卡片暂不可用';
       return;
     }
+    const renderConfig = projectionContentDisplayConfig(surface.width, surface.height, density);
+    this.logProjection(
+      `地图虚拟屏清晰度：surface=${surface.width}x${surface.height}, ` +
+        `render=${renderConfig.width}x${renderConfig.height}, density=${renderConfig.density}, ` +
+        `scale=${renderConfig.scale}`
+    );
 
     let displayId = -1;
     try {
       displayId = await display.createVirtualScreen({
         name: 'CarPlayer map card',
-        width: surface.width,
-        height: surface.height,
-        density,
+        width: renderConfig.width,
+        height: renderConfig.height,
+        density: renderConfig.density,
         surfaceId: surface.surfaceId,
         supportsFocus: true
       });
@@ -487,7 +514,7 @@ struct ProjectionHome {
       if (generation === this.mapDisplayGeneration) {
         this.mapOnPhone = false;
         this.mapMessage = '';
-        this.launchMessage = `${mapApp.label}启动请求已受理；目标屏显示仍需车机验证`;
+        this.launchMessage = '';
         this.logProjection(`${mapApp.label}启动请求已受理：displayId=${displayId}; 目标屏实显仍需验证`);
       }
     } catch (error) {

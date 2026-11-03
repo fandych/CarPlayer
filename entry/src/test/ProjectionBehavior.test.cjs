@@ -103,14 +103,182 @@ test('projection settings match the reference glass palette and two-pane layout'
   assert.equal((source.match(/backgroundColor\('#6BFFFFFF'\)/g) || []).length, 2);
   assert.ok(source.includes('private ConnectionSettingsPane()'));
   assert.ok(source.includes('Slider({ value: this.displayBrightness'));
-  assert.ok(source.includes('.layoutWeight(this.splitRatio)'));
-  assert.match(settingsSource, /this\.splitRatio === ratio \? this\.primaryTextColor\(\) : Color\.Transparent/);
+  assert.ok(source.includes('.layoutWeight(this.splitMapRatio)'));
+  assert.ok(source.includes('.layoutWeight(this.splitMusicRatio)'));
+  assert.match(settingsSource, /this\.SplitRatioControl\('map'\)/);
+  assert.match(settingsSource, /this\.SplitRatioControl\('music'\)/);
+  assert.match(source, /\.type\(InputType\.Number\)/);
+  assert.match(source, /previous\.drag\(point\.x\)/);
+  assert.match(source, /Text\(`\$\{edge === 'top' \? this\.safeInsetTop/);
+  assert.match(source, /Text\(`\$\{control === 'scale' \? this\.contentScalePercent/);
+  assert.ok(source.includes("Text('−').fontSize(26).fontWeight(FontWeight.Bold)"));
+  assert.ok(source.includes("Text('+').fontSize(26).fontWeight(FontWeight.Bold)"));
+  assert.doesNotMatch(settingsSource, /ForEach\(\[3, 4, 5\]/);
   const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', ['selectDayNightMode']);
   const target = new Target();
   target.selectDayNightMode('NIGHT');
   assert.equal(target.dayNightMode, 'NIGHT');
   target.selectDayNightMode('AUTO');
   assert.equal(target.dayNightMode, 'AUTO');
+});
+
+test('split pane ratios default to 3:2, persist independently and stay within 1–10', () => {
+  const previousAppStorage = global.AppStorage;
+  const previousPersistentStorage = global.PersistentStorage;
+  const stored = new Map();
+  global.AppStorage = {
+    get: key => stored.get(key),
+    setOrCreate: (key, value) => stored.set(key, value)
+  };
+  global.PersistentStorage = {
+    persistProp(key, value) {
+      if (!stored.has(key)) stored.set(key, value);
+    }
+  };
+  try {
+    const settings = loadEts('video/ProjectionSettings.ets');
+    assert.equal(settings.readProjectionSplitRatio('map'), 3);
+    assert.equal(settings.readProjectionSplitRatio('music'), 2);
+    assert.equal(settings.normalizeProjectionSplitRatio(0), 1);
+    assert.equal(settings.normalizeProjectionSplitRatio(11), 10);
+    assert.equal(settings.normalizeProjectionSplitRatio(Number.NaN), 3);
+    assert.equal(settings.saveProjectionSplitRatio('map', 7), 7);
+    assert.equal(settings.saveProjectionSplitRatio('music', -2), 1);
+    assert.equal(settings.readProjectionSplitRatio('map'), 7);
+    assert.equal(settings.readProjectionSplitRatio('music'), 1);
+  } finally {
+    if (previousAppStorage === undefined) delete global.AppStorage;
+    else global.AppStorage = previousAppStorage;
+    if (previousPersistentStorage === undefined) delete global.PersistentStorage;
+    else global.PersistentStorage = previousPersistentStorage;
+  }
+});
+
+test('projection touch reports update slider values during drag', () => {
+  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', [
+    'handleTouchReport', 'contains', 'setDisplayBrightnessFromTouch', 'updateDisplayBrightness'
+  ], {
+    AppStorage: { get: key => ({
+      carplayProjectionHomeActive: true, carplayProjectionDisplayId: 7
+    })[key] }
+  });
+  const target = new Target();
+  const sliderBounds = { left: 10, top: 10, right: 110, bottom: 40 };
+  target.displayBrightness = 80;
+  target.dashboardView = 'settings';
+  target.touchAreas = new Map([['settings:brightness', {
+    group: 'settings', ...sliderBounds,
+    action() {}, drag: x => target.setDisplayBrightnessFromTouch(x, sliderBounds)
+  }]]);
+  target.touchBounds = new Map([['settings', { left: 0, top: 0, right: 120, bottom: 60 }]]);
+  target.touchScrollState = undefined;
+  target.canvasPixelToContentPoint = (x, y) => ({ x, y });
+  target.scrollControllerAt = () => undefined;
+  const report = x => ({
+    displayId: 7, contacts: [{ id: 1, down: true, x, y: 20 }]
+  });
+  target.handleTouchReport(report(20));
+  target.handleTouchReport(report(90));
+  assert.equal(target.displayBrightness, 84);
+  target.handleTouchReport(report(200));
+  assert.equal(target.displayBrightness, 100);
+});
+
+test('split ratio inputs and steppers validate and clamp both panes to 1–10', () => {
+  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', [
+    'updateSplitRatio', 'adjustSplitRatio', 'updateSplitRatioInput', 'restoreSplitRatioInput'
+  ], {
+    saveProjectionSplitRatio: (pane, value) => Math.max(1, Math.min(10, Math.round(value)))
+  });
+  const target = new Target();
+  target.splitMapRatio = 3;
+  target.splitMusicRatio = 2;
+  target.splitMapRatioInput = '3';
+  target.splitMusicRatioInput = '2';
+  target.splitRatioMessage = '';
+  target.updateSplitRatioInput('map', '10');
+  assert.equal(target.splitMapRatio, 10);
+  target.updateSplitRatioInput('map', '11');
+  assert.equal(target.splitMapRatio, 10);
+  assert.equal(target.splitMapRatioInput, '11');
+  assert.match(target.splitRatioMessage, /1–10/);
+  target.restoreSplitRatioInput('map');
+  assert.equal(target.splitMapRatioInput, '10');
+  assert.match(target.splitRatioMessage, /1–10/);
+  target.adjustSplitRatio('music', -1);
+  assert.equal(target.splitMusicRatio, 1);
+  assert.equal(target.splitRatioMessage, '');
+  target.adjustSplitRatio('music', -1);
+  assert.equal(target.splitMusicRatio, 1);
+});
+
+test('split ratio stepper taps update layout values through the projection touch router', () => {
+  const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
+  assert.match(source, /`splitRatio-\$\{pane\}-minus`[\s\S]*adjustSplitRatio\(pane, -1\)/);
+  assert.match(source, /`splitRatio-\$\{pane\}-plus`[\s\S]*adjustSplitRatio\(pane, 1\)/);
+  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', [
+    'touchHandler', 'contains', 'adjustSplitRatio', 'updateSplitRatio'
+  ], {
+    AppStorage: { get: key => ({
+      carplayProjectionHomeActive: true, carplayProjectionDisplayId: 7
+    })[key] },
+    saveProjectionSplitRatio: (pane, value) => Math.max(1, Math.min(10, Math.round(value)))
+  });
+  const target = new Target();
+  target.dashboardView = 'settings';
+  target.activeAppLabel = '';
+  target.splitMapRatio = 3;
+  target.splitMusicRatio = 2;
+  target.splitMapRatioInput = '3';
+  target.splitMusicRatioInput = '2';
+  target.touchBounds = new Map([['settings', { left: 0, top: 0, right: 400, bottom: 300 }]]);
+  target.touchAreas = new Map([
+    ['settings:splitRatio-map-plus', {
+      group: 'settings', left: 10, top: 20, right: 50, bottom: 60,
+      action: () => target.adjustSplitRatio('map', 1)
+    }],
+    ['settings:splitRatio-music-minus', {
+      group: 'settings', left: 60, top: 20, right: 100, bottom: 60,
+      action: () => target.adjustSplitRatio('music', -1)
+    }]
+  ]);
+  target.canvasPixelToContentPoint = (x, y) => ({ x, y });
+  const tap = x => target.touchHandler({ data: {
+    displayId: 7, startX: x, endX: x, startY: 40, endY: 40
+  } });
+  tap(30);
+  tap(80);
+  assert.equal(target.splitMapRatio, 4);
+  assert.equal(target.splitMusicRatio, 1);
+});
+
+test('third-party map surfaces retain the negotiated projection aspect ratio', () => {
+  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', [
+    'projectionContentAspectRatio'
+  ]);
+  const target = new Target();
+  target.projectionViewAreaWidth = 1920;
+  target.projectionViewAreaHeight = 720;
+  target.projectionOutputWidth = 1280;
+  target.projectionOutputHeight = 720;
+  target.projectionNativeWidth = 1280;
+  target.projectionNativeHeight = 720;
+  assert.equal(target.projectionContentAspectRatio(), 1920 / 720);
+  target.projectionViewAreaWidth = 0;
+  target.projectionViewAreaHeight = 0;
+  assert.equal(target.projectionContentAspectRatio(), 1280 / 720);
+  target.projectionOutputWidth = 0;
+  target.projectionOutputHeight = 0;
+  target.projectionNativeWidth = 0;
+  target.projectionNativeHeight = 0;
+  assert.equal(target.projectionContentAspectRatio(), 0);
+});
+
+test('accepted launch statuses are logged rather than rendered over app surfaces', () => {
+  const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionHome.ets'), 'utf8');
+  assert.doesNotMatch(source, /this\.launchMessage\s*=\s*`[^`]*请求已受理/);
+  assert.match(source, /this\.logProjection\(`应用启动请求已受理/);
+  assert.match(source, /this\.launchMessage = `应用链接打开失败/);
 });
 
 test('apps list icons are not wrapped in an extra colored background tile', () => {
@@ -235,13 +403,16 @@ test('phone home button has no horizontal sheen but keeps its circular shadow an
 test('settings dropdowns select values from both local and receiver touch paths', () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
   assert.equal((source.match(/this\.SettingsDropdownRow\(/g) || []).length, 3);
+  assert.match(source, /'投屏帧率 FPS'[\s\S]*\['30 fps', '60 fps'\]/);
+  assert.match(source, /touchBounds\.set\('settingsContent'/);
+  assert.match(source, /touchBounds\.set\('settings', this\.areaBounds\(newArea\)\)/);
   assert.match(source, /dropdown-\$\{key\}-trigger/);
   assert.match(source, /dropdown-\$\{key\}-option-\$\{index\}/);
   assert.match(source, /\.onClick\(\(\): void => this\.chooseSettingsDropdownOption\(key, index, onSelect\)\)/);
 
   const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', [
     'toggleSettingsDropdown', 'closeSettingsDropdown', 'clearSettingsDropdownAreas',
-    'chooseSettingsDropdownOption', 'selectEncoderFps', 'selectCaptureFps'
+    'chooseSettingsDropdownOption', 'selectEncoderFps', 'selectCaptureFps', 'normalizeEncoderFps'
   ]);
   const target = new Target();
   target.touchAreas = new Map([
@@ -262,15 +433,76 @@ test('settings dropdowns select values from both local and receiver touch paths'
   assert.equal(target.touchAreas.has('settings:dropdown-captureFps-option-0'), false);
 
   target.encoderFps = 30;
+  target.captureFps = 30;
   target.selectEncoderFps(0);
-  assert.equal(target.encoderFps, 15);
+  assert.equal(target.encoderFps, 30);
+  target.selectEncoderFps(1);
+  assert.equal(target.encoderFps, 60);
+  assert.equal(target.captureFps, 60);
+  target.selectEncoderFps(0);
+  assert.equal(target.encoderFps, 30);
   target.selectEncoderFps(99);
-  assert.equal(target.encoderFps, 15);
+  assert.equal(target.encoderFps, 30);
+  target.encoderFps = 24;
+  target.normalizeEncoderFps();
+  assert.equal(target.encoderFps, 30);
   target.captureFps = 60;
   target.selectCaptureFps(0);
   assert.equal(target.captureFps, 30);
   target.selectCaptureFps(99);
   assert.equal(target.captureFps, 30);
+});
+
+test('connection tab taps hit the full settings page without capturing content scrolling', () => {
+  const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
+  assert.match(source, /\.onAreaChange\(\(_oldArea, newArea\) => this\.touchBounds\.set\('settings', this\.areaBounds\(newArea\)\)\)/);
+  assert.match(source, /\.onAreaChange\(\(_oldArea, newArea\) => this\.touchBounds\.set\('settingsContent', this\.areaBounds\(newArea\)\)\)/);
+  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', [
+    'touchHandler', 'contains', 'scrollControllerAt'
+  ], {
+    AppStorage: { get: key => ({
+      carplayProjectionHomeActive: true, carplayProjectionDisplayId: 7
+    })[key] }
+  });
+  const target = new Target();
+  let activated = 0;
+  target.dashboardView = 'settings';
+  target.activeAppLabel = '';
+  target.navigationPreview = false;
+  target.touchBounds = new Map([
+    ['settings', { left: 0, top: 0, right: 400, bottom: 300 }],
+    ['settingsContent', { left: 100, top: 0, right: 400, bottom: 300 }]
+  ]);
+  target.touchAreas = new Map([['settings:tab-connect', {
+    group: 'settings', left: 10, top: 20, right: 90, bottom: 70, action: () => { activated++; }
+  }]]);
+  target.canvasPixelToContentPoint = (x, y) => ({ x, y });
+  target.touchHandler({ data: {
+    displayId: 7, startX: 40, endX: 40, startY: 40, endY: 40, durationMs: 100
+  } });
+  assert.equal(activated, 1);
+  assert.equal(target.scrollControllerAt(40, 40), undefined);
+});
+
+test('third-party virtual displays render at higher resolution with matching logical density', () => {
+  const { projectionContentDisplayConfig } = loadEts('video/CarPlayVirtualDisplay.ets', {
+    '@ohos.display': {},
+    './ProjectionSettings': {
+      isSupportedProjectionSize: () => true,
+      PROJECTION_ENCODER_MAX_WIDTH: 4096,
+      PROJECTION_ENCODER_MAX_HEIGHT: 2160
+    }
+  });
+  assert.deepEqual(projectionContentDisplayConfig(1200, 700, 1.25), {
+    width: 2400, height: 1400, density: 2.5, scale: 2
+  });
+  assert.deepEqual(projectionContentDisplayConfig(1200, 700, 2), {
+    width: 1800, height: 1050, density: 3, scale: 1.5
+  });
+  assert.deepEqual(projectionContentDisplayConfig(5000, 2500, 2), {
+    width: 4096, height: 2048, density: 1.6384, scale: 0.8192
+  });
+  assert.throws(() => projectionContentDisplayConfig(0, 700, 1), /Invalid virtual content display/);
 });
 
 test('irregular-display calibration preserves aspect ratio and maps touch coordinates back', () => {
@@ -3314,10 +3546,17 @@ test('Apps grid includes only launchable third-party apps and adapts from three 
 
 test('split dashboard exposes ratio controls and requires an opened music app', () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
-  assert.match(source, /splitRatio/);
-  assert.match(source, /Text\(`\$\{ratio\} : 1`\)/);
-  assert.match(source, /\.layoutWeight\(this\.splitRatio\)/);
-  assert.match(source, /\.layoutWeight\(1\)/);
+  assert.match(source, /splitMapRatio/);
+  assert.match(source, /splitMusicRatio/);
+  assert.match(source, /TextInput\(\{[\s\S]*splitMapRatioInput/);
+  assert.match(source, /\.layoutWeight\(this\.splitMapRatio\)/);
+  assert.match(source, /\.layoutWeight\(this\.splitMusicRatio\)/);
+  assert.equal((source.match(/\.layoutWeight\(this\.splitMapRatio\)/g) || []).length, 3);
+  assert.equal((source.match(/\.layoutWeight\(this\.splitMusicRatio\)/g) || []).length, 2);
+  assert.doesNotMatch(source, /\.width\('22%'\)/);
+  assert.match(source, /\.aspectRatio\(this\.projectionContentAspectRatio\(\)\)/);
+  assert.match(source, /private projectionContentAspectRatio\(\): number/);
+  assert.doesNotMatch(source, /\b[345] : 1\b/);
   assert.match(source, /if \(view === 'split' && !this\.activeMusicApp\(\)\)/);
   const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', ['showDashboardView'], {
     AppStorage: { get: () => -1, setOrCreate: () => {} }
@@ -3495,6 +3734,8 @@ test('app surface replacement retains the display and never relaunches the navig
   });
   const target = new Target();
   target.appDisplayId = 23;
+  target.appContentWidth = 1200;
+  target.appContentHeight = 700;
   target.activeAppSurface = { surfaceId: 'old', width: 1200, height: 700 };
   target.appDisplayGeneration = 0;
   target.appSurfaceGeneration = 0;
@@ -3509,30 +3750,84 @@ test('app surface replacement retains the display and never relaunches the navig
   assert.deepEqual(calls, [[23, 'new']]);
   assert.equal(target.appDisplayId, 23);
   assert.equal(published, surface);
-  const resized = { ...surface, left: 100, width: 600, height: 350 };
-  await target.updateAppSurface(resized);
+  const repositioned = { ...surface, left: 100 };
+  await target.updateAppSurface(repositioned);
   assert.equal(target.appDisplayId, 23);
-  assert.equal(published, resized);
+  assert.equal(published, repositioned);
   assert.equal(calls.length, 1);
-  await target.updateAppSurface({ ...resized, surfaceId: 'broken' });
+  await target.updateAppSurface({ ...repositioned, surfaceId: 'broken' });
   assert.equal(target.appDisplayId, 23);
-  assert.equal(published, resized);
-  assert.equal(target.activeAppSurface, resized);
+  assert.equal(published, repositioned);
+  assert.equal(target.activeAppSurface, repositioned);
   assert.match(target.launchMessage, /surface unavailable/);
   await target.updateAppSurface(undefined);
   assert.equal(target.appDisplayId, 23);
   assert.equal(published, undefined);
-  await target.updateAppSurface(resized);
+  await target.updateAppSurface(repositioned);
   assert.equal(target.appDisplayId, 23);
-  assert.equal(published, resized);
+  assert.equal(published, repositioned);
   assert.deepEqual(calls, [[23, 'new'], [23, 'new']]);
   assert.equal(target.launchMessage, '');
-  const pending = target.updateAppSurface({ ...resized, surfaceId: 'delayed' });
+  const pending = target.updateAppSurface({ ...repositioned, surfaceId: 'delayed' });
   await target.updateAppSurface(undefined);
   releaseSurface();
   await pending;
   assert.equal(published, undefined, 'late binding must not restore a detached touch target');
   assert.equal(target.appSurfaceAttached, false);
+});
+
+test('resizing an app surface recreates its virtual screen with matching dimensions', async () => {
+  const Target = loadMethods('pages/ProjectionHome.ets', 'ProjectionHome', ['updateAppSurface'], {
+    AppStorage: { get: key => key === 'carplayProjectionDensity' ? 2 : undefined },
+    projectionContentDisplayConfig: (width, height, density) => ({
+      width: width * 2, height: height * 2, density: density * 2, scale: 2
+    }),
+    display: {
+      async createVirtualScreen(options) {
+        events.push(['create', options.width, options.height, options.density]);
+        return 31;
+      },
+      async setVirtualScreenSurface(id, surfaceId) { events.push(['surface', id, surfaceId]); },
+      async makeUnique(id) { events.push(['unique', id]); }
+    }
+  });
+  const events = [];
+  const target = new Target();
+  target.appDisplayId = 23;
+  target.appContentWidth = 1200;
+  target.appContentHeight = 700;
+  target.appDisplayGeneration = 0;
+  target.appSurfaceGeneration = 0;
+  target.activeAppSurface = { surfaceId: 'old', width: 1200, height: 700 };
+  target.activeApp = { appId: 'music' };
+  target.activeAppMoveExistingInstance = false;
+  target.appOnPhone = false;
+  target.appSwitching = false;
+  target.launchMessage = '';
+  target.logProjection = () => {};
+  target.releaseAppDisplay = async () => {
+    events.push(['release', target.appDisplayId]);
+    target.appDisplayId = -1;
+    target.appContentWidth = 0;
+    target.appContentHeight = 0;
+    target.activeAppSurface = undefined;
+    target.appSurfaceAttached = false;
+  };
+  target.launchApp = async (_app, id) => events.push(['launch', id]);
+  target.publishAppTouchBounds = surface => events.push(['publish', surface.width, surface.height]);
+  await target.updateAppSurface({
+    surfaceId: 'resized', left: 80, top: 10, width: 800, height: 640
+  });
+  assert.deepEqual(events, [
+    ['release', 23],
+    ['create', 1600, 1280, 4],
+    ['surface', 31, 'resized'],
+    ['unique', 31],
+    ['launch', 31],
+    ['publish', 800, 640]
+  ]);
+  assert.equal(target.appContentWidth, 1600);
+  assert.equal(target.appContentHeight, 1280);
 });
 
 test('map card opens its link on the phone before releasing the content display', async () => {
@@ -3574,6 +3869,9 @@ test('resizing the map split surface rebuilds its virtual display without a phon
     discoverProjectionApps: async () => [mapApp],
     isProjectionAppLaunchable: () => true,
     PROJECTION_APP_CANDIDATES: [],
+    projectionContentDisplayConfig: (width, height, density) => ({
+      width: width * 2, height: height * 2, density: density * 2, scale: 2
+    }),
     display: {
       async createVirtualScreen(options) { events.push(['create', options.width, options.height]); return 24; },
       async setVirtualScreenSurface(id, surfaceId) { events.push(['surface', id, surfaceId]); },
@@ -3594,7 +3892,7 @@ test('resizing the map split surface rebuilds its virtual display without a phon
   target.logProjection = () => {};
   await target.updateMapSurface({ surfaceId: 'map-surface', left: 0, top: 0, width: 800, height: 400 });
   assert.deepEqual(events, [
-    ['release', false], ['create', 800, 400], ['surface', 24, 'map-surface'], ['unique', 24], ['launch', 'amap', 24]
+    ['release', false], ['create', 1600, 800], ['surface', 24, 'map-surface'], ['unique', 24], ['launch', 'amap', 24]
   ]);
 });
 
@@ -3605,6 +3903,7 @@ test('selecting map from split promotes it to the content display without a phon
   });
   const target = new Target();
   const events = [];
+  target.logProjection = () => {};
   target.appSwitching = false;
   target.appDisplayId = 42;
   target.appOnPhone = false;

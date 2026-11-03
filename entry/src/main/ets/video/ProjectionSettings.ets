@@ -45,10 +45,13 @@ export interface ProjectionTheme {
 export type ProjectionDockPosition = 'left' | 'bottom';
 export type ProjectionDayNightMode = 'AUTO' | 'DAY' | 'NIGHT';
 export type ProjectionSafeInsetEdge = 'top' | 'right' | 'bottom' | 'left';
+export type ProjectionSplitPane = 'map' | 'music';
 
 export const RECEIVER_NATIVE_MODE_ID: string = 'receiver-native';
 export const PROJECTION_ENCODER_MAX_WIDTH: number = 4096;
 export const PROJECTION_ENCODER_MAX_HEIGHT: number = 2160;
+export const PROJECTION_SPLIT_RATIO_MIN: number = 1;
+export const PROJECTION_SPLIT_RATIO_MAX: number = 10;
 
 export const VERIFIED_PROJECTION_DISPLAY_MODES: VerifiedProjectionDisplayMode[] = [];
 
@@ -77,7 +80,35 @@ export function initializeProjectionSettings(): void {
   PersistentStorage.persistProp('carplayUseBluetoothAudio', false);
   PersistentStorage.persistProp('carplayDockPosition', 'left');
   PersistentStorage.persistProp('carplayDayNightMode', 'NIGHT');
+  PersistentStorage.persistProp('carplaySplitMapRatio', 3);
+  PersistentStorage.persistProp('carplaySplitMusicRatio', 2);
   settingsInitialized = true;
+}
+
+export function normalizeProjectionSplitRatio(value: number, fallback: number = 3): number {
+  const defaultValue = Number.isFinite(fallback)
+    ? Math.max(PROJECTION_SPLIT_RATIO_MIN, Math.min(PROJECTION_SPLIT_RATIO_MAX, Math.round(fallback)))
+    : 3;
+  if (!Number.isFinite(value)) {
+    return defaultValue;
+  }
+  return Math.max(PROJECTION_SPLIT_RATIO_MIN, Math.min(PROJECTION_SPLIT_RATIO_MAX, Math.round(value)));
+}
+
+export function readProjectionSplitRatio(pane: ProjectionSplitPane): number {
+  const defaultValue = pane === 'map' ? 3 : 2;
+  const key = pane === 'map' ? 'carplaySplitMapRatio' : 'carplaySplitMusicRatio';
+  PersistentStorage.persistProp(key, defaultValue);
+  return normalizeProjectionSplitRatio(AppStorage.get<number>(key) ?? defaultValue, defaultValue);
+}
+
+export function saveProjectionSplitRatio(pane: ProjectionSplitPane, value: number): number {
+  const defaultValue = pane === 'map' ? 3 : 2;
+  const key = pane === 'map' ? 'carplaySplitMapRatio' : 'carplaySplitMusicRatio';
+  const ratio = normalizeProjectionSplitRatio(value, defaultValue);
+  PersistentStorage.persistProp(key, defaultValue);
+  AppStorage.setOrCreate(key, ratio);
+  return ratio;
 }
 
 export function projectionTheme(id: string): ProjectionTheme {

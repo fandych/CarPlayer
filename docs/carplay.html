@@ -29,6 +29,10 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 }
 .design b{color:#fff;font-weight:600}
 .design .grp{display:flex;align-items:center;gap:8px}
+.ratio-pair,.ratio-step{display:flex;align-items:center;gap:5px}
+.ratio-step button,.ratio-step input{height:42px;border:1px solid var(--sep);border-radius:9px;background:var(--glass-2);color:var(--text)}
+.ratio-step button{min-width:42px;padding:0 8px;font-size:24px;font-weight:700;line-height:1}
+.ratio-step input{width:48px;text-align:center;font:inherit;user-select:text}
 
 /* ---------- 车机屏幕 (1280×720, 自适应缩放) ---------- */
 .fit{position:relative}
@@ -88,7 +92,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 
 .layout{display:grid;gap:14px;height:100%}
 #v-home .layout{grid-template-columns:78fr 22fr}
-#v-split .layout{grid-template-columns:var(--split,4fr 1fr)}
+#v-split .layout{grid-template-columns:var(--split,3fr 2fr)}
 .cards{display:flex;flex-direction:column;gap:14px;min-width:0;min-height:0}
 .cards>*{min-height:0}
 
@@ -277,9 +281,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;heigh
 <!-- ============ 设计面板 ============ -->
 <div class="design">
   <div class="grp"><b>设计选项</b></div>
-  <div class="grp">分屏比例 (地图 : 卡片)
-    <div class="seg" id="ratioSeg">
-      <button data-r="3">3 : 1</button><button data-r="4" class="on">4 : 1</button><button data-r="5">5 : 1</button>
+  <div class="grp">分屏比例 (地图 : 音乐)
+    <div class="ratio-pair">
+      <div class="ratio-step"><button data-split-step="map:-1">−</button><input type="number" min="1" max="10" value="3" data-split-ratio="map"><button data-split-step="map:1">+</button></div>
+      <span>:</span>
+      <div class="ratio-step"><button data-split-step="music:-1">−</button><input type="number" min="1" max="10" value="2" data-split-ratio="music"><button data-split-step="music:1">+</button></div>
     </div>
   </div>
   <div class="grp">外观
@@ -387,8 +393,12 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;heigh
               <div class="row"><div class="l"><span class="ic" style="background:#ff9f0a"><svg class="i"><use href="#i-bright"/></svg></span>亮度</div><input type="range" min="20" max="100" value="80" id="brightness"></div>
               <div class="row"><div class="l"><span class="ic" style="background:#8e8e93"><svg class="i"><use href="#i-text"/></svg></span>文字大小</div>
                 <div class="seg" id="fontSeg"><button data-f=".92">小</button><button data-f="1" class="on">标准</button><button data-f="1.1">大</button></div></div>
-              <div class="row"><div class="l"><span class="ic" style="background:#5e5ce6"><svg class="i"><use href="#i-split"/></svg></span>分屏比例<small>地图 : 卡片</small></div>
-                <div class="seg" data-ratioseg><button data-r="3">3 : 1</button><button data-r="4">4 : 1</button><button data-r="5">5 : 1</button></div></div>
+              <div class="row"><div class="l"><span class="ic" style="background:#5e5ce6"><svg class="i"><use href="#i-split"/></svg></span>分屏比例<small>地图 : 音乐 · 1–10</small></div>
+                <div class="ratio-pair">
+                  <div class="ratio-step"><button data-split-step="map:-1">−</button><input type="number" min="1" max="10" value="3" data-split-ratio="map"><button data-split-step="map:1">+</button></div>
+                  <span>:</span>
+                  <div class="ratio-step"><button data-split-step="music:-1">−</button><input type="number" min="1" max="10" value="2" data-split-ratio="music"><button data-split-step="music:1">+</button></div>
+                </div></div>
             </div>
             <div class="grp-l"><div class="row" style="flex-direction:column;align-items:flex-start;gap:12px"><div class="l">强调色</div><div class="sw" data-accents></div></div></div>
             <div class="grp-l"><div class="row" style="flex-direction:column;align-items:flex-start;gap:14px"><div class="l">壁纸</div><div class="walls" data-walls></div></div></div>
@@ -405,6 +415,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;heigh
               <div class="row"><div class="l"><span class="ic" style="background:#0a84ff"><svg class="i"><use href="#i-wifi"/></svg></span>Wi-Fi<small>Car-5G-Home</small></div><div class="tg on"></div></div>
               <div class="row"><div class="l"><span class="ic" style="background:#30d158"><svg class="i"><use href="#i-cell"/></svg></span>蜂窝网络<small>5G · 信号良好</small></div><div class="tg on"></div></div>
               <div class="row"><div class="l"><span class="ic" style="background:#ff9f0a"><svg class="i"><use href="#i-hot"/></svg></span>个人热点</div><div class="tg"></div></div>
+              <div class="row"><div class="l"><span class="ic" style="background:#5e5ce6"><svg class="i"><use href="#i-split"/></svg></span>投屏帧率 FPS</div>
+                <div class="seg" id="projectionFps"><button data-fps="30" class="on">30 fps</button><button data-fps="60">60 fps</button></div></div>
             </div>
           </div>
         </div>
@@ -586,16 +598,18 @@ const walls = [
   { n: '石墨', v: `radial-gradient(900px 600px at 30% 0%,#4a4a55 0%,transparent 60%),#16161a` },
 ];
 const accents = ['#0a84ff', '#30d158', '#ff9f0a', '#ff375f', '#bf5af2', '#64d2ff'];
-let wallIdx = 0, accent = accents[0], mode = 'dark', ratio = 4;
+let wallIdx = 0, accent = accents[0], mode = 'dark', mapRatio = 3, musicRatio = 2, projectionFps = 30;
 
 function applyTheme() {
   screenEl.classList.toggle('light', mode === 'light');
   screenEl.style.setProperty('--accent', accent);
   screenEl.style.setProperty('--wall', mode === 'light'
     ? `linear-gradient(rgba(255,255,255,.42),rgba(255,255,255,.42)),${walls[wallIdx].v}` : walls[wallIdx].v);
-  screenEl.style.setProperty('--split', `${ratio}fr 1fr`);
+  screenEl.style.setProperty('--split', `${mapRatio}fr ${musicRatio}fr`);
   $$('[data-modeseg] button,#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === mode));
-  $$('[data-ratioseg] button,#ratioSeg button').forEach(b => b.classList.toggle('on', +b.dataset.r === ratio));
+  $$('[data-split-ratio="map"]').forEach(input => { if (document.activeElement !== input) input.value = mapRatio; });
+  $$('[data-split-ratio="music"]').forEach(input => { if (document.activeElement !== input) input.value = musicRatio; });
+  $$('#projectionFps button').forEach(button => button.classList.toggle('on', Number(button.dataset.fps) === projectionFps));
   $$('[data-walls] .wall').forEach(w => w.classList.toggle('on', +w.dataset.i === wallIdx));
   $$('[data-accents] button').forEach(b => b.classList.toggle('on', b.dataset.c === accent));
 }
@@ -605,12 +619,30 @@ $$('[data-accents]').forEach(c => c.innerHTML = accents.map(a => `<button data-c
 document.addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
   if (t.dataset.m) mode = t.dataset.m;
-  else if (t.dataset.r) ratio = +t.dataset.r;
+  else if (t.dataset.splitStep) {
+    const [pane, step] = t.dataset.splitStep.split(':');
+    const current = pane === 'map' ? mapRatio : musicRatio;
+    const next = Math.max(1, Math.min(10, current + Number(step)));
+    if (pane === 'map') mapRatio = next;
+    else musicRatio = next;
+  }
+  else if (t.dataset.fps) projectionFps = Number(t.dataset.fps);
   else if (t.classList.contains('wall')) wallIdx = +t.dataset.i;
   else if (t.dataset.c) accent = t.dataset.c;
   else return;
   applyTheme();
 });
+$$('[data-split-ratio]').forEach(input => input.addEventListener('change', () => {
+  const pane = input.dataset.splitRatio;
+  const value = Number(input.value);
+  if (!Number.isInteger(value) || value < 1 || value > 10) {
+    input.value = pane === 'map' ? mapRatio : musicRatio;
+    return;
+  }
+  if (pane === 'map') mapRatio = value;
+  else if (pane === 'music') musicRatio = value;
+  applyTheme();
+}));
 applyTheme();
 
 /* ---------- 设置 ---------- */

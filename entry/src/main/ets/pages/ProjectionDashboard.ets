@@ -32,7 +32,8 @@ import {
   ProjectionCalibrationControl, ProjectionContentCalibration, ProjectionDisplayMode, ProjectionTheme,
   ProjectionSafeInsetEdge, normalizeSafeInset, projectionSafeInsetKey,
   readProjectionContentCalibration, readProjectionResolutionPreference, resolveNightMode,
-  resolveProjectionDisplayMode, saveProjectionContentCalibration, saveProjectionResolutionPreference,
+  readProjectionSplitRatio, resolveProjectionDisplayMode, saveProjectionContentCalibration,
+  saveProjectionResolutionPreference, saveProjectionSplitRatio, ProjectionSplitPane,
   RECEIVER_NATIVE_MODE_ID
 } from '../video/ProjectionSettings';
 
@@ -67,12 +68,14 @@ interface ProjectionTouchScrollState {
   lastX: number;
   lastY: number;
   scroller?: Scroller;
+  drag?: (pointX: number) => void;
 }
 
 interface ProjectionTouchArea extends ProjectionBounds {
   group: string;
   action: () => void;
   longPress?: () => void;
+  drag?: (pointX: number) => void;
 }
 
 const HOME_APP: ProjectionApp = {
@@ -128,7 +131,11 @@ export struct ProjectionDashboard {
   @State settingsTab: string = 'display';
   @State activeSettingsDropdown: string = '';
   @State displayBrightness: number = 80;
-  @State splitRatio: number = 4;
+  @State splitMapRatio: number = 3;
+  @State splitMusicRatio: number = 2;
+  @State splitMapRatioInput: string = '3';
+  @State splitMusicRatioInput: string = '2';
+  @State splitRatioMessage: string = '';
   @State private preserveSplitSurfaceForOverlays: boolean = false;
   @State selectedMapUri: string = '';
   @State selectedMusicUri: string = '';
@@ -140,6 +147,10 @@ export struct ProjectionDashboard {
   @StorageLink('carplayProjectionDisplayModes') projectionModeOptions: ProjectionDisplayMode[] = [];
   @StorageLink('carplayProjectionNativeWidth') projectionNativeWidth: number = 0;
   @StorageLink('carplayProjectionNativeHeight') projectionNativeHeight: number = 0;
+  @StorageLink('carplayProjectionOutputWidth') projectionOutputWidth: number = 0;
+  @StorageLink('carplayProjectionOutputHeight') projectionOutputHeight: number = 0;
+  @StorageLink('carplayProjectionViewAreaWidth') projectionViewAreaWidth: number = 0;
+  @StorageLink('carplayProjectionViewAreaHeight') projectionViewAreaHeight: number = 0;
   @StorageLink('carplayProjectionActiveModeId') activeProjectionModeId: string = '';
   @StorageLink('carplayProjectionResolutionMessage') projectionResolutionMessage: string = '';
   @State safeInsetTop: number = 0;
@@ -226,7 +237,11 @@ export struct ProjectionDashboard {
             if ((tap.durationMs ?? 0) >= 550) {
               area.longPress?.();
             } else {
-              area.action();
+              if (area.drag) {
+                area.drag(pointX);
+              } else {
+                area.action();
+              }
             }
             return;
           }
@@ -248,7 +263,11 @@ export struct ProjectionDashboard {
       }
       const bounds = this.touchBounds.get(area.group);
       if (bounds && this.contains(area, pointX, pointY) && this.contains(bounds, pointX, pointY)) {
-        area.action();
+        if (area.drag) {
+          area.drag(pointX);
+        } else {
+          area.action();
+        }
         return;
       }
     }
@@ -270,7 +289,8 @@ export struct ProjectionDashboard {
       this.contains(this.touchBounds.get(this.dashboardView) ?? emptyBounds, x, y)) {
       return this.dockMenuScroller;
     }
-    if (this.dashboardView === 'settings' && this.contains(this.touchBounds.get('settings') ?? emptyBounds, x, y)) {
+    if (this.dashboardView === 'settings' &&
+      this.contains(this.touchBounds.get('settingsContent') ?? emptyBounds, x, y)) {
       return this.settingsScroller;
     }
     if (this.dashboardView === 'themes' && this.contains(this.touchBounds.get('themes') ?? emptyBounds, x, y)) {
@@ -297,6 +317,12 @@ export struct ProjectionDashboard {
     const point = this.canvasPixelToContentPoint(contact.x, contact.y);
     const previous = this.touchScrollState;
     if (!previous || previous.displayId !== report.displayId || previous.contactId !== contact.id) {
+      const bounds = this.touchBounds.get('settings');
+      const dragArea = this.dashboardView === 'settings'
+        ? Array.from(this.touchAreas.values()).find((area: ProjectionTouchArea): boolean =>
+          area.group === 'settings' && area.drag !== undefined &&
+          this.contains(area, point.x, point.y) && (!bounds || this.contains(bounds, point.x, point.y)))
+        : undefined;
       this.touchScrollState = {
         displayId: report.displayId,
         contactId: contact.id,
@@ -304,14 +330,20 @@ export struct ProjectionDashboard {
         startY: point.y,
         lastX: point.x,
         lastY: point.y,
-        scroller: this.scrollControllerAt(point.x, point.y)
+        scroller: dragArea ? undefined : this.scrollControllerAt(point.x, point.y),
+        drag: dragArea?.drag
       };
+      dragArea?.drag?.(point.x);
       return;
     }
     const deltaX = previous.lastX - point.x;
     const deltaY = previous.lastY - point.y;
     previous.lastX = point.x;
     previous.lastY = point.y;
+    if (previous.drag) {
+      previous.drag(point.x);
+      return;
+    }
     if (Math.hypot(point.x - previous.startX, point.y - previous.startY) >= 8) {
       previous.scroller?.scrollBy(deltaX, deltaY);
     }
@@ -319,8 +351,10 @@ export struct ProjectionDashboard {
 
   aboutToAppear(): void {
     initializeProjectionSettings();
+    this.normalizeEncoderFps();
     this.loadSafeInsets();
     this.loadContentCalibration();
+    this.loadSplitRatios();
     this.loadProjectionResolution();
     AppStorage.setOrCreate('carplayDashboardView', 'home');
     emitter.on<CarPlayTouchTap>(CARPLAY_TOUCH_TAP_EVENT, this.touchHandler);
@@ -427,12 +461,13 @@ export struct ProjectionDashboard {
   }
 
   private updateTouchArea(group: string, key: string, area: Area, action: () => void,
-    longPress?: () => void): void {
+    longPress?: () => void, drag?: (pointX: number) => void): void {
     const bounds = this.areaBounds(area);
     this.touchAreas.set(`${group}:${key}`, {
       group,
       action,
       longPress,
+      drag,
       left: bounds.left,
       top: bounds.top,
       right: bounds.right,
@@ -790,9 +825,18 @@ export struct ProjectionDashboard {
   }
 
   private selectEncoderFps(index: number): void {
-    const fps = [15, 24, 30, 60][index];
+    const fps = [30, 60][index];
     if (fps !== undefined) {
       this.encoderFps = fps;
+      if (fps > this.captureFps) {
+        this.captureFps = fps;
+      }
+    }
+  }
+
+  private normalizeEncoderFps(): void {
+    if (![30, 60].includes(this.encoderFps)) {
+      this.encoderFps = 30;
     }
   }
 
@@ -810,6 +854,78 @@ export struct ProjectionDashboard {
 
   private selectDayNightMode(mode: 'AUTO' | 'DAY' | 'NIGHT'): void {
     this.dayNightMode = mode;
+  }
+
+  private updateDisplayBrightness(value: number): void {
+    this.displayBrightness = Math.round(Math.max(20, Math.min(100, value)));
+  }
+
+  private setDisplayBrightnessFromTouch(pointX: number, bounds: ProjectionBounds): void {
+    const width = bounds.right - bounds.left;
+    if (width <= 0) {
+      return;
+    }
+    const position = Math.max(0, Math.min(1, (pointX - bounds.left) / width));
+    this.updateDisplayBrightness(20 + position * 80);
+  }
+
+  private loadSplitRatios(): void {
+    this.splitMapRatio = readProjectionSplitRatio('map');
+    this.splitMusicRatio = readProjectionSplitRatio('music');
+    this.splitMapRatioInput = `${this.splitMapRatio}`;
+    this.splitMusicRatioInput = `${this.splitMusicRatio}`;
+  }
+
+  private updateSplitRatio(pane: ProjectionSplitPane, value: number): void {
+    const ratio = saveProjectionSplitRatio(pane, value);
+    if (pane === 'map') {
+      this.splitMapRatio = ratio;
+      this.splitMapRatioInput = `${ratio}`;
+    } else {
+      this.splitMusicRatio = ratio;
+      this.splitMusicRatioInput = `${ratio}`;
+    }
+    const otherInput = pane === 'map' ? this.splitMusicRatioInput : this.splitMapRatioInput;
+    this.splitRatioMessage = otherInput.length > 0 && !/^(?:[1-9]|10)$/.test(otherInput)
+      ? '每个比例值必须是 1–10 的整数' : '';
+  }
+
+  private adjustSplitRatio(pane: ProjectionSplitPane, delta: number): void {
+    this.updateSplitRatio(pane, (pane === 'map' ? this.splitMapRatio : this.splitMusicRatio) + delta);
+  }
+
+  private updateSplitRatioInput(pane: ProjectionSplitPane, value: string): void {
+    const input = value.replace(/[^0-9]/g, '').slice(0, 2);
+    if (pane === 'map') {
+      this.splitMapRatioInput = input;
+    } else {
+      this.splitMusicRatioInput = input;
+    }
+    if (input.length === 0) {
+      const otherInput = pane === 'map' ? this.splitMusicRatioInput : this.splitMapRatioInput;
+      this.splitRatioMessage = otherInput.length > 0 && !/^(?:[1-9]|10)$/.test(otherInput)
+        ? '每个比例值必须是 1–10 的整数' : '';
+      return;
+    }
+    const ratio = Number.parseInt(input, 10);
+    if (ratio >= 1 && ratio <= 10) {
+      this.updateSplitRatio(pane, ratio);
+    } else {
+      this.splitRatioMessage = '每个比例值必须是 1–10 的整数';
+    }
+  }
+
+  private restoreSplitRatioInput(pane: ProjectionSplitPane): void {
+    const input = pane === 'map' ? this.splitMapRatioInput : this.splitMusicRatioInput;
+    const valid = /^(?:[1-9]|10)$/.test(input);
+    if (pane === 'map') {
+      this.splitMapRatioInput = `${this.splitMapRatio}`;
+    } else {
+      this.splitMusicRatioInput = `${this.splitMusicRatio}`;
+    }
+    const otherInput = pane === 'map' ? this.splitMusicRatioInput : this.splitMapRatioInput;
+    this.splitRatioMessage = !valid || (otherInput.length > 0 && !/^(?:[1-9]|10)$/.test(otherInput))
+      ? '每个比例值必须是 1–10 的整数' : '';
   }
 
   private adjustSafeInset(edge: 'top' | 'right' | 'bottom' | 'left', delta: number): void {
@@ -912,6 +1028,15 @@ export struct ProjectionDashboard {
     }
   }
 
+  private projectionContentAspectRatio(): number {
+    const width = this.projectionViewAreaWidth > 0 ? this.projectionViewAreaWidth :
+      this.projectionOutputWidth > 0 ? this.projectionOutputWidth : this.projectionNativeWidth;
+    const height = this.projectionViewAreaHeight > 0 ? this.projectionViewAreaHeight :
+      this.projectionOutputHeight > 0 ? this.projectionOutputHeight : this.projectionNativeHeight;
+    return Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0
+      ? width / height : 0;
+  }
+
   private selectProjectionResolution(modeId: string): void {
     const mode = this.projectionModeOptions.find((item: ProjectionDisplayMode): boolean => item.id === modeId);
     if (!mode || !this.vehicleDisplayUuid) {
@@ -931,7 +1056,7 @@ export struct ProjectionDashboard {
   }
 
   @Builder
-  private CalibrationControlRow(label: string, value: number, control: ProjectionCalibrationControl) {
+  private CalibrationControlRow(label: string, control: ProjectionCalibrationControl) {
     Row({ space: 8 }) {
       Text(label).fontSize(13).fontColor(this.primaryTextColor()).layoutWeight(1)
       Button('−')
@@ -941,7 +1066,9 @@ export struct ProjectionDashboard {
         .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
           'settings', `calibration-${control}-minus`, newArea,
           (): void => this.adjustContentCalibration(control, -1)))
-      Text(`${value}%`).fontSize(13).fontColor(this.primaryTextColor()).width(46).textAlign(TextAlign.Center)
+      Text(`${control === 'scale' ? this.contentScalePercent :
+        control === 'offsetX' ? this.contentOffsetXPercent : this.contentOffsetYPercent}%`)
+        .fontSize(13).fontColor(this.primaryTextColor()).width(46).textAlign(TextAlign.Center)
       Button('+')
         .width(40).height(40).fontColor(this.primaryTextColor())
         .backgroundColor(this.glassSecondaryColor()).borderRadius(12)
@@ -1430,7 +1557,7 @@ export struct ProjectionDashboard {
   SplitPage() {
     Row({ space: 8 }) {
       Column({ space: 6 }) {
-        Stack({ alignContent: Alignment.Center }) {
+        Stack({ alignContent: Alignment.BottomStart }) {
           XComponent({
             id: 'projectionSplitMapSurface',
             type: XComponentType.SURFACE,
@@ -1438,6 +1565,7 @@ export struct ProjectionDashboard {
           })
             .width('100%')
             .height('100%')
+            .aspectRatio(this.projectionContentAspectRatio())
             .onLoad((): void => {
               this.mapSurfaceLoaded = true;
               this.mapSurfaceId = this.mapXComponentController.getXComponentSurfaceId();
@@ -1460,7 +1588,7 @@ export struct ProjectionDashboard {
         .width('100%')
         .clip(true)
       }
-      .layoutWeight(this.splitRatio)
+      .layoutWeight(this.splitMapRatio)
       .height('100%')
       .padding(12)
       .borderRadius(22)
@@ -1496,7 +1624,7 @@ export struct ProjectionDashboard {
                 .textAlign(TextAlign.Center).padding(12)
             }
           }
-          .layoutWeight(1)
+          .layoutWeight(this.splitMusicRatio)
           .width('100%')
           .clip(true)
         } else {
@@ -1518,7 +1646,7 @@ export struct ProjectionDashboard {
   }
 
   @Builder
-  SafeInsetRow(label: string, edge: 'top' | 'right' | 'bottom' | 'left', value: number) {
+  SafeInsetRow(label: string, edge: ProjectionSafeInsetEdge) {
     Row({ space: 8 }) {
       Text(label).fontSize(13).fontColor(this.primaryTextColor()).layoutWeight(1)
       Button('−')
@@ -1527,7 +1655,9 @@ export struct ProjectionDashboard {
         .onClick((): void => this.adjustSafeInset(edge, -1))
         .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
           'settings', `safe-${edge}-minus`, newArea, (): void => this.adjustSafeInset(edge, -1)))
-      Text(`${value}%`).fontSize(13).fontColor(this.primaryTextColor()).width(42).textAlign(TextAlign.Center)
+      Text(`${edge === 'top' ? this.safeInsetTop : edge === 'right' ? this.safeInsetRight :
+        edge === 'bottom' ? this.safeInsetBottom : this.safeInsetLeft}%`)
+        .fontSize(13).fontColor(this.primaryTextColor()).width(42).textAlign(TextAlign.Center)
       Button('+')
         .width(40).height(40).fontColor(this.primaryTextColor())
         .backgroundColor(this.glassSecondaryColor()).borderRadius(12)
@@ -1604,6 +1734,51 @@ export struct ProjectionDashboard {
   }
 
   @Builder
+  private SplitRatioControl(pane: ProjectionSplitPane) {
+    Row({ space: 4 }) {
+      Button({ type: ButtonType.Normal }) {
+        Text('−').fontSize(26).fontWeight(FontWeight.Bold).fontColor(this.primaryTextColor())
+      }
+        .width(42).height(42).padding(0)
+        .backgroundColor(this.glassSecondaryColor()).borderRadius(10)
+        .accessibilityText(pane === 'map' ? '减少地图比例' : '减少音乐比例')
+        .onClick((): void => this.adjustSplitRatio(pane, -1))
+        .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
+          'settings', `splitRatio-${pane}-minus`, newArea,
+          (): void => this.adjustSplitRatio(pane, -1)))
+      TextInput({
+        text: pane === 'map' ? this.splitMapRatioInput : this.splitMusicRatioInput,
+        placeholder: pane === 'map' ? '3' : '2'
+      })
+        .id(pane === 'map' ? 'projectionMapSplitRatio' : 'projectionMusicSplitRatio')
+        .type(InputType.Number)
+        .width(52).height(40)
+        .fontColor(this.primaryTextColor())
+        .placeholderColor(this.secondaryTextColor())
+        .backgroundColor(this.glassSecondaryColor())
+        .borderRadius(10)
+        .textAlign(TextAlign.Center)
+        .onChange((value: string): void => this.updateSplitRatioInput(pane, value))
+        .onBlur((): void => this.restoreSplitRatioInput(pane))
+        .onSubmit((): void => this.restoreSplitRatioInput(pane))
+        .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
+          'settings', `splitRatio-${pane}-input`, newArea,
+          (): void => this.getUIContext().getFocusController().requestFocus(
+            pane === 'map' ? 'projectionMapSplitRatio' : 'projectionMusicSplitRatio')))
+      Button({ type: ButtonType.Normal }) {
+        Text('+').fontSize(26).fontWeight(FontWeight.Bold).fontColor(this.primaryTextColor())
+      }
+        .width(42).height(42).padding(0)
+        .backgroundColor(this.glassSecondaryColor()).borderRadius(10)
+        .accessibilityText(pane === 'map' ? '增加地图比例' : '增加音乐比例')
+        .onClick((): void => this.adjustSplitRatio(pane, 1))
+        .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
+          'settings', `splitRatio-${pane}-plus`, newArea,
+          (): void => this.adjustSplitRatio(pane, 1)))
+    }
+  }
+
+  @Builder
   SettingsPage() {
     Row({ space: 12 }) {
       Column({ space: 10 }) {
@@ -1663,6 +1838,7 @@ export struct ProjectionDashboard {
     .border({ width: 1, color: this.glassStrokeColor() })
     .borderRadius(28)
     .clip(true)
+    .onAreaChange((_oldArea, newArea) => this.touchBounds.set('settings', this.areaBounds(newArea)))
   }
 
   @Builder
@@ -1803,10 +1979,10 @@ export struct ProjectionDashboard {
           }
           .width('100%').height(64).padding(14)
           this.SettingsDropdownRow(
-            '编码帧率',
+            '投屏帧率 FPS',
             'encoderFps',
-            ['15 fps', '24 fps', '30 fps', '60 fps'],
-            Math.max(0, [15, 24, 30, 60].indexOf(this.encoderFps)),
+            ['30 fps', '60 fps'],
+            Math.max(0, [30, 60].indexOf(this.encoderFps)),
             true,
             (index: number): void => this.selectEncoderFps(index)
           )
@@ -1827,7 +2003,7 @@ export struct ProjectionDashboard {
     }
     .layoutWeight(1).width('0%').height('100%')
     .backgroundColor(Color.Transparent)
-    .onAreaChange((_oldArea, newArea) => this.touchBounds.set('settings', this.areaBounds(newArea)))
+    .onAreaChange((_oldArea, newArea) => this.touchBounds.set('settingsContent', this.areaBounds(newArea)))
   }
 
   @Builder
@@ -1875,29 +2051,27 @@ export struct ProjectionDashboard {
             .blockColor('#FFFFFFFF')
             .selectedColor('#66787880')
             .trackColor('#66787880')
-            .onChange((value: number): void => { this.displayBrightness = value; })
+            .onChange((value: number): void => this.updateDisplayBrightness(value))
             .accessibilityText('亮度')
+            .onAreaChange((_oldArea, newArea) => {
+              const bounds = this.areaBounds(newArea);
+              this.updateTouchArea('settings', 'displayBrightness', newArea, (): void => {},
+                undefined, (pointX: number): void => this.setDisplayBrightnessFromTouch(pointX, bounds));
+            })
         }
         .height(68).padding(12)
         .border({ width: { top: 1 }, color: this.settingsSeparatorColor() })
         Row({ space: 10 }) {
           Column({ space: 3 }) {
             Text('分屏比例').fontSize(14).fontColor(this.primaryTextColor())
-            Text('地图 : 卡片').fontSize(11).fontColor(this.secondaryTextColor())
+            Text(this.splitRatioMessage || '地图 : 音乐 · 每项 1–10')
+              .fontSize(11).fontColor(this.splitRatioMessage ? '#FF9F0A' : this.secondaryTextColor())
           }
           .layoutWeight(1).alignItems(HorizontalAlign.Start)
-          Row({ space: 3 }) {
-            ForEach([3, 4, 5], (ratio: number) => {
-              Button({ type: ButtonType.Normal }) {
-                Text(`${ratio} : 1`).fontSize(11)
-                    .fontColor(this.splitRatio === ratio ? this.mapBackgroundColor() : this.secondaryTextColor())
-              }
-              .height(40).padding({ left: 9, right: 9 }).borderRadius(9)
-                  .backgroundColor(this.splitRatio === ratio ? this.primaryTextColor() : Color.Transparent)
-              .onClick((): void => { this.splitRatio = ratio; })
-              .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
-                'settings', `splitRatio-${ratio}`, newArea, (): void => { this.splitRatio = ratio; }))
-            }, (ratio: number) => `${ratio}`)
+          Row({ space: 4 }) {
+            this.SplitRatioControl('map')
+            Text(':').fontSize(14).fontColor(this.secondaryTextColor())
+            this.SplitRatioControl('music')
           }
         }
         .height(68).padding(12)
@@ -1930,10 +2104,10 @@ export struct ProjectionDashboard {
             .fontSize(14).fontColor(this.primaryTextColor())
           Text('按百分比避让遮挡区域；曲面轮廓仍需在目标车机校准')
             .fontSize(12).fontColor(this.secondaryTextColor()).maxLines(2)
-          this.SafeInsetRow('上', 'top', this.safeInsetTop)
-          this.SafeInsetRow('右', 'right', this.safeInsetRight)
-          this.SafeInsetRow('下', 'bottom', this.safeInsetBottom)
-          this.SafeInsetRow('左', 'left', this.safeInsetLeft)
+          this.SafeInsetRow('上', 'top')
+          this.SafeInsetRow('右', 'right')
+          this.SafeInsetRow('下', 'bottom')
+          this.SafeInsetRow('左', 'left')
         }
         .width('100%')
         .padding(14)
@@ -1946,9 +2120,9 @@ export struct ProjectionDashboard {
             .fontSize(14).fontColor(this.primaryTextColor())
           Text('等比缩放与位置微调仅作用于 Shell 内容；输出分辨率和全屏背景保持不变')
             .fontSize(12).fontColor(this.secondaryTextColor()).maxLines(2)
-          this.CalibrationControlRow('内容缩放', this.contentScalePercent, 'scale')
-          this.CalibrationControlRow('水平位置', this.contentOffsetXPercent, 'offsetX')
-          this.CalibrationControlRow('垂直位置', this.contentOffsetYPercent, 'offsetY')
+          this.CalibrationControlRow('内容缩放', 'scale')
+          this.CalibrationControlRow('水平位置', 'offsetX')
+          this.CalibrationControlRow('垂直位置', 'offsetY')
           Text(this.calibrationMessage || '缩放 70–100%；水平/垂直偏移各 ±15%，按显示 UUID 保存')
             .fontSize(10).fontColor(this.secondaryTextColor()).maxLines(2)
         }
@@ -1990,7 +2164,7 @@ export struct ProjectionDashboard {
     }
     .layoutWeight(1).width('0%').height('100%')
     .backgroundColor(Color.Transparent)
-    .onAreaChange((_oldArea, newArea) => this.touchBounds.set('settings', this.areaBounds(newArea)))
+    .onAreaChange((_oldArea, newArea) => this.touchBounds.set('settingsContent', this.areaBounds(newArea)))
   }
 
   @Builder
@@ -2068,7 +2242,7 @@ export struct ProjectionDashboard {
       .border({ width: 1, color: this.glassStrokeColor() })
       .clip(true)
     }
-    .width('22%').constraintSize({ minWidth: 190, maxWidth: 280 }).height('100%')
+    .layoutWeight(this.splitMusicRatio).height('100%')
     .onAreaChange((_oldArea, newArea) => this.touchBounds.set('media', this.areaBounds(newArea)))
   }
 
@@ -2079,7 +2253,7 @@ export struct ProjectionDashboard {
         this.SplitPage()
       } else if (this.activeAppLabel.length > 0) {
         Row({ space: 8 }) {
-          Stack({ alignContent: Alignment.Center }) {
+          Stack({ alignContent: Alignment.BottomStart }) {
             XComponent({
               id: 'projectionAppSurface',
               type: XComponentType.SURFACE,
@@ -2087,6 +2261,7 @@ export struct ProjectionDashboard {
             })
               .width('100%')
               .height('100%')
+            .aspectRatio(this.navigationPreview ? this.projectionContentAspectRatio() : 0)
               .onLoad((): void => {
                 this.appSurfaceId = this.appXComponentController.getXComponentSurfaceId();
                 this.notifyAppSurface();
@@ -2118,7 +2293,7 @@ export struct ProjectionDashboard {
                 .accessibilityText('展开当前地图')
             }
           }
-          .layoutWeight(1)
+          .layoutWeight(this.splitMapRatio)
           .height('100%')
           .clip(true)
           if (this.navigationPreview) {
@@ -2177,7 +2352,7 @@ export struct ProjectionDashboard {
             }
             .width('100%').height('100%').padding(14)
           }
-          .layoutWeight(1).height('100%')
+          .layoutWeight(this.splitMapRatio).height('100%')
           .borderRadius(22).clip(true)
           .border({ width: 1, color: this.glassStrokeColor() })
           .onAreaChange((_oldArea, newArea) => this.touchBounds.set('map', this.areaBounds(newArea)))
