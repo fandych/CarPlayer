@@ -75,17 +75,13 @@ interface ProjectionTouchArea extends ProjectionBounds {
   longPress?: () => void;
 }
 
-interface ProjectionModeSelectOption {
-  value: string;
-}
-
 const HOME_APP: ProjectionApp = {
   appId: 'shell-home',
   uri: 'carplay-client://v1/shell/home',
   launchState: 'VERIFIED',
   label: '首页',
   mark: 'C',
-  color: '#41C99A',
+  color: '#0A84FF',
   category: 'home'
 };
 
@@ -130,6 +126,7 @@ export struct ProjectionDashboard {
   @State appsGridColumns: number = 4;
   @State dashboardView: string = 'home';
   @State settingsTab: string = 'display';
+  @State activeSettingsDropdown: string = '';
   @State displayBrightness: number = 80;
   @State splitRatio: number = 4;
   @State private preserveSplitSurfaceForOverlays: boolean = false;
@@ -137,7 +134,7 @@ export struct ProjectionDashboard {
   @State selectedMusicUri: string = '';
   @State dockIconSize: number = 30;
   @StorageLink('carplayNightMode') nightMode: boolean = false;
-  @StorageLink('carplayDayNightMode') dayNightMode: string = 'AUTO';
+  @StorageLink('carplayDayNightMode') dayNightMode: string = 'NIGHT';
   @StorageLink('carplayDockPosition') dockPosition: string = 'left';
   @StorageLink('carplayVehicleDisplayUuid') vehicleDisplayUuid: string = '';
   @StorageLink('carplayProjectionDisplayModes') projectionModeOptions: ProjectionDisplayMode[] = [];
@@ -155,7 +152,7 @@ export struct ProjectionDashboard {
   @State calibrationMessage: string = '';
   @State selectedProjectionModeId: string = RECEIVER_NATIVE_MODE_ID;
   @State resolutionSelectionMessage: string = '';
-  @StorageLink('carplayTheme') theme: string = 'forest';
+  @StorageLink('carplayTheme') theme: string = 'aurora';
   @StorageLink('carplayAccent') accent: string = '#0A84FF';
   @StorageLink('carplayEncoderFps') encoderFps: number = 30;
   @StorageLink('carplayCaptureFps') captureFps: number = 60;
@@ -665,24 +662,145 @@ export struct ProjectionDashboard {
     this.dockPosition = this.dockPosition === 'bottom' ? 'left' : 'bottom';
   }
 
+  private isLightAppearance(): boolean {
+    return !resolveNightMode(this.dayNightMode, this.nightMode);
+  }
+
+  private colorWithAlpha(color: string, alpha: string): string {
+    return `#${alpha}${color.slice(1)}`;
+  }
+
+  private primaryTextColor(): string {
+    return this.isLightAppearance() ? '#1C1C1E' : '#FFFFFF';
+  }
+
+  private secondaryTextColor(): string {
+    return this.isLightAppearance() ? '#A63C3C43' : '#9EFFFFFF';
+  }
+
+  private mutedTextColor(): string {
+    return this.isLightAppearance() ? '#993C3C43' : '#80FFFFFF';
+  }
+
+  private mapBackgroundColor(): string {
+    return this.isLightAppearance() ? '#E9E7E1' : '#1D2230';
+  }
+
+  private glassStrokeColor(): string {
+    return this.isLightAppearance() ? '#BFFFFFFF' : '#38FFFFFF';
+  }
+
+  private glassSecondaryColor(): string {
+    return this.isLightAppearance() ? '#0D000000' : '#14FFFFFF';
+  }
+
   private glassPanelColor(): string {
-    return `${projectionTheme(this.theme).panel}B8`;
+    return this.isLightAppearance() ? '#85FFFFFF' : this.colorWithAlpha(projectionTheme(this.theme).surface, '75');
   }
 
   private glassSurfaceColor(): string {
-    return `${projectionTheme(this.theme).surface}8A`;
+    return this.isLightAppearance() ? '#B8FFFFFF' : this.colorWithAlpha(projectionTheme(this.theme).panel, '9E');
   }
 
   private settingsPanelColor(): string {
-    return `${projectionTheme(this.theme).panel}75`;
+    return this.glassPanelColor();
   }
 
   private settingsGroupColor(): string {
-    return '#FFFFFF14';
+    return this.glassSecondaryColor();
   }
 
   private settingsSeparatorColor(): string {
-    return '#FFFFFF1F';
+    return this.isLightAppearance() ? '#243C3C43' : '#1FFFFFFF';
+  }
+
+  private wallpaperResource(themeId: string): Resource {
+    switch (themeId) {
+      case 'sunset':
+        return $r('app.media.projection_sunset');
+      case 'forest':
+        return $r('app.media.projection_forest');
+      case 'ocean':
+        return $r('app.media.projection_ocean');
+      case 'graphite':
+        return $r('app.media.projection_graphite');
+      default:
+        return $r('app.media.projection_aurora');
+    }
+  }
+
+  private mapPreviewResource(): Resource {
+    return this.isLightAppearance()
+      ? $r('app.media.projection_map_preview_light') : $r('app.media.projection_map_preview');
+  }
+
+  private dockIconResource(icon: string, selected: boolean): Resource {
+    if (!this.isLightAppearance() || selected) {
+      return $r(icon);
+    }
+    switch (icon) {
+      case 'app.media.ic_house':
+        return $r('app.media.ic_house_light');
+      case 'app.media.ic_layout_grid':
+        return $r('app.media.ic_layout_grid_light');
+      case 'app.media.ic_navigation':
+        return $r('app.media.ic_navigation_light');
+      case 'app.media.ic_music':
+        return $r('app.media.ic_music_light');
+      case 'app.media.ic_split':
+        return $r('app.media.ic_split_light');
+      case 'app.media.ic_settings':
+        return $r('app.media.ic_settings_light');
+      default:
+        return $r(icon);
+    }
+  }
+
+  private settingsIconResource(lightIcon: string, darkIcon: string, selected: boolean = false): Resource {
+    return this.isLightAppearance() && !selected ? $r(lightIcon) : $r(darkIcon);
+  }
+
+  private toggleSettingsDropdown(key: string): void {
+    const previousKey = this.activeSettingsDropdown;
+    this.activeSettingsDropdown = previousKey === key ? '' : key;
+    if (previousKey.length > 0) {
+      this.clearSettingsDropdownAreas(previousKey);
+    }
+  }
+
+  private closeSettingsDropdown(key: string): void {
+    if (this.activeSettingsDropdown === key) {
+      this.activeSettingsDropdown = '';
+    }
+    this.clearSettingsDropdownAreas(key);
+  }
+
+  private clearSettingsDropdownAreas(key: string): void {
+    const prefix = `settings:dropdown-${key}-option-`;
+    for (const areaKey of this.touchAreas.keys()) {
+      if (areaKey.startsWith(prefix)) {
+        this.touchAreas.delete(areaKey);
+      }
+    }
+  }
+
+  private chooseSettingsDropdownOption(key: string, index: number, onSelect: (index: number) => void): void {
+    onSelect(index);
+    this.closeSettingsDropdown(key);
+  }
+
+  private selectEncoderFps(index: number): void {
+    const fps = [15, 24, 30, 60][index];
+    if (fps !== undefined) {
+      this.encoderFps = fps;
+    }
+  }
+
+  private selectCaptureFps(index: number): void {
+    const fps = [30, 60][index];
+    if (fps !== undefined) {
+      this.captureFps = fps;
+    }
   }
 
   private cycleDayNightMode(): void {
@@ -812,42 +930,21 @@ export struct ProjectionDashboard {
     }
   }
 
-  private cycleProjectionResolution(): void {
-    if (this.projectionModeOptions.length < 2) {
-      return;
-    }
-    const currentIndex = this.projectionModeOptions.findIndex(
-      (mode: ProjectionDisplayMode): boolean => mode.id === this.selectedProjectionModeId
-    );
-    const nextIndex = (currentIndex + 1 + this.projectionModeOptions.length) % this.projectionModeOptions.length;
-    const nextMode = this.projectionModeOptions[nextIndex];
-    if (nextMode) {
-      this.selectProjectionResolution(nextMode.id);
-    }
-  }
-
-  private projectionModeSelectOptions(): ProjectionModeSelectOption[] {
-    const options: ProjectionModeSelectOption[] = [];
-    for (const mode of this.projectionModeOptions) {
-      const option: ProjectionModeSelectOption = { value: mode.label };
-      options.push(option);
-    }
-    return options;
-  }
-
   @Builder
   private CalibrationControlRow(label: string, value: number, control: ProjectionCalibrationControl) {
     Row({ space: 8 }) {
-      Text(label).fontSize(13).fontColor('#F5F5F7').layoutWeight(1)
+      Text(label).fontSize(13).fontColor(this.primaryTextColor()).layoutWeight(1)
       Button('−')
-        .width(40).height(40)
+        .width(40).height(40).fontColor(this.primaryTextColor())
+        .backgroundColor(this.glassSecondaryColor()).borderRadius(12)
         .onClick((): void => this.adjustContentCalibration(control, -1))
         .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
           'settings', `calibration-${control}-minus`, newArea,
           (): void => this.adjustContentCalibration(control, -1)))
-      Text(`${value}%`).fontSize(13).fontColor('#F2F6F2').width(46).textAlign(TextAlign.Center)
+      Text(`${value}%`).fontSize(13).fontColor(this.primaryTextColor()).width(46).textAlign(TextAlign.Center)
       Button('+')
-        .width(40).height(40)
+        .width(40).height(40).fontColor(this.primaryTextColor())
+        .backgroundColor(this.glassSecondaryColor()).borderRadius(12)
         .onClick((): void => this.adjustContentCalibration(control, 1))
         .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
           'settings', `calibration-${control}-plus`, newArea,
@@ -1011,19 +1108,19 @@ export struct ProjectionDashboard {
       Column()
         .width(3)
         .height(5)
-          .backgroundColor(this.signalLevel >= 1 ? '#F5F5F7' : '#F5F5F740')
+          .backgroundColor(this.signalLevel >= 1 ? this.primaryTextColor() : this.mutedTextColor())
       Column()
         .width(3)
         .height(8)
-          .backgroundColor(this.signalLevel >= 2 ? '#F5F5F7' : '#F5F5F740')
+          .backgroundColor(this.signalLevel >= 2 ? this.primaryTextColor() : this.mutedTextColor())
       Column()
         .width(3)
         .height(11)
-          .backgroundColor(this.signalLevel >= 3 ? '#F5F5F7' : '#F5F5F740')
+          .backgroundColor(this.signalLevel >= 3 ? this.primaryTextColor() : this.mutedTextColor())
       Column()
         .width(3)
         .height(14)
-          .backgroundColor(this.signalLevel >= 4 ? '#F5F5F7' : '#F5F5F740')
+          .backgroundColor(this.signalLevel >= 4 ? this.primaryTextColor() : this.mutedTextColor())
     }
     .height(16)
     .alignItems(VerticalAlign.Bottom)
@@ -1038,7 +1135,7 @@ export struct ProjectionDashboard {
           .width(21)
           .height(11)
           .borderRadius(3)
-          .border({ width: 1, color: '#FFFFFFA6' })
+          .border({ width: 1, color: this.secondaryTextColor() })
         Row()
           .width(Math.max(2, 17 * this.batteryPercent / 100))
           .height(7)
@@ -1052,7 +1149,7 @@ export struct ProjectionDashboard {
         .width(2)
         .height(5)
         .borderRadius(1)
-        .backgroundColor('#B6C5BB')
+        .backgroundColor(this.secondaryTextColor())
     }
     .alignItems(VerticalAlign.Center)
     .accessibilityText(`电量 ${this.batteryPercent}%`)
@@ -1061,13 +1158,14 @@ export struct ProjectionDashboard {
   @Builder
   DockItem(id: string, label: string, icon: string, selected: boolean, vertical: boolean) {
     Stack({ alignContent: Alignment.Center }) {
-      Image($r(icon)).width(this.dockIconSize).height(this.dockIconSize).objectFit(ImageFit.Contain).borderRadius(8)
+      Image(this.dockIconResource(icon, selected))
+        .width(this.dockIconSize).height(this.dockIconSize).objectFit(ImageFit.Contain).borderRadius(8)
     }
     .width(vertical ? '100%' : 64)
     .height(vertical ? 48 : '100%')
     .borderRadius(16)
-    .backgroundColor(selected ? `${this.accent}D9` : Color.Transparent)
-    .border({ width: 1, color: selected ? '#FFFFFF55' : Color.Transparent })
+    .backgroundColor(selected ? this.colorWithAlpha(this.accent, 'D9') : Color.Transparent)
+    .border({ width: 1, color: selected ? '#55FFFFFF' : Color.Transparent })
     .gesture(GestureGroup(GestureMode.Exclusive,
       LongPressGesture({ duration: 550 }).onAction((): void => {
         if (id === 'map' || id === 'music') {
@@ -1114,7 +1212,7 @@ export struct ProjectionDashboard {
         .padding({ top: 8, bottom: 8, left: 5, right: 5 })
         .alignItems(HorizontalAlign.Center)
         .backgroundColor(this.glassSurfaceColor())
-        .border({ width: 1, color: '#FFFFFF26' })
+        .border({ width: 1, color: this.glassStrokeColor() })
         .borderRadius(24)
         .clip(true)
       }
@@ -1146,7 +1244,7 @@ export struct ProjectionDashboard {
         .padding({ left: 8, right: 8, top: 4, bottom: 4 })
         .justifyContent(FlexAlign.Center)
         .backgroundColor(this.glassSurfaceColor())
-        .border({ width: 1, color: '#FFFFFF26' })
+        .border({ width: 1, color: this.glassStrokeColor() })
         .borderRadius(18)
         .clip(true)
       }
@@ -1189,12 +1287,9 @@ export struct ProjectionDashboard {
       .width(68)
       .height(68)
       .borderRadius(20)
-      .backgroundColor(app.color)
-      .border({ width: 1, color: '#FFFFFF40' })
-      .shadow({ radius: 14, color: '#00000055', offsetX: 0, offsetY: 6 })
       Text(app.label)
         .fontSize(13)
-        .fontColor('#F5F5F7')
+        .fontColor(this.primaryTextColor())
         .fontWeight(FontWeight.Medium)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -1216,9 +1311,9 @@ export struct ProjectionDashboard {
     Scroll(this.appsScroller) {
       Column({ space: 12 }) {
         Row() {
-          Text('应用').fontSize(22).fontWeight(FontWeight.Bold).fontColor('#F5F5F7')
+          Text('应用').fontSize(22).fontWeight(FontWeight.Bold).fontColor(this.primaryTextColor())
           Blank()
-          Text(`${this.visibleApps().length} 个应用`).fontSize(12).fontColor('#FFFFFFA6')
+          Text(`${this.visibleApps().length} 个应用`).fontSize(12).fontColor(this.secondaryTextColor())
         }
         .width('100%')
         Grid() {
@@ -1234,7 +1329,7 @@ export struct ProjectionDashboard {
     }
     .width('100%').height('100%')
     .backgroundColor(this.glassPanelColor())
-    .border({ width: 1, color: '#FFFFFF26' })
+    .border({ width: 1, color: this.glassStrokeColor() })
     .borderRadius(22)
     .clip(true)
     .onAreaChange((_oldArea, newArea) => {
@@ -1249,9 +1344,9 @@ export struct ProjectionDashboard {
       Row() {
         Blank()
         Button({ type: ButtonType.Circle }) {
-          SymbolGlyph($r('sys.symbol.xmark')).fontSize(18).fontColor(['#F5F5F7'])
+          SymbolGlyph($r('sys.symbol.xmark')).fontSize(18).fontColor([this.primaryTextColor()])
         }
-        .width(36).height(36).backgroundColor('#FFFFFF18').borderRadius(12)
+        .width(36).height(36).backgroundColor(this.glassSecondaryColor()).borderRadius(12)
         .onClick((): void => this.showDashboardView('home'))
         .accessibilityText('关闭应用菜单')
         .onAreaChange((_oldArea, newArea) => {
@@ -1263,9 +1358,9 @@ export struct ProjectionDashboard {
       if (this.dashboardView === 'maps' && this.mapAppLabel.length > 0 &&
         this.mapAppUri === this.categoryApp('map')?.uri) {
         Button({ type: ButtonType.Circle }) {
-          SymbolGlyph($r('sys.symbol.arrow_up_right')).fontSize(18).fontColor(['#F5F5F7'])
+          SymbolGlyph($r('sys.symbol.arrow_up_right')).fontSize(18).fontColor([this.primaryTextColor()])
         }
-          .width(44).height(44).backgroundColor('#FFFFFF18')
+          .width(44).height(44).backgroundColor(this.glassSecondaryColor())
           .onClick((): void => this.onToggleMapDisplay())
           .accessibilityText(this.mapOnPhone ? '切换地图到虚拟屏' : '切换地图到手机')
           .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
@@ -1273,16 +1368,16 @@ export struct ProjectionDashboard {
       } else if (this.dashboardView === 'maps' && this.activeAppLabel.length > 0 &&
         this.activeAppUri === this.categoryApp('map')?.uri) {
         Button({ type: ButtonType.Circle }) {
-          SymbolGlyph($r('sys.symbol.arrow_up_right')).fontSize(18).fontColor(['#F5F5F7'])
+          SymbolGlyph($r('sys.symbol.arrow_up_right')).fontSize(18).fontColor([this.primaryTextColor()])
         }
-          .width(44).height(44).backgroundColor('#FFFFFF18')
+          .width(44).height(44).backgroundColor(this.glassSecondaryColor())
           .onClick((): void => this.onToggleAppDisplay())
           .accessibilityText(this.appOnPhone ? '切换地图到虚拟屏' : '切换地图到手机')
           .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
             'maps', 'toggleDisplay', newArea, (): void => this.onToggleAppDisplay()))
       }
       if (this.dockActionMessage.length > 0) {
-        Text(this.dockActionMessage).fontSize(11).fontColor('#E7C77B').maxLines(2)
+        Text(this.dockActionMessage).fontSize(11).fontColor(this.secondaryTextColor()).maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
       Scroll(this.dockMenuScroller) {
@@ -1291,7 +1386,7 @@ export struct ProjectionDashboard {
             app.category === (this.dashboardView === 'maps' ? 'map' : 'music')), (app: ProjectionApp) => {
             Row({ space: 12 }) {
               this.AppIcon(app, 36)
-              Text(app.label).fontSize(14).fontColor('#F5F5F7').layoutWeight(1).maxLines(1)
+              Text(app.label).fontSize(14).fontColor(this.primaryTextColor()).layoutWeight(1).maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
               if (this.categoryApp(app.category)?.uri === app.uri) {
                 SymbolGlyph($r('sys.symbol.checkmark')).fontSize(18).fontColor([this.accent])
@@ -1299,8 +1394,8 @@ export struct ProjectionDashboard {
             }
             .width('100%').height(60).padding({ left: 12, right: 12 }).borderRadius(16)
             .backgroundColor(this.categoryApp(app.category)?.uri === app.uri
-              ? `${this.accent}2A` : this.glassPanelColor())
-            .border({ width: 1, color: '#FFFFFF1C' })
+              ? this.colorWithAlpha(this.accent, '2A') : this.glassPanelColor())
+            .border({ width: 1, color: this.glassStrokeColor() })
             .onClick((): void => this.selectApp(app))
             .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
               app.category === 'map' ? 'maps' : 'music', app.uri, newArea, (): void => this.selectApp(app)))
@@ -1308,7 +1403,7 @@ export struct ProjectionDashboard {
           }, (app: ProjectionApp) => app.uri)
           if (!this.apps.some((app: ProjectionApp): boolean =>
             app.category === (this.dashboardView === 'maps' ? 'map' : 'music'))) {
-            Text('暂无可用应用').fontSize(13).fontColor('#AAB8AF').padding(16)
+            Text('暂无可用应用').fontSize(13).fontColor(this.secondaryTextColor()).padding(16)
           }
         }
         .width('100%')
@@ -1317,7 +1412,7 @@ export struct ProjectionDashboard {
     }
     .width('100%').height('100%').padding(16)
     .backgroundColor(this.glassPanelColor())
-    .border({ width: 1, color: '#FFFFFF26' })
+    .border({ width: 1, color: this.glassStrokeColor() })
     .borderRadius(22)
     .clip(true)
     .onAreaChange((_oldArea, newArea) => {
@@ -1357,7 +1452,7 @@ export struct ProjectionDashboard {
             })
             .onAreaChange((_oldArea, newArea) => this.updateMapSurface(newArea))
           if (this.mapMessage.length > 0) {
-            Text(this.mapMessage).fontSize(11).fontColor('#DCE4DE')
+            Text(this.mapMessage).fontSize(11).fontColor(this.secondaryTextColor())
               .textAlign(TextAlign.Center).padding(12)
           }
         }
@@ -1370,7 +1465,7 @@ export struct ProjectionDashboard {
       .padding(12)
       .borderRadius(22)
       .backgroundColor(this.glassPanelColor())
-      .border({ width: 1, color: '#FFFFFF26' })
+      .border({ width: 1, color: this.glassStrokeColor() })
       .clip(true)
 
       Column({ space: 6 }) {
@@ -1397,7 +1492,7 @@ export struct ProjectionDashboard {
                 this.notifyAppSurface();
               })
             if (this.launchMessage.length > 0) {
-              Text(this.launchMessage).fontSize(11).fontColor('#DCE4DE')
+              Text(this.launchMessage).fontSize(11).fontColor(this.secondaryTextColor())
                 .textAlign(TextAlign.Center).padding(12)
             }
           }
@@ -1406,7 +1501,7 @@ export struct ProjectionDashboard {
           .clip(true)
         } else {
           Text('请先从音乐 Dock 打开音乐 app，再进入分屏')
-            .fontSize(11).fontColor('#AAB8AF').maxLines(2).layoutWeight(1)
+            .fontSize(11).fontColor(this.secondaryTextColor()).maxLines(2).layoutWeight(1)
         }
       }
       .layoutWeight(1)
@@ -1414,7 +1509,7 @@ export struct ProjectionDashboard {
       .padding(12)
       .borderRadius(22)
       .backgroundColor(this.glassPanelColor())
-      .border({ width: 1, color: '#FFFFFF26' })
+      .border({ width: 1, color: this.glassStrokeColor() })
       .clip(true)
     }
     .width('100%')
@@ -1425,15 +1520,17 @@ export struct ProjectionDashboard {
   @Builder
   SafeInsetRow(label: string, edge: 'top' | 'right' | 'bottom' | 'left', value: number) {
     Row({ space: 8 }) {
-      Text(label).fontSize(13).fontColor('#F5F5F7').layoutWeight(1)
+      Text(label).fontSize(13).fontColor(this.primaryTextColor()).layoutWeight(1)
       Button('−')
-        .width(40).height(40)
+        .width(40).height(40).fontColor(this.primaryTextColor())
+        .backgroundColor(this.glassSecondaryColor()).borderRadius(12)
         .onClick((): void => this.adjustSafeInset(edge, -1))
         .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
           'settings', `safe-${edge}-minus`, newArea, (): void => this.adjustSafeInset(edge, -1)))
-      Text(`${value}%`).fontSize(13).fontColor('#F2F6F2').width(42).textAlign(TextAlign.Center)
+      Text(`${value}%`).fontSize(13).fontColor(this.primaryTextColor()).width(42).textAlign(TextAlign.Center)
       Button('+')
-        .width(40).height(40)
+        .width(40).height(40).fontColor(this.primaryTextColor())
+        .backgroundColor(this.glassSecondaryColor()).borderRadius(12)
         .onClick((): void => this.adjustSafeInset(edge, 1))
         .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
           'settings', `safe-${edge}-plus`, newArea, (): void => this.adjustSafeInset(edge, 1)))
@@ -1446,35 +1543,49 @@ export struct ProjectionDashboard {
   ThemesPage() {
     Scroll(this.themesScroller) {
       Column({ space: 16 }) {
-        Text('主题').fontSize(16).fontColor('#F2F6F2')
-        Row({ space: 16 }) {
+        Text('主题').fontSize(16).fontColor(this.primaryTextColor())
+        Row({ space: 10 }) {
           ForEach(PROJECTION_THEMES, (theme: ProjectionTheme) => {
             Column({ space: 6 }) {
-              Button({ type: ButtonType.Circle }) {
-                if (this.theme === theme.id) {
-                  SymbolGlyph($r('sys.symbol.checkmark')).fontSize(20).fontColor([this.accent])
-                }
+              Button({ type: ButtonType.Normal }) {
+              Image(this.wallpaperResource(theme.id))
+                .width('100%')
+                .height('100%')
+                .objectFit(ImageFit.Cover)
               }
-              .width(40).height(40).backgroundColor(theme.panel)
-              .border({ width: 2, color: this.theme === theme.id ? this.accent : '#68736D' })
+              .width(84)
+              .height(58)
+              .padding(0)
+              .borderRadius(14)
+              .backgroundColor(Color.Transparent)
+              .border({
+              width: this.theme === theme.id ? 2 : 1,
+              color: this.theme === theme.id ? this.primaryTextColor() : this.glassStrokeColor()
+              })
+              .clip(true)
               .onClick((): void => { this.theme = theme.id; })
               .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
-                'themes', theme.id, newArea, (): void => { this.theme = theme.id; }))
+              'themes', theme.id, newArea, (): void => { this.theme = theme.id; }))
               .accessibilityText(theme.label)
-              Text(theme.label).fontSize(12).fontColor('#F2F6F2')
+              Text(theme.label).fontSize(12).fontColor(this.primaryTextColor())
             }
-            .width(64)
+            .width(84)
           }, (theme: ProjectionTheme) => theme.id)
         }
-        Text('强调色').fontSize(12).fontColor('#DCE4DE')
-        Row({ space: 18 }) {
+        Text('强调色').fontSize(12).fontColor(this.secondaryTextColor())
+        Row({ space: 12 }) {
           ForEach(PROJECTION_ACCENTS, (color: string) => {
             Button({ type: ButtonType.Circle }) {
               if (this.accent === color) {
-                SymbolGlyph($r('sys.symbol.checkmark')).fontSize(16).fontColor(['#101713'])
+              SymbolGlyph($r('sys.symbol.checkmark')).fontSize(16)
+                .fontColor([this.mapBackgroundColor()])
               }
             }
             .width(30).height(30).backgroundColor(color)
+            .border({
+              width: this.accent === color ? 2 : 0,
+              color: this.accent === color ? this.primaryTextColor() : Color.Transparent
+            })
             .onClick((): void => { this.accent = color; })
             .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
               'themes', color, newArea, (): void => { this.accent = color; }))
@@ -1486,7 +1597,7 @@ export struct ProjectionDashboard {
     }
     .width('100%').height('100%')
     .backgroundColor(this.glassPanelColor())
-    .border({ width: 1, color: '#FFFFFF26' })
+    .border({ width: 1, color: this.glassStrokeColor() })
     .borderRadius(22)
     .clip(true)
     .onAreaChange((_oldArea, newArea) => this.touchBounds.set('themes', this.areaBounds(newArea)))
@@ -1496,30 +1607,40 @@ export struct ProjectionDashboard {
   SettingsPage() {
     Row({ space: 12 }) {
       Column({ space: 10 }) {
-        Text('设置').fontSize(30).fontWeight(FontWeight.Bold).fontColor('#F5F5F7')
+        Text('设置').fontSize(30).fontWeight(FontWeight.Bold).fontColor(this.primaryTextColor())
           .width('100%').padding({ left: 10, bottom: 8 })
         Button({ type: ButtonType.Normal }) {
           Row({ space: 12 }) {
-            Image($r('app.media.ic_day_night')).width(30).height(30).objectFit(ImageFit.Contain)
-            Text('显示').fontSize(16).fontColor('#FFFFFF').layoutWeight(1)
+            Image(this.settingsIconResource(
+              'app.media.ic_day_night_light', 'app.media.ic_day_night', this.settingsTab === 'display'
+            )).width(30).height(30).objectFit(ImageFit.Contain)
+            Text('显示').fontSize(16)
+              .fontColor(this.settingsTab === 'display' ? '#FFFFFF' : this.primaryTextColor())
+              .layoutWeight(1)
           }
           .width('100%')
         }
         .width('100%').height(58).padding({ left: 12, right: 12 }).borderRadius(14)
-        .backgroundColor(this.settingsTab === 'display' ? `${this.accent}D9` : Color.Transparent)
+        .backgroundColor(this.settingsTab === 'display'
+          ? this.colorWithAlpha(this.accent, 'D9') : Color.Transparent)
         .onClick((): void => { this.settingsTab = 'display'; })
         .accessibilityText('显示设置')
         .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
           'settings', 'tab-display', newArea, (): void => { this.settingsTab = 'display'; }))
         Button({ type: ButtonType.Normal }) {
           Row({ space: 12 }) {
-            Image($r('app.media.ic_car_front')).width(30).height(30).objectFit(ImageFit.Contain)
-            Text('连接').fontSize(16).fontColor('#FFFFFF').layoutWeight(1)
+            Image(this.settingsIconResource(
+              'app.media.ic_car_front_light', 'app.media.ic_car_front', this.settingsTab === 'connect'
+            )).width(30).height(30).objectFit(ImageFit.Contain)
+            Text('连接').fontSize(16)
+              .fontColor(this.settingsTab === 'connect' ? '#FFFFFF' : this.primaryTextColor())
+              .layoutWeight(1)
           }
           .width('100%')
         }
         .width('100%').height(58).padding({ left: 12, right: 12 }).borderRadius(14)
-        .backgroundColor(this.settingsTab === 'connect' ? `${this.accent}D9` : Color.Transparent)
+        .backgroundColor(this.settingsTab === 'connect'
+          ? this.colorWithAlpha(this.accent, 'D9') : Color.Transparent)
         .onClick((): void => { this.settingsTab = 'connect'; })
         .accessibilityText('连接设置')
         .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
@@ -1539,22 +1660,112 @@ export struct ProjectionDashboard {
     .width('100%').height('100%')
     .padding(10)
     .backgroundColor(this.settingsPanelColor())
-    .border({ width: 1, color: '#FFFFFF38' })
+    .border({ width: 1, color: this.glassStrokeColor() })
     .borderRadius(28)
     .clip(true)
+  }
+
+  @Builder
+  private SettingsDropdownRow(
+    label: string,
+    key: string,
+    options: string[],
+    selectedIndex: number,
+    enabled: boolean,
+    onSelect: (index: number) => void
+  ) {
+    Column() {
+      Row({ space: 16 }) {
+        Text(label).fontSize(14).fontColor(this.primaryTextColor()).layoutWeight(1)
+        Button({ type: ButtonType.Normal }) {
+          Row({ space: 8 }) {
+            Text(options[selectedIndex] ?? '暂无可用选项')
+              .fontSize(13)
+              .fontColor(this.primaryTextColor())
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .layoutWeight(1)
+            Text('⌄').fontSize(16).fontColor(this.secondaryTextColor())
+          }
+          .width('100%')
+        }
+        .width(180)
+        .height(42)
+        .padding({ left: 12, right: 12 })
+        .borderRadius(12)
+        .backgroundColor(this.glassSecondaryColor())
+        .border({ width: 1, color: this.glassStrokeColor() })
+        .enabled(enabled)
+        .accessibilityText(`${label}：${options[selectedIndex] ?? '暂无可用选项'}`)
+        .onClick((): void => {
+          if (enabled) {
+            this.toggleSettingsDropdown(key);
+          }
+        })
+        .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
+          'settings', `dropdown-${key}-trigger`, newArea, (): void => {
+            if (enabled) {
+              this.toggleSettingsDropdown(key);
+            }
+          }))
+      }
+      .width('100%')
+      .height(64)
+      .padding(14)
+
+      if (this.activeSettingsDropdown === key) {
+        Row() {
+          Blank()
+          Column({ space: 4 }) {
+            ForEach(options, (option: string, index: number) => {
+              Button({ type: ButtonType.Normal }) {
+                Row() {
+                  Text(option).fontSize(13).fontColor(this.primaryTextColor()).layoutWeight(1)
+                  if (selectedIndex === index) {
+                    SymbolGlyph($r('sys.symbol.checkmark')).fontSize(14).fontColor([this.accent])
+                  }
+                }
+                .width('100%')
+              }
+              .width('100%')
+              .height(40)
+              .padding({ left: 10, right: 10 })
+              .borderRadius(10)
+              .backgroundColor(selectedIndex === index
+                ? this.colorWithAlpha(this.accent, '38') : Color.Transparent)
+              .onClick((): void => this.chooseSettingsDropdownOption(key, index, onSelect))
+              .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
+                'settings', `dropdown-${key}-option-${index}`, newArea,
+                (): void => this.chooseSettingsDropdownOption(key, index, onSelect)))
+            }, (option: string): string => `${key}-${option}`)
+          }
+          .width(180)
+          .padding(6)
+          .borderRadius(14)
+          .backgroundColor(this.glassPanelColor())
+          .border({ width: 1, color: this.glassStrokeColor() })
+          .shadow({ radius: 18, color: '#50000000', offsetX: 0, offsetY: 8 })
+        }
+        .width('100%')
+        .padding({ left: 14, right: 14, bottom: 8 })
+      }
+    }
+    .width('100%')
+    .border({ width: { top: 1 }, color: this.settingsSeparatorColor() })
   }
 
   @Builder
   private ConnectionSettingsPane() {
     Scroll(this.settingsScroller) {
       Column({ space: 14 }) {
-        Text('连接').fontSize(26).fontWeight(FontWeight.Bold).fontColor('#F5F5F7')
+        Text('连接').fontSize(26).fontWeight(FontWeight.Bold).fontColor(this.primaryTextColor())
         Column() {
           Row({ space: 12 }) {
-            Image($r('app.media.ic_car_front')).width(34).height(34).objectFit(ImageFit.Contain)
+            Image(this.settingsIconResource('app.media.ic_car_front_light', 'app.media.ic_car_front'))
+              .width(34).height(34).objectFit(ImageFit.Contain)
             Column({ space: 3 }) {
-              Text('CarPlay').fontSize(15).fontWeight(FontWeight.Medium).fontColor('#FFFFFF')
-              Text('车机投影连接').fontSize(12).fontColor('#FFFFFFA6')
+              Text('CarPlay').fontSize(15).fontWeight(FontWeight.Medium).fontColor(this.primaryTextColor())
+              Text('车机投影连接').fontSize(12).fontColor(this.secondaryTextColor())
             }
             .layoutWeight(1).alignItems(HorizontalAlign.Start)
             Text('已连接').fontSize(13).fontColor('#32D74B')
@@ -1562,9 +1773,9 @@ export struct ProjectionDashboard {
           .width('100%').height(64).padding(14)
           Row({ space: 12 }) {
             Column({ space: 3 }) {
-              Text('蓝牙音频').fontSize(14).fontColor('#FFFFFF')
+              Text('蓝牙音频').fontSize(14).fontColor(this.primaryTextColor())
               Text(this.useBluetoothAudio ? '系统蓝牙音频路由' : '使用 CarPlay RTP 音频')
-                .fontSize(12).fontColor('#FFFFFFA6')
+                .fontSize(12).fontColor(this.secondaryTextColor())
             }
             .layoutWeight(1).alignItems(HorizontalAlign.Start)
             Toggle({ type: ToggleType.Switch, isOn: this.useBluetoothAudio })
@@ -1579,40 +1790,38 @@ export struct ProjectionDashboard {
           .border({ width: { top: 1 }, color: this.settingsSeparatorColor() })
         }
         .width('100%').borderRadius(18).backgroundColor(this.settingsGroupColor())
-        .border({ width: 1, color: '#FFFFFF26' })
+        .border({ width: 1, color: this.glassStrokeColor() })
         Column() {
           Row({ space: 12 }) {
             Column({ space: 3 }) {
-              Text('设备状态').fontSize(14).fontColor('#FFFFFF')
-              Text(this.networkLabel).fontSize(12).fontColor('#FFFFFFA6')
+              Text('设备状态').fontSize(14).fontColor(this.primaryTextColor())
+              Text(this.networkLabel).fontSize(12).fontColor(this.secondaryTextColor())
             }
             .layoutWeight(1).alignItems(HorizontalAlign.Start)
             this.SignalIndicator()
             this.BatteryIndicator()
           }
           .width('100%').height(64).padding(14)
-          Row({ space: 16 }) {
-            Text('编码帧率').fontSize(14).fontColor('#FFFFFF').layoutWeight(1)
-            Select([{ value: '15 fps' }, { value: '24 fps' }, { value: '30 fps' }, { value: '60 fps' }])
-              .selected(Math.max(0, [15, 24, 30, 60].indexOf(this.encoderFps)))
-              .onSelect((index: number): void => { this.encoderFps = [15, 24, 30, 60][index]; })
-              .width(120).height(42).font({ size: 13 })
-          }
-          .width('100%').height(64).padding(14)
-          .border({ width: { top: 1 }, color: this.settingsSeparatorColor() })
-          Row({ space: 16 }) {
-            Text('采集刷新率').fontSize(14).fontColor('#FFFFFF').layoutWeight(1)
-            Select([{ value: '30 Hz' }, { value: '60 Hz' }])
-              .selected(Math.max(0, [30, 60].indexOf(this.captureFps)))
-              .onSelect((index: number): void => { this.captureFps = [30, 60][index]; })
-              .width(120).height(42).font({ size: 13 })
-          }
-          .width('100%').height(64).padding(14)
-          .border({ width: { top: 1 }, color: this.settingsSeparatorColor() })
+          this.SettingsDropdownRow(
+            '编码帧率',
+            'encoderFps',
+            ['15 fps', '24 fps', '30 fps', '60 fps'],
+            Math.max(0, [15, 24, 30, 60].indexOf(this.encoderFps)),
+            true,
+            (index: number): void => this.selectEncoderFps(index)
+          )
+          this.SettingsDropdownRow(
+            '采集刷新率',
+            'captureFps',
+            ['30 Hz', '60 Hz'],
+            Math.max(0, [30, 60].indexOf(this.captureFps)),
+            true,
+            (index: number): void => this.selectCaptureFps(index)
+          )
         }
         .width('100%').borderRadius(18).backgroundColor(this.settingsGroupColor())
-        .border({ width: 1, color: '#FFFFFF26' })
-        Text(this.receiverHomeMessage || this.launchMessage).fontSize(11).fontColor('#FFFFFFA6')
+        .border({ width: 1, color: this.glassStrokeColor() })
+        Text(this.receiverHomeMessage || this.launchMessage).fontSize(11).fontColor(this.secondaryTextColor())
       }
       .width('100%').padding({ left: 36, right: 36, top: 28, bottom: 28 })
     }
@@ -1625,30 +1834,30 @@ export struct ProjectionDashboard {
   private DisplaySettingsPane() {
     Scroll(this.settingsScroller) {
       Column({ space: 16 }) {
-        Text('显示').fontSize(26).fontWeight(FontWeight.Bold).fontColor('#F5F5F7')
+        Text('显示').fontSize(26).fontWeight(FontWeight.Bold).fontColor(this.primaryTextColor())
         Column() {
         Row({ space: 14 }) {
-          Text('外观').fontSize(14).fontColor('#F5F5F7').layoutWeight(1)
+          Text('外观').fontSize(14).fontColor(this.primaryTextColor()).layoutWeight(1)
           Row({ space: 4 }) {
             Button({ type: ButtonType.Normal }) {
               Text('深色').fontSize(12).fontColor(
                 this.dayNightMode === 'NIGHT' || (this.dayNightMode === 'AUTO' && this.nightMode)
-                  ? '#1C1C1E' : '#F5F5F7')
+                  ? this.mapBackgroundColor() : this.secondaryTextColor())
             }
             .height(42).padding({ left: 9, right: 9 }).borderRadius(9)
             .backgroundColor(this.dayNightMode === 'NIGHT' || (this.dayNightMode === 'AUTO' && this.nightMode)
-              ? '#F5F5F7' : Color.Transparent)
+              ? this.primaryTextColor() : Color.Transparent)
             .onClick((): void => this.selectDayNightMode('NIGHT'))
             .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
               'settings', 'appearanceNight', newArea, (): void => this.selectDayNightMode('NIGHT')))
             Button({ type: ButtonType.Normal }) {
               Text('浅色').fontSize(12).fontColor(
                 this.dayNightMode === 'DAY' || (this.dayNightMode === 'AUTO' && !this.nightMode)
-                  ? '#1C1C1E' : '#F5F5F7')
+                  ? this.mapBackgroundColor() : this.secondaryTextColor())
             }
             .height(42).padding({ left: 9, right: 9 }).borderRadius(9)
             .backgroundColor(this.dayNightMode === 'DAY' || (this.dayNightMode === 'AUTO' && !this.nightMode)
-              ? '#F5F5F7' : Color.Transparent)
+              ? this.primaryTextColor() : Color.Transparent)
             .onClick((): void => this.selectDayNightMode('DAY'))
             .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
               'settings', 'appearanceDay', newArea, (): void => this.selectDayNightMode('DAY')))
@@ -1657,12 +1866,15 @@ export struct ProjectionDashboard {
         .height(68).padding(12)
         Row({ space: 14 }) {
           Column({ space: 3 }) {
-            Text('亮度').fontSize(14).fontColor('#F5F5F7')
-            Text(`${Math.round(this.displayBrightness)}%`).fontSize(12).fontColor('#FFFFFFA6')
+            Text('亮度').fontSize(14).fontColor(this.primaryTextColor())
+            Text(`${Math.round(this.displayBrightness)}%`).fontSize(12).fontColor(this.secondaryTextColor())
           }
           .width(72).alignItems(HorizontalAlign.Start)
           Slider({ value: this.displayBrightness, min: 20, max: 100, step: 1 })
             .layoutWeight(1)
+            .blockColor('#FFFFFFFF')
+            .selectedColor('#66787880')
+            .trackColor('#66787880')
             .onChange((value: number): void => { this.displayBrightness = value; })
             .accessibilityText('亮度')
         }
@@ -1670,18 +1882,18 @@ export struct ProjectionDashboard {
         .border({ width: { top: 1 }, color: this.settingsSeparatorColor() })
         Row({ space: 10 }) {
           Column({ space: 3 }) {
-            Text('分屏比例').fontSize(14).fontColor('#F5F5F7')
-            Text('地图 : 卡片').fontSize(11).fontColor('#FFFFFFA6')
+            Text('分屏比例').fontSize(14).fontColor(this.primaryTextColor())
+            Text('地图 : 卡片').fontSize(11).fontColor(this.secondaryTextColor())
           }
           .layoutWeight(1).alignItems(HorizontalAlign.Start)
           Row({ space: 3 }) {
             ForEach([3, 4, 5], (ratio: number) => {
               Button({ type: ButtonType.Normal }) {
                 Text(`${ratio} : 1`).fontSize(11)
-                    .fontColor(this.splitRatio === ratio ? '#1C1C1E' : '#F5F5F7')
+                    .fontColor(this.splitRatio === ratio ? this.mapBackgroundColor() : this.secondaryTextColor())
               }
               .height(40).padding({ left: 9, right: 9 }).borderRadius(9)
-                  .backgroundColor(this.splitRatio === ratio ? '#F5F5F7' : Color.Transparent)
+                  .backgroundColor(this.splitRatio === ratio ? this.primaryTextColor() : Color.Transparent)
               .onClick((): void => { this.splitRatio = ratio; })
               .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
                 'settings', `splitRatio-${ratio}`, newArea, (): void => { this.splitRatio = ratio; }))
@@ -1694,27 +1906,30 @@ export struct ProjectionDashboard {
         .width('100%')
         .borderRadius(18)
         .backgroundColor(this.settingsGroupColor())
-        .border({ width: 1, color: '#FFFFFF26' })
+        .border({ width: 1, color: this.glassStrokeColor() })
         Row({ space: 14 }) {
           Column({ space: 4 }) {
-            Text('Dock 位置').fontSize(14).fontColor('#F5F5F7')
-            Text(this.dockPosition === 'bottom' ? '底部' : '左侧').fontSize(12).fontColor('#FFFFFFA6')
+            Text('Dock 位置').fontSize(14).fontColor(this.primaryTextColor())
+            Text(this.dockPosition === 'bottom' ? '底部' : '左侧').fontSize(12).fontColor(this.secondaryTextColor())
           }
           .layoutWeight(1)
           Button(this.dockPosition === 'bottom' ? '切换到左侧' : '切换到底部')
             .height(44)
+            .fontColor(this.primaryTextColor())
+            .backgroundColor(this.glassSecondaryColor())
+            .borderRadius(12)
             .onClick((): void => this.toggleDockPosition())
             .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
               'settings', 'dockPosition', newArea, (): void => this.toggleDockPosition()))
         }
         .height(68).padding(12).borderRadius(16).backgroundColor(this.settingsGroupColor())
-        .border({ width: 1, color: '#FFFFFF26' })
+        .border({ width: 1, color: this.glassStrokeColor() })
         Column({ space: 4 }) {
           Text(this.vehicleDisplayUuid.length > 0
             ? `显示安全边距 · ${this.vehicleDisplayUuid.slice(-8)}` : '显示安全边距 · 默认')
-            .fontSize(14).fontColor('#F5F5F7')
+            .fontSize(14).fontColor(this.primaryTextColor())
           Text('按百分比避让遮挡区域；曲面轮廓仍需在目标车机校准')
-            .fontSize(12).fontColor('#FFFFFFA6').maxLines(2)
+            .fontSize(12).fontColor(this.secondaryTextColor()).maxLines(2)
           this.SafeInsetRow('上', 'top', this.safeInsetTop)
           this.SafeInsetRow('右', 'right', this.safeInsetRight)
           this.SafeInsetRow('下', 'bottom', this.safeInsetBottom)
@@ -1724,59 +1939,52 @@ export struct ProjectionDashboard {
         .padding(14)
         .borderRadius(16)
         .backgroundColor(this.settingsGroupColor())
-        .border({ width: 1, color: '#FFFFFF26' })
+        .border({ width: 1, color: this.glassStrokeColor() })
         Column({ space: 4 }) {
           Text(this.vehicleDisplayUuid.length > 0
             ? `异形屏内容校准 · ${this.vehicleDisplayUuid.slice(-8)}` : '异形屏内容校准')
-            .fontSize(14).fontColor('#F5F5F7')
+            .fontSize(14).fontColor(this.primaryTextColor())
           Text('等比缩放与位置微调仅作用于 Shell 内容；输出分辨率和全屏背景保持不变')
-            .fontSize(12).fontColor('#FFFFFFA6').maxLines(2)
+            .fontSize(12).fontColor(this.secondaryTextColor()).maxLines(2)
           this.CalibrationControlRow('内容缩放', this.contentScalePercent, 'scale')
           this.CalibrationControlRow('水平位置', this.contentOffsetXPercent, 'offsetX')
           this.CalibrationControlRow('垂直位置', this.contentOffsetYPercent, 'offsetY')
           Text(this.calibrationMessage || '缩放 70–100%；水平/垂直偏移各 ±15%，按显示 UUID 保存')
-            .fontSize(10).fontColor('#FFFFFFA6').maxLines(2)
+            .fontSize(10).fontColor(this.secondaryTextColor()).maxLines(2)
         }
         .width('100%')
         .padding(14)
         .borderRadius(16)
         .backgroundColor(this.settingsGroupColor())
-        .border({ width: 1, color: '#FFFFFF26' })
-        Row({ space: 12 }) {
-          Column({ space: 4 }) {
-            Text('投屏分辨率').fontSize(14).fontColor('#F5F5F7')
-            Text(this.activeProjectionModeId.length > 0
-              ? `当前会话 ${this.projectionModeOptions.find(
-                (mode: ProjectionDisplayMode): boolean => mode.id === this.activeProjectionModeId
-              )?.label ?? this.activeProjectionModeId}` : '下次连接生效')
-              .fontSize(12).fontColor('#FFFFFFA6')
-          }
-          .layoutWeight(1)
-          Select(this.projectionModeSelectOptions())
-            .selected(Math.max(0, this.projectionModeOptions.findIndex(
+        .border({ width: 1, color: this.glassStrokeColor() })
+        Column() {
+          this.SettingsDropdownRow(
+            '投屏分辨率',
+            'projectionResolution',
+            this.projectionModeOptions.length > 0
+              ? this.projectionModeOptions.map((mode: ProjectionDisplayMode): string => mode.label)
+              : ['暂无可用档位'],
+            Math.max(0, this.projectionModeOptions.findIndex(
               (mode: ProjectionDisplayMode): boolean => mode.id === this.selectedProjectionModeId
-            )))
-            .enabled(this.projectionModeOptions.length > 1)
-            .onSelect((index: number): void => {
+            )),
+            this.projectionModeOptions.length > 1,
+            (index: number): void => {
               const mode = this.projectionModeOptions[index];
               if (mode) {
                 this.selectProjectionResolution(mode.id);
               }
-            })
-            .width(180).height(44).font({ size: 13 })
-            .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
-              'settings', 'projectionResolution', newArea, (): void => this.cycleProjectionResolution()))
+            }
+          )
         }
         .width('100%')
-        .padding(14)
         .borderRadius(16)
         .backgroundColor(this.settingsGroupColor())
-        .border({ width: 1, color: '#FFFFFF26' })
+        .border({ width: 1, color: this.glassStrokeColor() })
         Text(this.resolutionSelectionMessage || this.projectionResolutionMessage ||
           (this.projectionModeOptions.length > 1
             ? `车机原生 ${this.projectionNativeWidth}×${this.projectionNativeHeight}；档位按显示 UUID 独立保存`
             : `车机原生 ${this.projectionNativeWidth}×${this.projectionNativeHeight}；当前无其它已验证档位`))
-          .fontSize(12).fontColor('#FFFFFFA6').width('100%').maxLines(2)
+          .fontSize(12).fontColor(this.secondaryTextColor()).width('100%').maxLines(2)
       }
       .width('100%').padding(16)
     }
@@ -1788,10 +1996,13 @@ export struct ProjectionDashboard {
   @Builder
   private MediaControl(command: ProjectionMediaCommand, label: string, symbol: Resource) {
     Button({ type: ButtonType.Normal }) {
-      SymbolGlyph(symbol).fontSize(18).fontColor(['#F5F5F7'])
+      SymbolGlyph(symbol).fontSize(18).fontColor([
+        command === 'play' || command === 'pause' ? '#FFFFFF' : this.primaryTextColor()
+      ])
     }
     .layoutWeight(1).height(46).borderRadius(14)
-    .backgroundColor(command === 'play' || command === 'pause' ? `${this.accent}48` : '#FFFFFF12')
+    .backgroundColor(command === 'play' || command === 'pause'
+      ? this.colorWithAlpha(this.accent, '48') : this.glassSecondaryColor())
     .enabled(this.mediaState.commands.includes(command))
     .accessibilityText(label)
     .onClick((): void => { void this.sendMediaCommand(command); })
@@ -1810,9 +2021,9 @@ export struct ProjectionDashboard {
         Image($r('app.media.projection_album_art'))
           .width('100%').aspectRatio(1).objectFit(ImageFit.Cover).borderRadius(18)
         Column({ space: 3 }) {
-          Text(this.mediaState.title).fontSize(16).fontWeight(FontWeight.Bold).fontColor('#F5F5F7')
+          Text(this.mediaState.title).fontSize(16).fontWeight(FontWeight.Bold).fontColor(this.primaryTextColor())
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text(this.mediaState.artist || '未知歌手').fontSize(12).fontColor('#FFFFFFA6')
+          Text(this.mediaState.artist || '未知歌手').fontSize(12).fontColor(this.secondaryTextColor())
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         .width('100%').alignItems(HorizontalAlign.Start)
@@ -1820,7 +2031,7 @@ export struct ProjectionDashboard {
         .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
           'media', 'open', newArea, (): void => this.openMediaApp()))
         Progress({ value: this.mediaProgressPercent(), total: 100 })
-          .width('100%').height(4).color('#F5F5F7')
+          .width('100%').height(4).color('#FFFFFF')
         Row({ space: 4 }) {
           this.MediaControl('playPrevious', '上一首', $r('sys.symbol.backward_end_fill'))
           this.MediaControl(this.mediaState.isPlaying ? 'pause' : 'play', this.mediaState.isPlaying ? '暂停' : '播放',
@@ -1831,7 +2042,7 @@ export struct ProjectionDashboard {
       }
       .layoutWeight(1.25).width('100%').padding(16).borderRadius(24)
       .backgroundColor(this.glassPanelColor())
-      .border({ width: 1, color: '#FFFFFF30' })
+      .border({ width: 1, color: this.glassStrokeColor() })
       .clip(true)
 
       Stack({ alignContent: Alignment.TopStart }) {
@@ -1843,7 +2054,7 @@ export struct ProjectionDashboard {
           Row() {
             Column({ space: 6 }) {
               Text('24°').fontSize(42).fontWeight(FontWeight.Lighter).fontColor('#FFFFFF')
-              Text('晴 · 27° / 18°').fontSize(12).fontColor('#FFFFFFD9')
+              Text('晴 · 27° / 18°').fontSize(12).fontColor('#D9FFFFFF')
             }
             .alignItems(HorizontalAlign.Start)
             Blank()
@@ -1854,7 +2065,7 @@ export struct ProjectionDashboard {
         .width('100%').height('100%').padding(16)
       }
       .layoutWeight(1).width('100%').borderRadius(24)
-      .border({ width: 1, color: '#FFFFFF30' })
+      .border({ width: 1, color: this.glassStrokeColor() })
       .clip(true)
     }
     .width('22%').constraintSize({ minWidth: 190, maxWidth: 280 }).height('100%')
@@ -1892,7 +2103,7 @@ export struct ProjectionDashboard {
             if (this.launchMessage.length > 0) {
               Text(this.launchMessage)
                 .fontSize(12)
-                .fontColor('#DCE4DE')
+                .fontColor(this.secondaryTextColor())
                 .textAlign(TextAlign.Center)
                 .padding(12)
             }
@@ -1918,7 +2129,7 @@ export struct ProjectionDashboard {
       } else {
         Row({ space: 14 }) {
           Stack({ alignContent: Alignment.TopStart }) {
-            Image($r('app.media.projection_map_preview'))
+            Image(this.mapPreviewResource())
               .width('100%').height('100%').objectFit(ImageFit.Cover)
             Column() {
               Row({ space: 12 }) {
@@ -1927,23 +2138,23 @@ export struct ProjectionDashboard {
                 }
                 .width(46).height(46).borderRadius(15).backgroundColor(this.accent)
                 Column({ space: 4 }) {
-                  Text('导航预览').fontSize(16).fontWeight(FontWeight.Bold).fontColor('#F5F5F7')
+                  Text('导航预览').fontSize(16).fontWeight(FontWeight.Bold).fontColor(this.primaryTextColor())
                   Text('示意地图 · 实际路线由地图应用提供')
-                    .fontSize(11).fontColor('#FFFFFFB3').maxLines(1)
+                    .fontSize(11).fontColor(this.secondaryTextColor()).maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                 }
                 .alignItems(HorizontalAlign.Start)
               }
               .width('100%').padding(12).borderRadius(18)
               .backgroundColor(this.glassPanelColor())
-              .border({ width: 1, color: '#FFFFFF30' })
+              .border({ width: 1, color: this.glassStrokeColor() })
               Blank()
               Row({ space: 12 }) {
                 Column({ space: 4 }) {
                   Text(this.launchMessage.length > 0 ? '地图暂不可用' : '准备开始导航')
-                    .fontSize(15).fontWeight(FontWeight.Bold).fontColor('#F5F5F7')
+                    .fontSize(15).fontWeight(FontWeight.Bold).fontColor(this.primaryTextColor())
                   Text(this.launchMessage || '打开地图应用以查看实时路线与路况')
-                    .fontSize(11).fontColor('#FFFFFFB3').maxLines(2)
+                    .fontSize(11).fontColor(this.secondaryTextColor()).maxLines(2)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                 }
                 .layoutWeight(1).alignItems(HorizontalAlign.Start)
@@ -1962,21 +2173,27 @@ export struct ProjectionDashboard {
               }
               .width('100%').padding(12).borderRadius(18)
               .backgroundColor(this.glassPanelColor())
-              .border({ width: 1, color: '#FFFFFF30' })
+              .border({ width: 1, color: this.glassStrokeColor() })
             }
             .width('100%').height('100%').padding(14)
           }
           .layoutWeight(1).height('100%')
           .borderRadius(22).clip(true)
-          .border({ width: 1, color: '#FFFFFF30' })
+          .border({ width: 1, color: this.glassStrokeColor() })
           .onAreaChange((_oldArea, newArea) => this.touchBounds.set('map', this.areaBounds(newArea)))
           this.DashboardSidebar()
         }
         .width('100%').height('100%')
       }
       if (this.dashboardView !== 'home' && this.dashboardView !== 'split') {
-        Image($r('app.media.projection_aurora'))
+        Image(this.wallpaperResource(this.theme))
           .width('100%').height('100%').objectFit(ImageFit.Cover)
+        if (this.isLightAppearance()) {
+          Column()
+            .width('100%')
+            .height('100%')
+            .backgroundColor('#6BFFFFFF')
+        }
       }
       if (this.dashboardView === 'apps') {
         this.AppsPage()
@@ -1995,9 +2212,14 @@ export struct ProjectionDashboard {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Image($r('app.media.projection_aurora'))
+      Image(this.wallpaperResource(this.theme))
         .width('100%').height('100%').objectFit(ImageFit.Cover)
-        .opacity(this.theme === 'forest' ? 0.82 : 0.22)
+      if (this.isLightAppearance()) {
+        Column()
+          .width('100%')
+          .height('100%')
+          .backgroundColor('#6BFFFFFF')
+      }
       if (this.dockPosition === 'bottom') {
         Column({ space: 8 }) {
           this.MainPanel(false)
@@ -2037,7 +2259,7 @@ export struct ProjectionDashboard {
     .padding(8)
     .clip(true)
     .backgroundColor(projectionTheme(this.theme).background)
-    .brightness((resolveNightMode(this.dayNightMode, this.nightMode) ? 0.82 : 1) * this.displayBrightness / 100)
+    .brightness(0.5 + this.displayBrightness / 200)
     .onAreaChange((_oldArea, newArea) => {
       const height = Number.parseFloat(`${newArea.height}`);
       this.projectionViewportWidth = Math.max(0, Number.parseFloat(`${newArea.width}`) - 16);

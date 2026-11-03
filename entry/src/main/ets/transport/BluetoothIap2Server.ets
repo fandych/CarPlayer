@@ -54,21 +54,7 @@ export class BluetoothIap2Server {
   }
 
   stop(): void {
-    if (this.clientId >= 0) {
-      if (this.readHandler) {
-        try {
-          bluetoothSocket.off('sppRead', this.clientId, this.readHandler);
-        } catch (error) {
-          this.onFailure?.(`Bluetooth read listener cleanup failed: ${this.errorMessage(error)}`);
-        }
-      }
-      try {
-        bluetoothSocket.sppCloseClientSocket(this.clientId);
-      } catch (error) {
-        this.onFailure?.(`Bluetooth client socket cleanup failed: ${this.errorMessage(error)}`);
-      }
-      this.clientId = -1;
-    }
+    this.disconnectClient();
     if (this.serverId >= 0) {
       try {
         bluetoothSocket.sppCloseServerSocket(this.serverId);
@@ -81,6 +67,10 @@ export class BluetoothIap2Server {
     this.onClientData = undefined;
     this.onClientConnected = undefined;
     this.onFailure = undefined;
+  }
+
+  disconnectClient(): void {
+    this.closeClient();
   }
 
   private acceptNext(): void {

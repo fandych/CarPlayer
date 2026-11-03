@@ -72,6 +72,9 @@ interface Iap2MessageIds {
   DEVICE_LANGUAGE_UPDATE: number;
   DEVICE_TIME_UPDATE: number;
   DEVICE_UUID_UPDATE: number;
+  DEVICE_HID_REPORT: number;
+  EA_OPEN_SESSION: number;
+  EA_SESSION_STATUS: number;
 }
 
 const MESSAGE: Iap2MessageIds = {
@@ -95,8 +98,39 @@ const MESSAGE: Iap2MessageIds = {
   DEVICE_INFORMATION_UPDATE: 0x4e09,
   DEVICE_LANGUAGE_UPDATE: 0x4e0a,
   DEVICE_TIME_UPDATE: 0x4e0b,
-  DEVICE_UUID_UPDATE: 0x4e0c
+  DEVICE_UUID_UPDATE: 0x4e0c,
+  DEVICE_HID_REPORT: 0x6801,
+  EA_OPEN_SESSION: 0xea00,
+  EA_SESSION_STATUS: 0xea03
 };
+
+const WIFI_CONFIGURATION_WINDOW_MS: number = 60_000;
+
+interface EaProtocol {
+  protocolId: number;
+  name: string;
+}
+
+function readEaProtocols(body: Uint8Array): EaProtocol[] {
+  const parameters = decodeIap2Parameters(body);
+  const protocols: EaProtocol[] = [];
+  for (const groupId of [10, 11, 12]) {
+    const group = parameters.find((parameter) => parameter.id === groupId);
+    if (!group) {
+      continue;
+    }
+    const children = decodeIap2Parameters(group.value);
+    const protocolId = children.find((parameter) => parameter.id === 0)?.value[0];
+    if (protocolId === undefined) {
+      continue;
+    }
+    const name = decodeIap2String(
+      children.find((parameter) => parameter.id === 1)?.value ?? new Uint8Array(0)
+    );
+    protocols.push({ protocolId, name });
+  }
+  return protocols;
+}
 
 function currentDeviceLanguage(): string {
   try {
@@ -259,6 +293,7 @@ export class Iap2SenderSession {
   private readonly log: (message: string) => void;
   private readonly onWifi: (credentials: WifiCredentials) => void;
   private readonly onEndpoint: (endpoint: WirelessAirPlayEndpoint | undefined) => void;
+  private readonly onEndpointPending: () => void;
   private readonly mfiVerifier: MfiVerifier;
   private receiveQueue: Promise<void> = Promise.resolve();
   private pendingReceiveChunks: number = 0;
@@ -301,6 +336,7 @@ export class Iap2SenderSession {
   private detectionRetryCount: number = 0;
   private accessorySendMessages?: number[];
   private accessoryReceiveMessages?: number[];
+  private accessoryEaProtocols: EaProtocol[] = [];
   private deviceAnnouncementSent: boolean = false;
   private deviceAnnouncementInProgress: boolean = false;
   private challengeLength: number = 32;
@@ -310,13 +346,18 @@ export class Iap2SenderSession {
   private pendingMfiChallenge?: Uint8Array;
   private transportIdentifierSent: boolean = false;
   private transportIdentifierPending: boolean = false;
-  private transportIdentifierTimer?: number;
   private identificationTimer?: number;
   private challengeTimer?: number;
   private mfiCertificateTimer?: number;
   private mfiCertificateRequestCount: number = 0;
   private wifiConfigurationTimer?: number;
   private wifiConfigurationRescueGeneration: number = 0;
+  private wifiConfigurationDeadline: number = -1;
+  private eaSessionWaitTimer?: number;
+  private hidStartWaitTimer?: number;
+  private startSessionWaitTimer?: number;
+  private wifiConfigurationReceived: boolean = false;
+  private startSessionReceived: boolean = false;
   private deviceStateGreetingsSent: boolean = false;
   private buickStartSessionWaitTimer?: number;
   private buickAvailabilitySentAt: number = 0;
@@ -335,12 +376,14 @@ export class Iap2SenderSession {
     requestMfiTrust?: (info: MfiTrustPromptInfo) => Promise<boolean>,
     persistMfiFingerprint?: (fingerprint: string) => Promise<void>,
     skipMfiChallengeVerification: boolean = false,
-    context?: common.UIAbilityContext
+    context?: common.UIAbilityContext,
+    onEndpointPending: () => void = (): void => {}
   ) {
     this.sendBytes = sendBytes;
     this.log = log;
     this.onWifi = onWifi;
     this.onEndpoint = onEndpoint;
+    this.onEndpointPending = onEndpointPending;
     this.deviceAddress = deviceAddress;
     this.deviceName = deviceName;
     this.deviceUuid = deviceUuid;
@@ -381,7 +424,14 @@ export class Iap2SenderSession {
     this.deviceAnnouncementSent = false;
     this.deviceAnnouncementInProgress = false;
     this.deviceStateGreetingsSent = false;
+    this.accessoryEaProtocols = [];
+    this.accessorySendMessages = undefined;
+    this.accessoryReceiveMessages = undefined;
+    this.wifiConfigurationReceived = false;
+    this.startSessionReceived = false;
     this.wifiConfigurationRescueGeneration++;
+    this.wifiConfigurationDeadline = -1;
+    this.clearPostAuthenticationTimers();
     this.clearBuickStartSessionTimer();
     this.buickAvailabilityFrameDigest = '';
     this.buickAvailabilitySentAt = 0;
@@ -509,12 +559,6 @@ export class Iap2SenderSession {
       throw new Error('缺少有效真实蓝牙 MAC；已阻止发送 CarPlay 设备身份');
     }
     await this.sendDeviceAnnouncement();
-    this.transportIdentifierTimer = setTimeout((): void => {
-      this.transportIdentifierTimer = undefined;
-      void this.sendTransportIdentifier().catch((error: Error): void => {
-        this.log(`发送 iAP2 传输标识失败：${error.message}`);
-      });
-    }, 3000);
   }
 
   cancel(): void {
@@ -527,14 +571,11 @@ export class Iap2SenderSession {
         clearTimeout(this.identificationTimer);
         this.identificationTimer = undefined;
       }
-      if (this.transportIdentifierTimer !== undefined) {
-        clearTimeout(this.transportIdentifierTimer);
-        this.transportIdentifierTimer = undefined;
-      }
       if (this.wifiConfigurationTimer !== undefined) {
         clearTimeout(this.wifiConfigurationTimer);
         this.wifiConfigurationTimer = undefined;
       }
+      this.clearPostAuthenticationTimers();
       this.clearMfiCertificateTimer();
       this.clearMfiChallenge();
       this.clearRetransmitTimer();
@@ -555,6 +596,7 @@ export class Iap2SenderSession {
       this.deviceAnnouncementInProgress = false;
       this.deviceStateGreetingsSent = false;
       this.wifiConfigurationRescueGeneration++;
+      this.wifiConfigurationDeadline = -1;
       this.buickWaitingForStartSession = false;
       this.buickReidentificationWindowOpen = false;
       this.buickMarkerEchoSent = false;
@@ -773,11 +815,28 @@ export class Iap2SenderSession {
       }
       this.chooseChallengeLength(body);
       this.logMfiMessageCapabilities(body);
+      try {
+        this.accessoryEaProtocols = readEaProtocols(body);
+      } catch (error) {
+        this.accessoryEaProtocols = [];
+        this.log(`解析 iAP2 ExternalAccessoryProtocol 失败：${this.errorDetails(error)}`);
+      }
       await this.sendControl(MESSAGE.IDENTIFICATION_ACCEPTED);
       this.log('认证消息属于 iAP2 清单例外；即使 1D01 未列出 AA00/AA01，也按标准发起证书请求');
       await this.sendControl(MESSAGE.MFI_CERTIFICATE_REQUEST);
       this.mfiCertificateRequestCount = 1;
       this.startMfiCertificateTimer();
+      return;
+    }
+    if (messageId === MESSAGE.EA_SESSION_STATUS) {
+      if (this.eaSessionWaitTimer !== undefined) {
+        clearTimeout(this.eaSessionWaitTimer);
+        this.eaSessionWaitTimer = undefined;
+        this.log(`收到 iAP2 EA_SESSION_STATUS（${body.length}B）`);
+        await this.startOptionalHidWait(this.sessionGeneration);
+      } else {
+        this.log(`收到非等待阶段的 iAP2 EA_SESSION_STATUS（${body.length}B）`);
+      }
       return;
     }
     if (messageId === MESSAGE.MFI_CERTIFICATE_SERIAL) {
@@ -887,6 +946,7 @@ export class Iap2SenderSession {
         clearTimeout(this.wifiConfigurationTimer);
         this.wifiConfigurationTimer = undefined;
       }
+      this.wifiConfigurationDeadline = -1;
       this.wifiConfigurationRescueGeneration++;
       let credentials: WifiCredentials;
       try {
@@ -904,7 +964,13 @@ export class Iap2SenderSession {
         this.log('车机 0x5703 配置缺少 SSID；不会尝试加入网络');
         throw new Error('车机返回的 iAP2 Wi-Fi 配置中没有 SSID');
       }
+      this.wifiConfigurationReceived = true;
+      this.clearOptionalHandshakeWaits();
       this.onWifi(credentials);
+      await this.sendDeviceAnnouncement();
+      if (!this.startSessionReceived) {
+        this.startStartSessionWaitTimer(this.sessionGeneration);
+      }
       return;
     }
     if (messageId === MESSAGE.CARPLAY_START_SESSION) {
@@ -931,6 +997,8 @@ export class Iap2SenderSession {
         return;
       }
       this.clearWifiConfigurationTimer();
+      this.clearStartSessionWaitTimer();
+      this.startSessionReceived = true;
       if (this.buickB233Receiver && this.buickWaitingForStartSession) {
         this.buickWaitingForStartSession = false;
         this.buickReidentificationWindowOpen = false;
@@ -943,6 +1011,7 @@ export class Iap2SenderSession {
       try {
         const credentials = parseWirelessSessionCredentials(body);
         if (credentials) {
+          this.wifiConfigurationReceived = true;
           this.log(
             `从 0x4301 wireless group 解析网络：SSID=${credentials.ssid}，` +
               `security=${credentials.securityType}，channel=${credentials.channel}，密码已隐藏`
@@ -968,7 +1037,18 @@ export class Iap2SenderSession {
       return;
     }
     if (messageId === MESSAGE.START_HID) {
-      this.log('收到 iAP2 StartHID；未声明设备 HID 组件，不发送 DeviceHIDReport');
+      if (this.hidStartWaitTimer !== undefined) {
+        clearTimeout(this.hidStartWaitTimer);
+        this.hidStartWaitTimer = undefined;
+        await this.sendControl(
+          MESSAGE.DEVICE_HID_REPORT,
+          concatBytes(numberParameter(0, 0, 2), this.parameter(1, new Uint8Array([0])))
+        );
+        this.log('收到 iAP2 StartHID；已发送 DeviceHIDReport 应答');
+        await this.requestWifiConfiguration();
+      } else {
+        this.log('收到等待窗口外的 iAP2 StartHID；未发送 DeviceHIDReport');
+      }
       return;
     }
     if (messageId === MESSAGE.CARPLAY_AVAILABILITY && !this.authenticated) {
@@ -1323,13 +1403,95 @@ export class Iap2SenderSession {
       }
     }
     try {
-      await this.requestWifiConfiguration();
+      if (this.buickB233Receiver) {
+        await this.requestWifiConfiguration();
+      } else {
+        await this.startPostAuthenticationSequence(generation);
+      }
     } catch (error) {
       this.log(`MFi 认证流程已结束，但启动车机无线配置流程失败：${this.errorDetails(error)}`);
     }
   }
 
+  private async startPostAuthenticationSequence(generation: number): Promise<void> {
+    await this.sendDeviceStateGreetings();
+    if (!this.started || generation !== this.sessionGeneration) {
+      return;
+    }
+    for (const protocol of this.accessoryEaProtocols) {
+      await this.sendControl(
+        MESSAGE.EA_OPEN_SESSION,
+        concatBytes(numberParameter(0, protocol.protocolId, 1), stringParameter(1, protocol.name))
+      );
+      this.log(`已请求 iAP2 EA 会话：protocol=${protocol.protocolId} name=${protocol.name}`);
+    }
+    if (this.wifiConfigurationReceived) {
+      await this.sendDeviceAnnouncement();
+      return;
+    }
+    if (this.accessoryEaProtocols.length > 0 &&
+      this.accessorySendMessages?.includes(MESSAGE.EA_SESSION_STATUS) !== false) {
+      this.eaSessionWaitTimer = setTimeout((): void => {
+        this.eaSessionWaitTimer = undefined;
+        if (!this.started || generation !== this.sessionGeneration) {
+          return;
+        }
+        this.log('等待 iAP2 EA_SESSION_STATUS 超时（500ms）；继续后续启动流程');
+        void this.startOptionalHidWait(generation).catch((error: Error): void => {
+          this.log(`iAP2 StartHID 等待失败：${this.errorDetails(error)}`);
+        });
+      }, 500);
+      return;
+    }
+    await this.startOptionalHidWait(generation);
+  }
+
+  private async startOptionalHidWait(generation: number): Promise<void> {
+    if (!this.started || !this.authenticated || generation !== this.sessionGeneration) {
+      return;
+    }
+    if (this.wifiConfigurationReceived) {
+      await this.sendDeviceAnnouncement();
+      return;
+    }
+    if (this.accessorySendMessages?.includes(MESSAGE.START_HID) === false) {
+      this.log('车机未声明会发送 0x6800；跳过可选 StartHID 等待');
+      await this.requestWifiConfiguration();
+      return;
+    }
+    this.hidStartWaitTimer = setTimeout((): void => {
+      this.hidStartWaitTimer = undefined;
+      if (!this.started || !this.authenticated || generation !== this.sessionGeneration) {
+        return;
+      }
+      this.log('等待 iAP2 StartHID 超时（2s）；继续 Wi-Fi 配置交换');
+      void this.requestWifiConfiguration().catch((error: Error): void => {
+        this.log(`启动 iAP2 Wi-Fi 配置交换失败：${this.errorDetails(error)}`);
+      });
+    }, 2000);
+  }
+
+  private clearPostAuthenticationTimers(): void {
+    this.clearOptionalHandshakeWaits();
+    this.clearStartSessionWaitTimer();
+  }
+
+  private clearOptionalHandshakeWaits(): void {
+    if (this.eaSessionWaitTimer !== undefined) {
+      clearTimeout(this.eaSessionWaitTimer);
+      this.eaSessionWaitTimer = undefined;
+    }
+    if (this.hidStartWaitTimer !== undefined) {
+      clearTimeout(this.hidStartWaitTimer);
+      this.hidStartWaitTimer = undefined;
+    }
+  }
+
   private async requestWifiConfiguration(): Promise<void> {
+    if (this.wifiConfigurationReceived) {
+      await this.sendDeviceAnnouncement();
+      return;
+    }
     if (this.buickB233Receiver) {
       this.log('识别为 Buick B233：跳过不兼容的 0x5702/0x5703 流程，直接发送 B233 格式 0x4300');
       void this.sendDeviceAnnouncement().catch((error: Error): void => {
@@ -1348,6 +1510,9 @@ export class Iap2SenderSession {
       return;
     }
     if (maySupportLegacyExchange) {
+      if (this.wifiConfigurationDeadline < 0) {
+        this.wifiConfigurationDeadline = Date.now() + WIFI_CONFIGURATION_WINDOW_MS;
+      }
       await this.sendControl(MESSAGE.WIFI_REQUEST);
       this.startWifiConfigurationTimer('0x5703', true);
       this.log('已发送 iAP2 0x5702 Wi-Fi 配置请求，进入分段等待 0x5703');
@@ -1366,7 +1531,11 @@ export class Iap2SenderSession {
       this.wifiConfigurationTimer = undefined;
     }
     const generation = ++this.wifiConfigurationRescueGeneration;
-    const delayMs = stage === 1 ? 1300 : 1500;
+    const delayMs = stage === 0
+      ? 1500
+      : stage === 1
+        ? 1300
+        : Math.max(0, this.wifiConfigurationDeadline - Date.now());
     this.wifiConfigurationTimer = setTimeout((): void => {
       this.wifiConfigurationTimer = undefined;
       if (!this.started || !this.authenticated || generation !== this.wifiConfigurationRescueGeneration) {
@@ -1395,6 +1564,7 @@ export class Iap2SenderSession {
         return;
       }
       if (fallbackToWirelessSession && !this.deviceAnnouncementSent) {
+        this.wifiConfigurationDeadline = -1;
         this.log(`重发 0x5702 后仍未收到 ${expected}；尝试一次 0x4300/0x4301 无线会话分支`);
         void this.sendDeviceAnnouncement()
           .then((): void => this.log('CarPlay 已声明可用，继续等待车机启动请求'))
@@ -1403,12 +1573,14 @@ export class Iap2SenderSession {
           });
         return;
       }
+      this.wifiConfigurationDeadline = -1;
       this.log(`设备问候和一次 0x5702 重发后仍未收到 ${expected}；保持 iAP2 监听，迟到响应仍会处理`);
     }, delayMs);
   }
 
   private clearWifiConfigurationTimer(): void {
     this.wifiConfigurationRescueGeneration++;
+    this.wifiConfigurationDeadline = -1;
     if (this.wifiConfigurationTimer !== undefined) {
       clearTimeout(this.wifiConfigurationTimer);
       this.wifiConfigurationTimer = undefined;
@@ -1457,6 +1629,7 @@ export class Iap2SenderSession {
           numberParameter(0, 1, 1),
           stringParameter(1, this.deviceAddress)
         )));
+        this.startStartSessionWaitTimer(generation);
       }
       this.deviceAnnouncementSent = true;
       this.log('已上报设备信息并发送 CarPlay 可用通知');
@@ -1464,6 +1637,38 @@ export class Iap2SenderSession {
       if (generation === this.sessionGeneration) {
         this.deviceAnnouncementInProgress = false;
       }
+    }
+  }
+
+  private startStartSessionWaitTimer(generation: number): void {
+    this.clearStartSessionWaitTimer();
+    if (this.accessorySendMessages?.includes(MESSAGE.CARPLAY_START_SESSION) === false) {
+      this.log('车机未声明会发送 0x4301；按 mDNS AirPlay 路径继续');
+      void this.sendTransportIdentifier().catch((error: Error): void => {
+        this.log(`发送 iAP2 传输标识失败：${error.message}`);
+      });
+      return;
+    }
+    const timeoutMs = this.wifiConfigurationReceived ? 3000 : 8000;
+    this.startSessionWaitTimer = setTimeout((): void => {
+      this.startSessionWaitTimer = undefined;
+      if (!this.started || generation !== this.sessionGeneration || this.startSessionReceived) {
+        return;
+      }
+      this.log(`等待 iAP2 0x4301 超时（${timeoutMs}ms）；保留晚到消息处理`);
+      void this.sendTransportIdentifier().catch((error: Error): void => {
+        this.log(`发送 iAP2 传输标识失败：${error.message}`);
+      });
+      if (!this.wifiConfigurationReceived) {
+        this.onEndpointPending();
+      }
+    }, timeoutMs);
+  }
+
+  private clearStartSessionWaitTimer(): void {
+    if (this.startSessionWaitTimer !== undefined) {
+      clearTimeout(this.startSessionWaitTimer);
+      this.startSessionWaitTimer = undefined;
     }
   }
 
@@ -1601,10 +1806,6 @@ export class Iap2SenderSession {
       return;
     }
     this.transportIdentifierPending = true;
-    if (this.transportIdentifierTimer !== undefined) {
-      clearTimeout(this.transportIdentifierTimer);
-      this.transportIdentifierTimer = undefined;
-    }
     try {
       await this.sendControl(MESSAGE.TRANSPORT_IDENTIFIER, stringParameter(0, this.deviceAddress));
       this.transportIdentifierSent = true;

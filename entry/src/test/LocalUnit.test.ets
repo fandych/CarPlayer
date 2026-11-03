@@ -217,11 +217,12 @@ export default function localUnitTest() {
       )).assertEqual('identifier-match');
     });
 
-    it('does not require the optional reverse probe after an authenticated start endpoint', 0, () => {
+    it('waits for endpoint resolution after an incomplete authenticated start endpoint', 0, () => {
+      expect(isAirPlayStartReady(true, true)).assertTrue();
       expect(isAirPlayStartReady(true, false, true)).assertTrue();
-      expect(isAirPlayStartReady(true, true, false)).assertTrue();
-      expect(isAirPlayStartReady(false, true, true)).assertFalse();
-      expect(isAirPlayStartReady(true, false, false)).assertFalse();
+      expect(isAirPlayStartReady(true, false, false, true)).assertTrue();
+      expect(isAirPlayStartReady(true, false, false, false)).assertFalse();
+      expect(isAirPlayStartReady(false, true)).assertFalse();
     });
 
     it('accepts only the advertised two-slot touch HID report', 0, () => {

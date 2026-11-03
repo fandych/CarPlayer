@@ -10,7 +10,8 @@ const sourceRoot = path.resolve(__dirname, '../main/ets');
 
 test('capture, encoder, Dock, safe-area and day/night settings stay within supported defaults', () => {
   const {
-    resolveProjectionRates, projectionTheme, resolveNightMode, normalizeSafeInset, projectionSafeInsetKey,
+    resolveProjectionRates, projectionTheme, resolveNightMode, PROJECTION_THEMES, PROJECTION_ACCENTS,
+    normalizeSafeInset, projectionSafeInsetKey,
     projectionDisplayModes, resolveProjectionDisplayMode, projectionResolutionKey,
     projectionContentCalibrationKey, normalizeProjectionContentScale, normalizeProjectionContentOffset,
     isSupportedProjectionSize
@@ -19,9 +20,19 @@ test('capture, encoder, Dock, safe-area and day/night settings stay within suppo
   assert.deepEqual(resolveProjectionRates(60, 24, 60), { capture: 60, encode: 24 });
   assert.deepEqual(resolveProjectionRates(60, 60, 30), { capture: 30, encode: 30 });
   assert.deepEqual(resolveProjectionRates(NaN, -1, 999), { capture: 30, encode: 30 });
-  assert.equal(projectionTheme('unknown').id, 'forest');
-  assert.equal(projectionTheme('forest').background, '#10101C');
+  assert.equal(projectionTheme('unknown').id, 'aurora');
+  assert.equal(projectionTheme('aurora').background, '#10101C');
+  assert.equal(projectionTheme('sunset').background, '#2B1033');
+  assert.equal(projectionTheme('forest').background, '#0B1F1A');
+  assert.equal(projectionTheme('forest').surface, '#262630');
+  assert.equal(projectionTheme('forest').panel, '#1E1E26');
   assert.equal(projectionTheme('graphite').background, '#16161A');
+  assert.equal(projectionTheme('ocean').background, '#06102A');
+  assert.deepEqual(PROJECTION_THEMES.map(theme => theme.id),
+    ['aurora', 'sunset', 'forest', 'ocean', 'graphite']);
+  assert.deepEqual(PROJECTION_ACCENTS, [
+    '#0A84FF', '#30D158', '#FF9F0A', '#FF375F', '#BF5AF2', '#64D2FF'
+  ]);
   assert.equal(resolveNightMode('AUTO', true), true);
   assert.equal(resolveNightMode('AUTO', false), false);
   assert.equal(resolveNightMode('DAY', true), false);
@@ -80,18 +91,186 @@ test('projection settings match the reference glass palette and two-pane layout'
   assert.match(settingsSource, /this\.settingsPanelColor\(\)/);
   assert.match(settingsSource, /this\.settingsGroupColor\(\)/);
   assert.match(settingsSource, /this\.settingsSeparatorColor\(\)/);
-  assert.doesNotMatch(settingsSource, /#DCE4DE|#AAB8AF|this\.glassPanelColor\(\)/);
+  assert.doesNotMatch(settingsSource, /#DCE4DE|#AAB8AF/);
   assert.match(source, /\.height\(42\)\.padding\(\{ left: 9, right: 9 \}\)/);
+  assert.match(source, /this\.isLightAppearance\(\) \? '#85FFFFFF' : this\.colorWithAlpha\(projectionTheme\(this\.theme\)\.surface, '75'\)/);
+  assert.match(source, /this\.isLightAppearance\(\) \? '#1C1C1E' : '#FFFFFF'/);
+  assert.match(source, /this\.isLightAppearance\(\) \? '#BFFFFFFF' : '#38FFFFFF'/);
+  assert.doesNotMatch(source, /#FFFFFF(?:14|1F|38|55|6B|80|85|9E|A6|B8|BF|D9)|#0000000D|#3C3C43A6|#3C3C4399/);
+  assert.match(source, /colorWithAlpha\(this\.accent, 'D9'\)/);
+  assert.match(source, /\.border\(\{ width: 1, color: this\.glassStrokeColor\(\) \}\)/);
+  assert.match(source, /\.brightness\(0\.5 \+ this\.displayBrightness \/ 200\)/);
+  assert.equal((source.match(/backgroundColor\('#6BFFFFFF'\)/g) || []).length, 2);
   assert.ok(source.includes('private ConnectionSettingsPane()'));
   assert.ok(source.includes('Slider({ value: this.displayBrightness'));
   assert.ok(source.includes('.layoutWeight(this.splitRatio)'));
-  assert.match(settingsSource, /this\.splitRatio === ratio \? '#F5F5F7' : Color\.Transparent/);
+  assert.match(settingsSource, /this\.splitRatio === ratio \? this\.primaryTextColor\(\) : Color\.Transparent/);
   const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', ['selectDayNightMode']);
   const target = new Target();
   target.selectDayNightMode('NIGHT');
   assert.equal(target.dayNightMode, 'NIGHT');
   target.selectDayNightMode('AUTO');
   assert.equal(target.dayNightMode, 'AUTO');
+});
+
+test('apps list icons are not wrapped in an extra colored background tile', () => {
+  const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
+  const tileStart = source.indexOf('AppTile(app: ProjectionApp)');
+  const tileEnd = source.indexOf('@Builder', tileStart + 1);
+  const tileSource = source.slice(tileStart, tileEnd);
+  assert.ok(tileStart >= 0);
+  assert.doesNotMatch(tileSource, /\.backgroundColor\(app\.color\)/);
+  assert.doesNotMatch(tileSource, /\.shadow\(\{ radius: 14/);
+  assert.match(tileSource, /this\.AppIcon\(app, 42\)/);
+  assert.match(tileSource, /Text\(app\.label\)/);
+});
+
+test('projection wallpapers, accents and map colors match the HTML reference', () => {
+  const { PROJECTION_THEMES, PROJECTION_ACCENTS } = loadEts('video/ProjectionSettings.ets');
+  const html = fs.readFileSync(path.resolve(__dirname, '../../../docs/carplay.html'), 'utf8').toLowerCase();
+  const mediaRoot = path.resolve(sourceRoot, '..', 'resources', 'base', 'media');
+  const walls = [
+    ['aurora', ['#3a2bd6', '#d6336c', '#0e9aa7', '#10101c']],
+    ['sunset', ['#ff9f0a', '#ff375f', '#2b1033']],
+    ['forest', ['#30d158', '#0a6f8f', '#0b1f1a']],
+    ['ocean', ['#0a84ff', '#5e5ce6', '#06102a']],
+    ['graphite', ['#4a4a55', '#16161a']]
+  ];
+  assert.deepEqual(PROJECTION_THEMES.map(theme => theme.id), walls.map(([id]) => id));
+  for (const [id, colors] of walls) {
+    const asset = fs.readFileSync(path.join(mediaRoot, `projection_${id}.svg`), 'utf8').toLowerCase();
+    for (const color of colors) {
+      assert.ok(html.includes(color), `HTML is missing ${color}`);
+      assert.ok(asset.includes(color), `${id} wallpaper is missing ${color}`);
+    }
+  }
+  for (const color of PROJECTION_ACCENTS) {
+    assert.ok(html.includes(color.toLowerCase()), `HTML is missing accent ${color}`);
+  }
+  const lightMap = fs.readFileSync(path.join(mediaRoot, 'projection_map_preview_light.svg'), 'utf8');
+  for (const color of ['#E9E7E1', '#FFFFFF', '#FFF6D8', '#CFE6C3', '#AED3F2', '#CFCBC2', '#3C3C43']) {
+    assert.ok(lightMap.includes(color), `Light map is missing ${color}`);
+  }
+  const weather = fs.readFileSync(path.join(mediaRoot, 'projection_weather_card.svg'), 'utf8');
+  assert.match(weather, /stop-color="#409CFF" stop-opacity="\.55"/);
+  assert.match(weather, /stop-color="#0A3CA0" stop-opacity="\.45"/);
+});
+
+test('dashboard text and glass colors switch between the exact HTML dark and light palettes', () => {
+  const { projectionTheme, resolveNightMode } = loadEts('video/ProjectionSettings.ets');
+  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', [
+    'isLightAppearance', 'colorWithAlpha', 'primaryTextColor', 'secondaryTextColor', 'mutedTextColor',
+    'mapBackgroundColor', 'glassStrokeColor', 'glassSecondaryColor', 'glassPanelColor',
+    'glassSurfaceColor', 'settingsPanelColor', 'settingsGroupColor', 'settingsSeparatorColor'
+  ], { projectionTheme, resolveNightMode });
+  const target = new Target();
+  target.theme = 'aurora';
+  target.dayNightMode = 'NIGHT';
+  target.nightMode = false;
+  assert.equal(target.isLightAppearance(), false);
+  assert.equal(target.primaryTextColor(), '#FFFFFF');
+  assert.equal(target.secondaryTextColor(), '#9EFFFFFF');
+  assert.equal(target.mutedTextColor(), '#80FFFFFF');
+  assert.equal(target.mapBackgroundColor(), '#1D2230');
+  assert.equal(target.glassPanelColor(), '#75262630');
+  assert.equal(target.glassSurfaceColor(), '#9E1E1E26');
+  assert.equal(target.glassStrokeColor(), '#38FFFFFF');
+  assert.equal(target.glassSecondaryColor(), '#14FFFFFF');
+  assert.equal(target.settingsPanelColor(), '#75262630');
+  assert.equal(target.settingsGroupColor(), '#14FFFFFF');
+  assert.equal(target.settingsSeparatorColor(), '#1FFFFFFF');
+  assert.equal(target.colorWithAlpha('#0A84FF', 'D9'), '#D90A84FF');
+
+  target.dayNightMode = 'DAY';
+  assert.equal(target.isLightAppearance(), true);
+  assert.equal(target.primaryTextColor(), '#1C1C1E');
+  assert.equal(target.secondaryTextColor(), '#A63C3C43');
+  assert.equal(target.mutedTextColor(), '#993C3C43');
+  assert.equal(target.mapBackgroundColor(), '#E9E7E1');
+  assert.equal(target.glassPanelColor(), '#85FFFFFF');
+  assert.equal(target.glassSurfaceColor(), '#B8FFFFFF');
+  assert.equal(target.glassStrokeColor(), '#BFFFFFFF');
+  assert.equal(target.glassSecondaryColor(), '#0D000000');
+  assert.equal(target.settingsPanelColor(), '#85FFFFFF');
+  assert.equal(target.settingsGroupColor(), '#0D000000');
+  assert.equal(target.settingsSeparatorColor(), '#243C3C43');
+});
+
+test('wallpaper, map and light-mode icon resources follow the selected appearance', () => {
+  const { resolveNightMode } = loadEts('video/ProjectionSettings.ets');
+  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', [
+    'isLightAppearance', 'wallpaperResource', 'mapPreviewResource',
+    'dockIconResource', 'settingsIconResource'
+  ], { $r: (resource) => resource, resolveNightMode });
+  const target = new Target();
+  target.dayNightMode = 'NIGHT';
+  target.nightMode = false;
+  assert.equal(target.wallpaperResource('aurora'), 'app.media.projection_aurora');
+  assert.equal(target.wallpaperResource('sunset'), 'app.media.projection_sunset');
+  assert.equal(target.wallpaperResource('forest'), 'app.media.projection_forest');
+  assert.equal(target.wallpaperResource('ocean'), 'app.media.projection_ocean');
+  assert.equal(target.wallpaperResource('graphite'), 'app.media.projection_graphite');
+  assert.equal(target.mapPreviewResource(), 'app.media.projection_map_preview');
+  target.dayNightMode = 'DAY';
+  assert.equal(target.mapPreviewResource(), 'app.media.projection_map_preview_light');
+  assert.equal(target.dockIconResource('app.media.ic_house', false), 'app.media.ic_house_light');
+  assert.equal(target.dockIconResource('app.media.ic_house', true), 'app.media.ic_house');
+  assert.equal(
+    target.settingsIconResource('app.media.ic_day_night_light', 'app.media.ic_day_night'),
+    'app.media.ic_day_night_light'
+  );
+  assert.equal(
+    target.settingsIconResource('app.media.ic_day_night_light', 'app.media.ic_day_night', true),
+    'app.media.ic_day_night'
+  );
+});
+
+test('phone home button has no horizontal sheen but keeps its circular shadow and action', () => {
+  const source = fs.readFileSync(path.join(sourceRoot, 'pages/HomePage.ets'), 'utf8');
+  assert.doesNotMatch(source, /backgroundColor\('#38FFFFFF'\)/);
+  assert.match(source, /\.shadow\(\{ radius: 32, color: this\.statusColor, offsetX: 0, offsetY: 18 \}\)/);
+  assert.match(source, /\.onClick\(\(\) => this\.onAction\(\)\)/);
+});
+
+test('settings dropdowns select values from both local and receiver touch paths', () => {
+  const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
+  assert.equal((source.match(/this\.SettingsDropdownRow\(/g) || []).length, 3);
+  assert.match(source, /dropdown-\$\{key\}-trigger/);
+  assert.match(source, /dropdown-\$\{key\}-option-\$\{index\}/);
+  assert.match(source, /\.onClick\(\(\): void => this\.chooseSettingsDropdownOption\(key, index, onSelect\)\)/);
+
+  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', [
+    'toggleSettingsDropdown', 'closeSettingsDropdown', 'clearSettingsDropdownAreas',
+    'chooseSettingsDropdownOption', 'selectEncoderFps', 'selectCaptureFps'
+  ]);
+  const target = new Target();
+  target.touchAreas = new Map([
+    ['settings:dropdown-encoderFps-option-0', {}],
+    ['settings:dropdown-captureFps-option-0', {}]
+  ]);
+  target.activeSettingsDropdown = '';
+  target.toggleSettingsDropdown('encoderFps');
+  assert.equal(target.activeSettingsDropdown, 'encoderFps');
+  target.toggleSettingsDropdown('captureFps');
+  assert.equal(target.activeSettingsDropdown, 'captureFps');
+  assert.equal(target.touchAreas.has('settings:dropdown-encoderFps-option-0'), false);
+
+  let selectedIndex = -1;
+  target.chooseSettingsDropdownOption('captureFps', 1, index => { selectedIndex = index; });
+  assert.equal(selectedIndex, 1);
+  assert.equal(target.activeSettingsDropdown, '');
+  assert.equal(target.touchAreas.has('settings:dropdown-captureFps-option-0'), false);
+
+  target.encoderFps = 30;
+  target.selectEncoderFps(0);
+  assert.equal(target.encoderFps, 15);
+  target.selectEncoderFps(99);
+  assert.equal(target.encoderFps, 15);
+  target.captureFps = 60;
+  target.selectCaptureFps(0);
+  assert.equal(target.captureFps, 30);
+  target.selectCaptureFps(99);
+  assert.equal(target.captureFps, 30);
 });
 
 test('irregular-display calibration preserves aspect ratio and maps touch coordinates back', () => {
@@ -383,10 +562,26 @@ test('Bluetooth audio preference defaults off and initialization preserves the s
     assert.equal(stored.get('carplayUseBluetoothAudio'), saved ?? false);
     assert.equal(calls.filter(key => key === 'carplayUseBluetoothAudio').length, 1);
     assert.equal(stored.get('carplayDockPosition'), 'left');
-    assert.equal(stored.get('carplayDayNightMode'), 'AUTO');
+    assert.equal(stored.get('carplayTheme'), 'aurora');
+    assert.equal(stored.get('carplayAccent'), '#0A84FF');
+    assert.equal(stored.get('carplayDayNightMode'), 'NIGHT');
     assert.equal(calls.filter(key => key === 'carplayDockPosition').length, 1);
     assert.equal(calls.filter(key => key === 'carplayDayNightMode').length, 1);
   }
+
+  const savedTheme = new Map([['carplayTheme', 'forest'], ['carplayAccent', '#FF9F0A']]);
+  const preservedExports = {};
+  vm.runInNewContext(javascript, {
+    exports: preservedExports,
+    PersistentStorage: {
+      persistProp(key, value) {
+        if (!savedTheme.has(key)) savedTheme.set(key, value);
+      }
+    }
+  });
+  preservedExports.initializeProjectionSettings();
+  assert.equal(savedTheme.get('carplayTheme'), 'forest');
+  assert.equal(savedTheme.get('carplayAccent'), '#FF9F0A');
 });
 
 test('vehicle Bluetooth audio touch area is active only on the settings page', () => {
@@ -1338,12 +1533,72 @@ test('all HID reports in a TCP read are dispatched before awaiting any response 
   assert.equal(writes, 1);
 });
 
-test('authenticated start endpoints do not depend on the optional reverse probe', () => {
+test('AirPlay start waits for an endpoint, mDNS service, or completed resolution window', () => {
   const { isAirPlayStartReady } = loadEts('session/SessionController.ets', {}, 'isAirPlayStartReady');
+  assert.equal(isAirPlayStartReady(true, true), true);
   assert.equal(isAirPlayStartReady(true, false, true), true);
-  assert.equal(isAirPlayStartReady(true, true, false), true);
-  assert.equal(isAirPlayStartReady(false, true, true), false);
-  assert.equal(isAirPlayStartReady(true, false, false), false);
+  assert.equal(isAirPlayStartReady(true, false, false, true), true);
+  assert.equal(isAirPlayStartReady(true, false, false, false), false);
+  assert.equal(isAirPlayStartReady(false, true), false);
+});
+
+test('AirPlay waits 4 seconds for ctrl invite and 3 seconds for endpoint resolution', () => {
+  const timers = [];
+  let timerId = 0;
+  const Target = loadMethods('session/SessionController.ets', 'SessionController',
+    ['startAirPlayPrerequisiteWait', 'startAirPlayEndpointResolutionWait'], {
+      AIRPLAY_CTRL_INVITE_WAIT_MS: 4000,
+      AIRPLAY_ENDPOINT_RESOLVE_WAIT_MS: 3000,
+      setTimeout: (callback, delayMs) => {
+        timers.push({ callback, delayMs });
+        return ++timerId;
+      },
+      clearTimeout: () => {}
+    });
+  const target = new Target();
+  let connections = 0;
+  target.running = true;
+  target.vehicleWifiConnected = true;
+  target.inviteReceived = false;
+  target.airPlayInviteWaitElapsed = false;
+  target.airPlayInviteWaitTimer = -1;
+  target.airPlayEndpointResolveTimer = -1;
+  target.mdnsAirPlayService = undefined;
+  target.hasSelfContainedAirPlayEndpoint = () => false;
+  target.clearAirPlayWaitTimers = () => {};
+  target.refreshDiscoveredAirPlay = () => {};
+  target.connectAirPlay = async () => { connections++; };
+  target.events = { onLog() {} };
+
+  target.startAirPlayPrerequisiteWait();
+  assert.equal(timers[0].delayMs, 4000);
+  timers.shift().callback();
+  assert.equal(target.airPlayInviteWaitElapsed, true);
+  assert.equal(timers[0].delayMs, 3000);
+  timers.shift().callback();
+  assert.equal(target.airPlayEndpointResolveElapsed, true);
+  assert.equal(connections, 1);
+});
+
+test('CarPlay control service publishes before the Bluetooth listener starts', async () => {
+  const Target = loadMethods('session/SessionController.ets', 'SessionController', ['start'], {
+    advanceSessionGeneration: () => 1,
+    isCurrentSessionGeneration: () => true
+  });
+  const target = new Target();
+  const actions = [];
+  target.requestPermissions = async () => {};
+  target.hasValidDeviceAddress = () => true;
+  target.startControlAdvertisement = async () => { actions.push('ctrl-advertisement'); };
+  target.bluetooth = { async start() { actions.push('bluetooth-listener'); } };
+  target.setKeepScreenOn = async () => {};
+  target.clearAirPlayWaitTimers = () => {};
+  target.clearPendingStartSessionTimer = () => {};
+  target.clearWifiReconnectTimer = () => {};
+  target.events = { onStatus() {}, onLog() {} };
+
+  await target.start();
+  assert.deepEqual(actions, ['ctrl-advertisement', 'bluetooth-listener']);
 });
 
 test('wireless startup keeps address candidates without treating UUID identities as public keys', () => {
@@ -1387,33 +1642,46 @@ test('wireless startup keeps address candidates without treating UUID identities
   assert.equal(parse(body), undefined);
 });
 
-test('wireless startup invitation survives missing endpoint metadata and control advertisement', async () => {
+test('iAP2 start request does not masquerade as ctrl invitation', async () => {
   const Target = loadMethods('session/SessionController.ets', 'SessionController',
     ['handleIap2AirPlayEndpoint', 'startControlAdvertisement'], {
       CarPlayCtrlAdvertiser: class {
-        async start() {}
+        constructor(_context, _address, onInvite) {
+          this.onInvite = onInvite;
+        }
+        async start() {
+          this.onInvite();
+        }
       }
     });
   const target = new Target();
   let connections = 0;
   target.running = true;
-  target.events = { onLog() {}, onAirPlayService() {} };
+  target.inviteReceived = false;
+  target.vehicleWifiConnected = true;
+  target.hasValidDeviceAddress = () => true;
+  target.clearPendingStartSessionTimer = () => {};
+  target.clearAirPlayInviteWaitTimer = () => {};
+  target.startAirPlayPrerequisiteWait = () => {};
+  target.startAirPlayEndpointResolutionWait = () => {};
+  target.events = { onLog() {}, onStatus() {}, onAirPlayService() {} };
   target.refreshDiscoveredAirPlay = () => {};
   target.discoveredAirPlay = { host: '192.168.49.1', port: 7000 };
   target.connectAirPlay = async () => { connections++; };
   target.handleIap2AirPlayEndpoint(undefined);
-  assert.equal(target.inviteReceived, true);
+  assert.equal(target.airPlayStartSessionReceived, true);
+  assert.equal(target.inviteReceived, false);
   assert.equal(connections, 1);
   await target.startControlAdvertisement();
   assert.equal(target.inviteReceived, true);
-  assert.equal(connections, 2);
+  assert.equal(connections, 3);
   target.inviteReceived = false;
   target.running = false;
   target.handleIap2AirPlayEndpoint(undefined);
   assert.equal(target.inviteReceived, false);
 });
 
-test('wireless startup availability waits without arming a start-request deadline', async () => {
+test('new-protocol startup announces availability without probing legacy Wi-Fi', async () => {
   const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
     ['requestWifiConfiguration'], {
       MESSAGE: { CARPLAY_AVAILABILITY: 0x4300, CARPLAY_START_SESSION: 0x4301 },
@@ -1428,6 +1696,80 @@ test('wireless startup availability waits without arming a start-request deadlin
   target.startWifiConfigurationTimer = () => { throw new Error('must wait for a start request'); };
   await target.requestWifiConfiguration();
   assert.equal(announcements, 1);
+});
+
+test('iAP2 hands 0x5703 credentials to Wi-Fi while announcing CarPlay immediately', async () => {
+  const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
+    ['receiveControlMessage'], {
+      MESSAGE: { WIFI_CONFIGURATION: 0x5703 },
+      formatIap2MessageDiagnostic: () => '',
+      encodeUtf8: value => new TextEncoder().encode(value)
+    });
+  const target = new Target();
+  const actions = [];
+  target.started = true;
+  target.authenticated = true;
+  target.log = () => {};
+  target.wifiConfigurationTimer = undefined;
+  target.wifiConfigurationRescueGeneration = 0;
+  target.clearOptionalHandshakeWaits = () => {};
+  target.parseWifi = () => ({ ssid: 'CAR_HOTSPOT', password: 'hidden', securityType: 2, channel: 0 });
+  target.onWifi = () => { actions.push('join-wifi'); };
+  target.sendDeviceAnnouncement = async () => { actions.push('announce-0x4300'); };
+  target.startStartSessionWaitTimer = () => { actions.push('wait-0x4301'); };
+
+  await target.receiveControlMessage(0x5703, new Uint8Array([1]));
+  assert.deepEqual(actions, ['join-wifi', 'announce-0x4300', 'wait-0x4301']);
+});
+
+test('post-MFi startup sends greetings and opens declared EA sessions before Wi-Fi', async () => {
+  const timers = [];
+  const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
+    ['startPostAuthenticationSequence'], {
+      MESSAGE: { EA_OPEN_SESSION: 0xea00, EA_SESSION_STATUS: 0xea03 },
+      concatBytes: (...parts) => Uint8Array.from(parts.flatMap(part => Array.from(part))),
+      numberParameter: (id, value, width) => new Uint8Array([id, value, width]),
+      stringParameter: (id, value) => new TextEncoder().encode(`${id}:${value}`),
+      setTimeout: (callback, delayMs) => {
+        timers.push({ callback, delayMs });
+        return timers.length;
+      }
+    });
+  const target = new Target();
+  const actions = [];
+  target.started = true;
+  target.authenticated = true;
+  target.sessionGeneration = 4;
+  target.accessoryEaProtocols = [{ protocolId: 7, name: 'com.example.ea' }];
+  target.accessorySendMessages = [0xea03];
+  target.log = () => {};
+  target.sendDeviceStateGreetings = async () => { actions.push('greetings'); };
+  target.sendControl = async messageId => { actions.push(messageId); };
+
+  await target.startPostAuthenticationSequence(4);
+  assert.deepEqual(actions, ['greetings', 0xea00]);
+  assert.equal(timers[0].delayMs, 500);
+});
+
+test('iAP2 StartHID is acknowledged before Wi-Fi configuration begins', async () => {
+  const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
+    ['receiveControlMessage'], {
+      MESSAGE: { START_HID: 0x6800, DEVICE_HID_REPORT: 0x6801 },
+      formatIap2MessageDiagnostic: () => '',
+      clearTimeout: () => {},
+      concatBytes: (...parts) => Uint8Array.from(parts.flatMap(part => Array.from(part))),
+      numberParameter: (id, value, width) => new Uint8Array([id, value, width])
+    });
+  const target = new Target();
+  const actions = [];
+  target.log = () => {};
+  target.hidStartWaitTimer = 1;
+  target.parameter = (id, value) => new Uint8Array([id, ...value]);
+  target.sendControl = async messageId => { actions.push(messageId); };
+  target.requestWifiConfiguration = async () => { actions.push('wifi'); };
+
+  await target.receiveControlMessage(0x6800, new Uint8Array(0));
+  assert.deepEqual(actions, [0x6801, 'wifi']);
 });
 
 test('iAP2 probes legacy Wi-Fi for sparse lists and only skips it for complete new-protocol lists', () => {
@@ -1462,6 +1804,7 @@ test('iAP2 retries 0x5702 after device greetings before falling back to 0x4300',
   target.authenticated = true;
   target.deviceAnnouncementSent = false;
   target.wifiConfigurationRescueGeneration = 0;
+  target.wifiConfigurationDeadline = Date.now() + 60000;
   target.log = () => {};
   target.errorDetails = error => error.message;
   target.sendDeviceStateGreetings = async force => { actions.push(`greetings:${force}`); };
@@ -1479,7 +1822,7 @@ test('iAP2 retries 0x5702 after device greetings before falling back to 0x4300',
   assert.equal(timers[0].delayMs, 1300);
   await runNextTimer();
   assert.deepEqual(actions, ['greetings:true', 0x5702]);
-  assert.equal(timers[0].delayMs, 1500);
+  assert.ok(timers[0].delayMs > 50000 && timers[0].delayMs <= 60000);
   await runNextTimer();
   assert.deepEqual(actions, ['greetings:true', 0x5702, 'announce']);
 });
@@ -1671,7 +2014,8 @@ test('Buick B233 re-identification is one-shot and buffers an early 0x4301', asy
       isBuickB233Identity: value => value.includes('buick') && value.includes('b233') &&
         value.includes('saic general motors'),
       normalizeAccessoryIdentity: value => value.toLowerCase().replace(/\s+/g, ' ').trim(),
-      readAccessoryIdentity: bytes => new TextDecoder().decode(bytes)
+      readAccessoryIdentity: bytes => new TextDecoder().decode(bytes),
+      readEaProtocols: () => []
     });
   const target = new Target();
   target.log = () => {};
@@ -1804,6 +2148,7 @@ test('Buick B233 announcements use separate initial and recovery message orders'
   target.controlFrameDigest = async () => '0123456789abcdef';
   target.controlAckSnapshot = () => 'outstanding=none queued=0';
   target.startBuickStartSessionWaitTimer = () => {};
+  target.startStartSessionWaitTimer = () => {};
   target.clearBuickStartSessionTimer = () => {};
   target.buickCarPlayDeviceIdentifier = async () => 'A'.repeat(24);
   const sent = [];
@@ -1913,6 +2258,7 @@ test('wireless startup rejects malformed and unauthenticated start requests', as
   target.authenticated = true;
   target.errorDetails = error => error.message;
   target.clearWifiConfigurationTimer = () => {};
+  target.clearStartSessionWaitTimer = () => {};
   target.hasValidDeviceAddress = () => true;
   target.sendTransportIdentifier = async () => {};
   let invitations = 0;
@@ -2022,6 +2368,7 @@ test('wireless discovery and ctrl advertisement start only after network selecti
   target.wifi = { async connect() { return { ssid: 'BUICK_7841', ipAddress: '10.36.232.67' }; } };
   target.startControlAdvertisement = async () => { actions.push('advertise'); };
   target.startAirPlayDiscovery = () => { actions.push('discovery'); };
+  target.startAirPlayPrerequisiteWait = () => {};
   let finishNetwork;
   target.wifiNetworkLease = { acquire() {
     actions.push('network');
@@ -2065,6 +2412,7 @@ test('selected WLAN loss cleans up AirPlay and schedules a bounded Wi-Fi rejoin'
   target.wifiReconnectAttempts = 0;
   target.wifiLostCleanupInProgress = false;
   target.clearWifiReconnectTimer = () => {};
+  target.clearPendingStartSessionTimer = () => {};
   target.airPlayGeneration = 0;
   target.airPlayConnectAttempted = true;
   target.airPlayConnectInProgress = true;

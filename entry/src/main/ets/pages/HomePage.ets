@@ -62,12 +62,6 @@ export struct HomePage {
                 .backgroundColor(this.statusColor)
                 .border({ width: 1, color: '#FFFFFF66' })
                 .shadow({ radius: 32, color: this.statusColor, offsetX: 0, offsetY: 18 })
-              Column()
-                .width(174)
-                .height(78)
-                .borderRadius(87)
-                .backgroundColor('#38FFFFFF')
-                .translate({ x: 0, y: -56 })
               Column({ space: 12 }) {
                 if (this.status === 'connecting' || this.status === 'waiting') {
                   LoadingProgress()

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <radialGradient id="orange" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1"
+      gradientTransform="translate(1024 72) scale(900 600)">
+      <stop offset="0" stop-color="#FF9F0A"/>
+      <stop offset=".6" stop-color="#FF9F0A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="rose" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1"
+      gradientTransform="translate(128 648) scale(900 600)">
+      <stop offset="0" stop-color="#FF375F"/>
+      <stop offset=".6" stop-color="#FF375F" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="720" fill="#2B1033"/>
+  <rect width="1280" height="720" fill="url(#orange)"/>
+  <rect width="1280" height="720" fill="url(#rose)"/>
+</svg>

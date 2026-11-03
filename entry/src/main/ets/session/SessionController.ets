@@ -2,7 +2,7 @@ import abilityAccessCtrl from '@ohos.abilityAccessCtrl';
 import common from '@ohos.app.ability.common';
 import window from '@ohos.window';
 import emitter from '@ohos.events.emitter';
-import { AirPlayPairingClient } from '../airplay/AirPlayPairingClient';
+import { AirPlayPairingClient, AirPlayRtspStatusError } from '../airplay/AirPlayPairingClient';
 import { AirPlayMediaSessionInfo } from '../airplay/AirPlayMediaSession';
 import { EncodedH264Event } from '../airplay/AirPlayVideoStream';
 import { AudioRtpSender } from '../audio/AudioRtpSender';
@@ -39,8 +39,18 @@ export interface SessionEvents {
   persistMfiFingerprint: (fingerprint: string) => Promise<void>;
 }
 
-export function isAirPlayStartReady(networkReady: boolean, invited: boolean, hasEndpoint: boolean): boolean {
-  return networkReady && (invited || hasEndpoint);
+const AIRPLAY_CTRL_INVITE_WAIT_MS: number = 4000;
+const AIRPLAY_ENDPOINT_RESOLVE_WAIT_MS: number = 3000;
+const AIRPLAY_PAIRING_WINDOW_MS: number = 120000;
+
+export function isAirPlayStartReady(
+  networkReady: boolean,
+  invited: boolean,
+  hasCompleteEndpoint: boolean,
+  hasMdnsService: boolean = false,
+  endpointResolutionComplete: boolean = false
+): boolean {
+  return networkReady && (invited || hasCompleteEndpoint || hasMdnsService || endpointResolutionComplete);
 }
 
 export class SessionController {
@@ -66,6 +76,9 @@ export class SessionController {
   private credentials?: WifiCredentials;
   private running: boolean = false;
   private inviteReceived: boolean = false;
+  private airPlayStartSessionReceived: boolean = false;
+  private airPlayInviteWaitElapsed: boolean = false;
+  private airPlayEndpointResolveElapsed: boolean = false;
   private vehicleWifiConnected: boolean = false;
   private wifiJoinInProgress: boolean = false;
   private wifiJoinGeneration: number = 0;
@@ -74,7 +87,11 @@ export class SessionController {
   private airPlayGeneration: number = 0;
   private airPlayReconnectTimer: number = -1;
   private airPlayStableTimer: number = -1;
+  private airPlayInviteWaitTimer: number = -1;
+  private airPlayEndpointResolveTimer: number = -1;
+  private pendingStartSessionTimer: number = -1;
   private airPlayReconnectAttempts: number = 0;
+  private airPlayPairingDeadline: number = -1;
   private wifiReconnectTimer: number = -1;
   private wifiReconnectAttempts: number = 0;
   private wifiLostCleanupInProgress: boolean = false;
@@ -140,6 +157,10 @@ export class SessionController {
     this.wifiJoinGeneration++;
     this.airPlayConnectInProgress = false;
     this.airPlayConnectAttempted = false;
+    this.airPlayStartSessionReceived = false;
+    this.airPlayInviteWaitElapsed = false;
+    this.airPlayEndpointResolveElapsed = false;
+    this.airPlayPairingDeadline = -1;
     this.vehicleWifiConnected = false;
     this.wifiReconnectAttempts = 0;
     this.clearWifiReconnectTimer();
@@ -147,7 +168,20 @@ export class SessionController {
     this.mdnsAirPlayService = undefined;
     this.iap2AirPlayEndpoint = undefined;
     this.airPlayIdentityConflict = false;
+    this.clearAirPlayWaitTimers();
+    this.clearPendingStartSessionTimer();
     try {
+      if (this.hasValidDeviceAddress()) {
+        try {
+          await this.startControlAdvertisement();
+        } catch (error) {
+          this.events.onLog(
+            `蓝牙启动前控制广播未能发布；入网后将重试：${error instanceof Error ? error.message : String(error)}`
+          );
+        }
+      } else {
+        this.events.onLog('真实蓝牙 MAC 未配置；暂不发布 CarPlay 控制广播');
+      }
       await this.bluetooth.start(
         () => this.handleBluetoothConnected(),
         (bytes: Uint8Array) => this.handleBluetoothData(bytes),
@@ -168,6 +202,17 @@ export class SessionController {
       }
       this.running = false;
       this.bluetooth.stop();
+      const advertiser = this.ctrlAdvertiser;
+      this.ctrlAdvertiser = undefined;
+      if (advertiser) {
+        try {
+          await advertiser.stop();
+        } catch (cleanupError) {
+          this.events.onLog(
+            `蓝牙启动失败后的控制广播清理失败：${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`
+          );
+        }
+      }
       throw error instanceof Error ? error : new Error(String(error));
     }
   }
@@ -181,8 +226,10 @@ export class SessionController {
     this.clearWifiReconnectTimer();
     this.pendingAirPlayDisconnect = '';
     this.airPlayConnectAttempted = false;
+    this.airPlayPairingDeadline = -1;
     this.wifiJoinInProgress = false;
     this.vehicleWifiConnected = false;
+    this.clearPendingStartSessionTimer();
     const failures: string[] = [];
     try {
       await this.wifi.cancelPendingJoin();
@@ -235,6 +282,9 @@ export class SessionController {
     this.iap2AirPlayEndpoint = undefined;
     this.airPlayIdentityConflict = false;
     this.inviteReceived = false;
+    this.airPlayStartSessionReceived = false;
+    this.airPlayInviteWaitElapsed = false;
+    this.airPlayEndpointResolveElapsed = false;
     await this.setKeepScreenOn(false);
     this.events.onStatus(failures.length > 0 ? '已停止，但部分资源清理失败' : '已停止');
     this.events.onLog(failures.length > 0 ? `会话停止时出现错误：${failures.join('；')}` : '会话已停止');
@@ -250,6 +300,11 @@ export class SessionController {
     this.airPlayConnectAttempted = false;
     this.airPlayConnectInProgress = false;
     this.inviteReceived = false;
+    this.airPlayStartSessionReceived = false;
+    this.airPlayInviteWaitElapsed = false;
+    this.airPlayEndpointResolveElapsed = false;
+    this.airPlayPairingDeadline = -1;
+    this.clearAirPlayWaitTimers();
     const pairing = this.activePairing;
     this.activePairing = undefined;
     const failures: string[] = [];
@@ -388,6 +443,7 @@ export class SessionController {
       if (!this.running || this.iap2 !== iap2 || joinGeneration !== this.wifiJoinGeneration) {
         return;
       }
+      this.startAirPlayPrerequisiteWait();
       await this.connectAirPlay();
     } catch (error) {
       if (this.running && this.credentials && !this.vehicleWifiConnected && !this.wifiLostCleanupInProgress) {
@@ -411,6 +467,11 @@ export class SessionController {
     this.clearWifiReconnectTimer();
     this.vehicleWifiConnected = false;
     this.inviteReceived = false;
+    this.airPlayStartSessionReceived = false;
+    this.airPlayInviteWaitElapsed = false;
+    this.airPlayEndpointResolveElapsed = false;
+    this.airPlayPairingDeadline = -1;
+    this.clearPendingStartSessionTimer();
     this.airPlayConnectAttempted = false;
     this.airPlayConnectInProgress = false;
     const generation = ++this.airPlayGeneration;
@@ -514,6 +575,7 @@ export class SessionController {
     this.clearAirPlayTimers();
     this.pendingAirPlayDisconnect = '';
     this.airPlayReconnectAttempts = 0;
+    this.airPlayPairingDeadline = -1;
     const stalePairing = this.activePairing;
     try {
       await this.stopProjection();
@@ -529,13 +591,14 @@ export class SessionController {
       }
     }
     this.airPlayConnectAttempted = false;
-    if (!this.inviteReceived || !this.discoveredAirPlay) {
+    if (!this.vehicleWifiConnected || !this.discoveredAirPlay) {
       this.events.onLog(
-        `AirPlay 重试暂不可执行：邀请${this.inviteReceived ? '已收到' : '未收到'}，` +
+        `AirPlay 重试暂不可执行：车机 Wi-Fi${this.vehicleWifiConnected ? '已连接' : '未连接'}，` +
           `mDNS 服务${this.discoveredAirPlay ? '已发现' : '未发现'}`
       );
       return;
     }
+    this.airPlayEndpointResolveElapsed = true;
     this.events.onStatus('正在重试 AirPlay 配对和 RTSP 会话');
     await this.connectAirPlay();
   }
@@ -574,15 +637,22 @@ export class SessionController {
     }
     this.events.onStatus('车机已连接，正在协商 iAP2');
     this.events.onLog('已接受 RFCOMM 连接');
+    this.clearPendingStartSessionTimer();
+    this.clearAirPlayWaitTimers();
     this.iap2?.cancel();
     this.discoveredAirPlay = undefined;
     this.mdnsAirPlayService = undefined;
     this.iap2AirPlayEndpoint = undefined;
     this.airPlayIdentityConflict = false;
+    this.airPlayStartSessionReceived = false;
+    this.airPlayInviteWaitElapsed = false;
+    this.airPlayEndpointResolveElapsed = false;
+    this.airPlayPairingDeadline = -1;
     this.iap2 = new Iap2SenderSession(
       (bytes: Uint8Array): Promise<void> => this.bluetooth.send(bytes),
       (message: string): void => this.events.onLog(message),
       (credentials: WifiCredentials): void => {
+        this.clearPendingStartSessionTimer();
         this.credentials = credentials;
         this.events.onWifiCredentials(credentials);
         this.events.onStatus(`iAP2 已收到热点 ${credentials.ssid}，正在自动连接`);
@@ -596,7 +666,8 @@ export class SessionController {
       this.events.requestMfiTrust,
       this.events.persistMfiFingerprint,
       this.skipMfiChallengeVerification,
-      this.context
+      this.context,
+      (): void => this.handleIap2EndpointPending()
     );
     void this.iap2.start().catch((error: Error): void => this.reportError(error));
   }
@@ -628,9 +699,8 @@ export class SessionController {
         this.refreshDiscoveredAirPlay();
         this.events.onAirPlayService(service);
         this.events.onLog(`发现 AirPlay ${service.name} · ${service.host}:${service.port}`);
-        if (this.inviteReceived) {
-          void this.connectAirPlay().catch((error: Error): void => this.reportError(error));
-        }
+        this.clearAirPlayWaitTimers();
+        void this.connectAirPlay().catch((error: Error): void => this.reportError(error));
       },
       (message: string): void => this.events.onLog(message)
     );
@@ -642,7 +712,8 @@ export class SessionController {
     if (!this.running || this.airPlayIdentityConflict) {
       return;
     }
-    this.inviteReceived = true;
+    this.airPlayStartSessionReceived = true;
+    this.clearPendingStartSessionTimer();
     if (endpoint) {
       this.iap2AirPlayEndpoint = endpoint;
       this.events.onLog(
@@ -657,8 +728,9 @@ export class SessionController {
     this.refreshDiscoveredAirPlay();
     if (this.discoveredAirPlay) {
       this.events.onAirPlayService(this.discoveredAirPlay);
-      void this.connectAirPlay().catch((error: Error): void => this.reportError(error));
     }
+    this.startAirPlayPrerequisiteWait();
+    void this.connectAirPlay().catch((error: Error): void => this.reportError(error));
   }
 
   private refreshDiscoveredAirPlay(): void {
@@ -776,6 +848,10 @@ export class SessionController {
     this.airPlayIdentityConflict = true;
     this.discoveredAirPlay = undefined;
     this.inviteReceived = false;
+    this.airPlayStartSessionReceived = false;
+    this.airPlayInviteWaitElapsed = false;
+    this.airPlayEndpointResolveElapsed = false;
+    this.airPlayPairingDeadline = -1;
     this.airPlayConnectAttempted = true;
     this.airPlayConnectInProgress = false;
     this.airPlayGeneration++;
@@ -795,6 +871,10 @@ export class SessionController {
   }
 
   private async startControlAdvertisement(): Promise<void> {
+    if (!this.hasValidDeviceAddress()) {
+      this.events.onLog('真实蓝牙 MAC 未配置；跳过 CarPlay 控制广播');
+      return;
+    }
     if (this.ctrlAdvertiser) {
       await this.ctrlAdvertiser.stop();
     }
@@ -803,7 +883,9 @@ export class SessionController {
       this.deviceAddress,
       (): void => {
         this.inviteReceived = true;
+        this.clearAirPlayInviteWaitTimer();
         this.events.onStatus('收到车机邀请，等待 AirPlay 接收端');
+        this.startAirPlayEndpointResolutionWait();
         if (this.discoveredAirPlay) {
           void this.connectAirPlay().catch((error: Error): void => this.reportError(error));
         }
@@ -812,8 +894,124 @@ export class SessionController {
     );
     this.ctrlAdvertiser = advertiser;
     await advertiser.start();
+    this.startAirPlayPrerequisiteWait();
     if (this.inviteReceived && this.discoveredAirPlay) {
       void this.connectAirPlay().catch((error: Error): void => this.reportError(error));
+    }
+  }
+
+  private hasSelfContainedAirPlayEndpoint(): boolean {
+    const endpoint = this.iap2AirPlayEndpoint;
+    return endpoint !== undefined && endpoint.port > 0 &&
+      endpoint.addresses.some((address: string): boolean => address.trim().length > 0);
+  }
+
+  private hasAirPlayStartSignal(): boolean {
+    return this.inviteReceived || this.airPlayStartSessionReceived ||
+      this.mdnsAirPlayService !== undefined || this.airPlayEndpointResolveElapsed;
+  }
+
+  private startAirPlayPrerequisiteWait(): void {
+    if (!this.running || !this.vehicleWifiConnected) {
+      return;
+    }
+    if (this.hasSelfContainedAirPlayEndpoint() || this.mdnsAirPlayService) {
+      this.clearAirPlayWaitTimers();
+      void this.connectAirPlay().catch((error: Error): void => this.reportError(error));
+      return;
+    }
+    if (this.inviteReceived || this.airPlayInviteWaitElapsed) {
+      this.clearAirPlayInviteWaitTimer();
+      this.startAirPlayEndpointResolutionWait();
+      return;
+    }
+    if (this.airPlayInviteWaitTimer >= 0) {
+      return;
+    }
+    this.airPlayInviteWaitTimer = setTimeout((): void => {
+      this.airPlayInviteWaitTimer = -1;
+      if (!this.running || !this.vehicleWifiConnected || this.mdnsAirPlayService ||
+        this.hasSelfContainedAirPlayEndpoint()) {
+        return;
+      }
+      this.airPlayInviteWaitElapsed = true;
+      this.events.onLog('等待 CarPlay ctrl 邀请达到 4 秒；继续等待 AirPlay mDNS/端点解析');
+      this.startAirPlayEndpointResolutionWait();
+    }, AIRPLAY_CTRL_INVITE_WAIT_MS);
+  }
+
+  private startAirPlayEndpointResolutionWait(): void {
+    if (!this.running || !this.vehicleWifiConnected) {
+      return;
+    }
+    if (this.mdnsAirPlayService || this.hasSelfContainedAirPlayEndpoint()) {
+      this.clearAirPlayWaitTimers();
+      void this.connectAirPlay().catch((error: Error): void => this.reportError(error));
+      return;
+    }
+    if (this.airPlayEndpointResolveTimer >= 0) {
+      return;
+    }
+    this.airPlayEndpointResolveTimer = setTimeout((): void => {
+      this.airPlayEndpointResolveTimer = -1;
+      if (!this.running || !this.vehicleWifiConnected || this.mdnsAirPlayService ||
+        this.hasSelfContainedAirPlayEndpoint()) {
+        return;
+      }
+      this.airPlayEndpointResolveElapsed = true;
+      this.refreshDiscoveredAirPlay();
+      this.events.onLog('AirPlay mDNS 端点等待达到 3 秒；尝试已选车机网络的网关回退');
+      void this.connectAirPlay().catch((error: Error): void => this.reportError(error));
+    }, AIRPLAY_ENDPOINT_RESOLVE_WAIT_MS);
+  }
+
+  private clearAirPlayInviteWaitTimer(): void {
+    if (this.airPlayInviteWaitTimer >= 0) {
+      clearTimeout(this.airPlayInviteWaitTimer);
+      this.airPlayInviteWaitTimer = -1;
+    }
+  }
+
+  private clearAirPlayEndpointResolveTimer(): void {
+    if (this.airPlayEndpointResolveTimer >= 0) {
+      clearTimeout(this.airPlayEndpointResolveTimer);
+      this.airPlayEndpointResolveTimer = -1;
+    }
+  }
+
+  private clearAirPlayWaitTimers(): void {
+    this.clearAirPlayInviteWaitTimer();
+    this.clearAirPlayEndpointResolveTimer();
+  }
+
+  private hasValidDeviceAddress(): boolean {
+    return /^(?!02:00:00:00:00:00$)([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(this.deviceAddress);
+  }
+
+  private handleIap2EndpointPending(): void {
+    if (!this.running || this.credentials || this.pendingStartSessionTimer >= 0) {
+      return;
+    }
+    const session = this.iap2;
+    this.events.onStatus('等待车机发送无线 CarPlay 端点（0x4301）');
+    this.events.onLog('未收到 Wi-Fi 凭据；按 Cardeck 流程保活等待晚到 0x4301，最长 5 分钟');
+    this.pendingStartSessionTimer = setTimeout((): void => {
+      this.pendingStartSessionTimer = -1;
+      if (!this.running || this.iap2 !== session || this.credentials) {
+        return;
+      }
+      this.events.onStatus('等待 0x4301 超时；蓝牙恢复监听，等待车机重连');
+      this.events.onLog('等待车机无线端点达到 5 分钟；关闭当前 RFCOMM 会话，保留蓝牙监听');
+      this.iap2 = undefined;
+      session?.cancel();
+      this.bluetooth.disconnectClient();
+    }, 5 * 60 * 1000);
+  }
+
+  private clearPendingStartSessionTimer(): void {
+    if (this.pendingStartSessionTimer >= 0) {
+      clearTimeout(this.pendingStartSessionTimer);
+      this.pendingStartSessionTimer = -1;
     }
   }
 
@@ -823,10 +1021,23 @@ export class SessionController {
       this.events.onLog('AirPlay mDNS 与 iAP2 endpoint 身份冲突；拒绝连接');
       return;
     }
-    if (!this.running || !service || !isAirPlayStartReady(this.vehicleWifiConnected,
-      this.inviteReceived, this.iap2AirPlayEndpoint !== undefined) || this.airPlayConnectInProgress ||
+    if (!this.running || !service || !isAirPlayStartReady(
+      this.vehicleWifiConnected,
+      this.hasSelfContainedAirPlayEndpoint(),
+      this.mdnsAirPlayService !== undefined,
+      this.airPlayEndpointResolveElapsed
+    ) || this.airPlayConnectInProgress ||
       this.airPlayConnectAttempted) {
       return;
+    }
+    if (!/^(?:0x)?[0-9a-fA-F]{64}$/.test(service.txt['pk'] ?? '')) {
+      this.events.onStatus('AirPlay 接收端缺少有效公钥；为保持配对验证，不启动未认证会话');
+      this.events.onLog('AirPlay mDNS/0x4301 endpoint 没有有效公钥；等待可验证的接收端身份');
+      return;
+    }
+    this.clearAirPlayWaitTimers();
+    if (this.airPlayPairingDeadline < 0) {
+      this.airPlayPairingDeadline = Date.now() + AIRPLAY_PAIRING_WINDOW_MS;
     }
     this.airPlayConnectInProgress = true;
     this.airPlayConnectAttempted = true;
@@ -872,6 +1083,7 @@ export class SessionController {
         return;
       }
       await this.startAudio(media, generation);
+      this.airPlayPairingDeadline = -1;
       this.scheduleAirPlayStableReset(generation);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -893,7 +1105,14 @@ export class SessionController {
           cleanupError.message : String(cleanupError)}`);
       }
       this.activePairing = undefined;
-      this.scheduleAirPlayReconnect(`连接失败：${message}`);
+      if (error instanceof AirPlayRtspStatusError &&
+        [404, 405, 455, 501].includes(error.statusCode)) {
+        this.airPlayPairingDeadline = -1;
+        this.events.onStatus('AirPlay 接收端不支持当前配对接口；未降级到明文会话');
+        this.events.onLog(`AirPlay Pair-Setup 返回 ${error.statusCode}；保留认证要求，停止自动重试`);
+      } else {
+        this.scheduleAirPlayReconnect(`连接失败：${message}`);
+      }
     } finally {
       if (generation === this.airPlayGeneration) {
         this.airPlayConnectInProgress = false;
@@ -956,21 +1175,27 @@ export class SessionController {
   }
 
   private scheduleAirPlayReconnect(reason: string): void {
-    if (!this.running || !this.inviteReceived || !this.discoveredAirPlay || this.airPlayReconnectTimer >= 0) {
+    if (!this.running || !this.hasAirPlayStartSignal() || !this.discoveredAirPlay ||
+      this.airPlayReconnectTimer >= 0) {
       return;
     }
-    if (this.airPlayReconnectAttempts >= 5) {
+    if (this.airPlayPairingDeadline < 0) {
+      this.airPlayPairingDeadline = Date.now() + AIRPLAY_PAIRING_WINDOW_MS;
+    }
+    const remainingMs = this.airPlayPairingDeadline - Date.now();
+    if (remainingMs <= 0) {
       this.events.onStatus('AirPlay 自动重连已暂停，请手动重试');
-      this.events.onLog(`AirPlay 自动重连达到 5 次上限；最近原因：${reason}`);
+      this.events.onLog(`AirPlay 配对重试窗口已到 120 秒；最近原因：${reason}`);
       return;
     }
     const attempt = this.airPlayReconnectAttempts + 1;
-    const delayMs = Math.min(15000, 1000 * (2 ** this.airPlayReconnectAttempts));
+    const delayMs = Math.min(2000, remainingMs);
     this.airPlayReconnectAttempts = attempt;
-    this.events.onLog(`AirPlay ${reason}；${delayMs / 1000} 秒后自动重连 (${attempt}/5)`);
+    this.events.onLog(`AirPlay ${reason}；${delayMs / 1000} 秒后自动重连 (${attempt}，剩余 ${Math.ceil(remainingMs / 1000)} 秒)`);
     this.airPlayReconnectTimer = setTimeout((): void => {
       this.airPlayReconnectTimer = -1;
-      if (!this.running || !this.inviteReceived || !this.discoveredAirPlay || this.airPlayConnectInProgress) {
+      if (!this.running || !this.hasAirPlayStartSignal() || !this.discoveredAirPlay ||
+        this.airPlayConnectInProgress) {
         return;
       }
       this.airPlayConnectAttempted = false;
@@ -984,6 +1209,7 @@ export class SessionController {
       this.airPlayStableTimer = -1;
       if (this.running && generation === this.airPlayGeneration) {
         this.airPlayReconnectAttempts = 0;
+        this.airPlayPairingDeadline = -1;
       }
     }, 60000);
   }
@@ -1001,6 +1227,7 @@ export class SessionController {
       this.airPlayReconnectTimer = -1;
     }
     this.clearAirPlayStableTimer();
+    this.clearAirPlayWaitTimers();
   }
 
   private isCurrentAirPlaySession(pairing: AirPlayPairingClient, generation: number): boolean {

@@ -53,12 +53,16 @@ export const PROJECTION_ENCODER_MAX_HEIGHT: number = 2160;
 export const VERIFIED_PROJECTION_DISPLAY_MODES: VerifiedProjectionDisplayMode[] = [];
 
 export const PROJECTION_THEMES: ProjectionTheme[] = [
-  { id: 'forest', label: '森林', background: '#10101C', surface: '#262630', panel: '#1E1E28' },
-  { id: 'graphite', label: '石墨', background: '#16161A', surface: '#292930', panel: '#222229' },
-  { id: 'ocean', label: '深海', background: '#0C1A25', surface: '#1A2B38', panel: '#263C4A' }
+  { id: 'aurora', label: '极光', background: '#10101C', surface: '#262630', panel: '#1E1E26' },
+  { id: 'sunset', label: '日落', background: '#2B1033', surface: '#262630', panel: '#1E1E26' },
+  { id: 'forest', label: '森林', background: '#0B1F1A', surface: '#262630', panel: '#1E1E26' },
+  { id: 'ocean', label: '深海', background: '#06102A', surface: '#262630', panel: '#1E1E26' },
+  { id: 'graphite', label: '石墨', background: '#16161A', surface: '#262630', panel: '#1E1E26' }
 ];
 
-export const PROJECTION_ACCENTS: string[] = ['#0A84FF', '#30D158', '#FF9F0A', '#FF375F', '#64D2FF'];
+export const PROJECTION_ACCENTS: string[] = [
+  '#0A84FF', '#30D158', '#FF9F0A', '#FF375F', '#BF5AF2', '#64D2FF'
+];
 
 let settingsInitialized: boolean = false;
 
@@ -66,13 +70,13 @@ export function initializeProjectionSettings(): void {
   if (settingsInitialized) {
     return;
   }
-  PersistentStorage.persistProp('carplayTheme', 'forest');
+  PersistentStorage.persistProp('carplayTheme', 'aurora');
   PersistentStorage.persistProp('carplayAccent', '#0A84FF');
   PersistentStorage.persistProp('carplayEncoderFps', 30);
   PersistentStorage.persistProp('carplayCaptureFps', 60);
   PersistentStorage.persistProp('carplayUseBluetoothAudio', false);
   PersistentStorage.persistProp('carplayDockPosition', 'left');
-  PersistentStorage.persistProp('carplayDayNightMode', 'AUTO');
+  PersistentStorage.persistProp('carplayDayNightMode', 'NIGHT');
   settingsInitialized = true;
 }
 

@@ -1,16 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
   <defs>
-    <radialGradient id="violet" cx="15%" cy="10%" r="78%">
+    <radialGradient id="violet" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1"
+      gradientTransform="translate(192 72) scale(900 600)">
       <stop offset="0" stop-color="#3A2BD6"/>
-      <stop offset="1" stop-color="#3A2BD6" stop-opacity="0"/>
+      <stop offset=".6" stop-color="#3A2BD6" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="rose" cx="90%" cy="20%" r="72%">
+    <radialGradient id="rose" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1"
+      gradientTransform="translate(1152 144) scale(800 600)">
       <stop offset="0" stop-color="#D6336C"/>
-      <stop offset="1" stop-color="#D6336C" stop-opacity="0"/>
+      <stop offset=".55" stop-color="#D6336C" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="teal" cx="60%" cy="100%" r="78%">
+    <radialGradient id="teal" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1"
+      gradientTransform="translate(768 720) scale(900 700)">
       <stop offset="0" stop-color="#0E9AA7"/>
-      <stop offset="1" stop-color="#0E9AA7" stop-opacity="0"/>
+      <stop offset=".6" stop-color="#0E9AA7" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <rect width="1280" height="720" fill="#10101C"/>

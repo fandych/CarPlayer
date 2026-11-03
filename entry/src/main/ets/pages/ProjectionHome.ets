@@ -18,6 +18,7 @@ import {
 } from './ProjectionAppCatalog';
 import { ProjectionShakeDetector } from '../video/ProjectionShakeDetector';
 import { projectionDisplayToggleTarget } from '../video/CarPlayVirtualDisplay';
+import { projectionTheme, resolveNightMode } from '../video/ProjectionSettings';
 
 const DOMAIN: number = 0xCA22;
 
@@ -34,6 +35,9 @@ struct ProjectionHome {
   @StorageLink('carplayProjectionViewAreaWidth') projectionViewAreaWidth: number = 0;
   @StorageLink('carplayProjectionViewAreaHeight') projectionViewAreaHeight: number = 0;
   @StorageLink('carplayProjectionDensity') projectionDensity: number = 1;
+  @StorageLink('carplayTheme') theme: string = 'aurora';
+  @StorageLink('carplayDayNightMode') dayNightMode: string = 'NIGHT';
+  @StorageLink('carplayNightMode') nightMode: boolean = true;
   private activeApp?: ProjectionApp;
   private appDisplayId: number = -1;
   private appContentWidth: number = 0;
@@ -580,7 +584,8 @@ struct ProjectionHome {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#101713')
+    .backgroundColor(resolveNightMode(this.dayNightMode, this.nightMode)
+      ? projectionTheme(this.theme).background : '#FFFFFF')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
   }
 }
