@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="700" viewBox="0 0 1000 700">
+  <rect width="1000" height="700" fill="#1D2230"/>
+  <path d="M0 540C150 495 270 580 430 555S720 615 1000 565V700H0Z" fill="#14304F"/>
+  <rect x="610" y="150" width="220" height="95" rx="22" fill="#1F3A30"/>
+  <rect x="40" y="440" width="170" height="70" rx="20" fill="#1F3A30"/>
+  <rect x="370" y="30" width="120" height="70" rx="18" fill="#1F3A30"/>
+  <g fill="none" stroke="#3A4157" stroke-width="9" stroke-linecap="round">
+    <path d="M0 120H1000M0 330H1000M0 470H1000M70 0V700M240 0V700M420 0V540M600 0V560M790 0V560M940 0V560"/>
+  </g>
+  <g fill="none" stroke="#10131C" stroke-width="30" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-20 640L330 440L640 300L1020 140M510-20L560 300L650 560"/>
+  </g>
+  <g fill="none" stroke="#505A78" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-20 640L330 440L640 300L1020 140M510-20L560 300L650 560"/>
+  </g>
+  <path d="M240 700V330H420V230H790V120H940" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linejoin="round" stroke-linecap="round" opacity=".9"/>
+  <path d="M240 700V330H420V230H790V120H940" fill="none" stroke="#0A84FF" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+  <g fill="#FFFFFF" fill-opacity=".58" font-family="sans-serif" font-size="16" font-weight="600">
+    <text x="90" y="112">Maple Ave</text>
+    <text x="640" y="322">Harbor Blvd</text>
+    <text x="258" y="462">Pine St</text>
+    <text x="640" y="190">Central Park</text>
+    <text x="410" y="52">Museum</text>
+  </g>
+  <circle cx="240" cy="520" r="28" fill="#0A84FF" fill-opacity=".28"/>
+  <circle cx="240" cy="520" r="17" fill="#FFFFFF"/>
+  <path d="M240 510L248 529L240 525L232 529Z" fill="#0A84FF"/>
+  <circle cx="940" cy="120" r="14" fill="#FF453A"/>
+  <circle cx="940" cy="120" r="5.5" fill="#FFFFFF"/>
+</svg>

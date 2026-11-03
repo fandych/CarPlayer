@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CarPlay 车机端 · 原型</title>
+<style>
+:root{
+  --accent:#0a84ff;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","PingFang SC","Helvetica Neue","Segoe UI","Microsoft YaHei",sans-serif;
+  --text:#fff;--text-2:rgba(255,255,255,.62);--glass-2:rgba(255,255,255,.08);--sep:rgba(255,255,255,.14);--map-bg:#1d2230;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:var(--font);background:#0b0b0f;color:#fff;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  user-select:none;
+}
+svg.i{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+svg.i .f{fill:currentColor;stroke:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+
+/* ---------- 设计面板（屏幕外） ---------- */
+.design{
+  display:flex;gap:22px;align-items:center;padding:8px 16px;border-radius:14px;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+  font-size:13px;color:#cfd2da;backdrop-filter:blur(20px);flex-wrap:wrap;justify-content:center;
+}
+.design b{color:#fff;font-weight:600}
+.design .grp{display:flex;align-items:center;gap:8px}
+
+/* ---------- 车机屏幕 (1280×720, 自适应缩放) ---------- */
+.fit{position:relative}
+.screen{
+  --wall:radial-gradient(900px 600px at 15% 10%,#3a2bd6 0%,transparent 60%),
+         radial-gradient(800px 600px at 90% 20%,#d6336c 0%,transparent 55%),
+         radial-gradient(900px 700px at 60% 100%,#0e9aa7 0%,transparent 60%),#10101c;
+  --glass:rgba(38,38,48,.46);--glass-2:rgba(255,255,255,.08);--glass-strong:rgba(30,30,38,.62);
+  --stroke:rgba(255,255,255,.22);--hl:rgba(255,255,255,.28);
+  --text:#fff;--text-2:rgba(255,255,255,.62);--sep:rgba(255,255,255,.12);
+  --map-bg:#1d2230;--map-road:#3a4157;--map-main:#505a78;--map-park:#1f3a30;--map-water:#14304f;--map-label:rgba(255,255,255,.5);--map-casing:#10131c;
+  width:1280px;height:720px;position:absolute;left:0;top:0;transform-origin:0 0;
+  border-radius:30px;overflow:hidden;background:var(--wall);color:var(--text);
+  box-shadow:0 0 0 8px #1a1a1f,0 0 0 9px #3a3a44,0 30px 80px rgba(0,0,0,.6);
+}
+.screen.light{
+  --glass:rgba(255,255,255,.52);--glass-2:rgba(0,0,0,.05);--glass-strong:rgba(255,255,255,.72);
+  --stroke:rgba(255,255,255,.75);--hl:rgba(255,255,255,.9);
+  --text:#1c1c1e;--text-2:rgba(60,60,67,.65);--sep:rgba(60,60,67,.14);
+  --map-bg:#e9e7e1;--map-road:#ffffff;--map-main:#fff6d8;--map-park:#cfe6c3;--map-water:#aed3f2;--map-label:rgba(60,60,67,.6);--map-casing:#cfcbc2;
+}
+.glass{
+  background:var(--glass);
+  -webkit-backdrop-filter:blur(34px) saturate(180%);backdrop-filter:blur(34px) saturate(180%);
+  border:1px solid var(--stroke);
+  box-shadow:inset 0 1px 0 var(--hl),0 10px 30px rgba(0,0,0,.22);
+}
+
+/* Dock */
+.dock{
+  position:absolute;left:14px;top:14px;bottom:14px;width:84px;border-radius:28px;
+  display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:10px;
+}
+.status{
+  display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0 12px;width:54px;
+  border-bottom:1px solid var(--sep);color:var(--text);margin-bottom:4px;
+}
+.status svg{width:24px;height:24px}
+.nav{
+  width:58px;height:58px;border-radius:18px;display:grid;place-items:center;color:var(--text-2);
+  transition:.25s;position:relative;
+}
+.nav svg{width:28px;height:28px}
+.nav:hover{background:var(--glass-2);color:var(--text)}
+.nav:active{transform:scale(.92)}
+.nav.active{
+  color:#fff;background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 100%,#fff 18%),var(--accent));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 6px 16px color-mix(in srgb,var(--accent) 55%,transparent);
+}
+.spacer{flex:1}
+
+/* Main / Views */
+.main{position:absolute;left:112px;top:14px;right:14px;bottom:14px}
+.view{position:absolute;inset:0;display:none}
+.view.active{display:block;animation:in .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes in{from{opacity:0;transform:scale(.985) translateY(6px)}to{opacity:1;transform:none}}
+
+.layout{display:grid;gap:14px;height:100%}
+#v-home .layout{grid-template-columns:78fr 22fr}
+#v-split .layout{grid-template-columns:var(--split,4fr 1fr)}
+.cards{display:flex;flex-direction:column;gap:14px;min-width:0;min-height:0}
+.cards>*{min-height:0}
+
+/* Map */
+.map{position:relative;border-radius:28px;overflow:hidden;container-type:inline-size;border:1px solid var(--stroke);min-width:0;height:100%}
+.map svg.mapsvg{position:absolute;inset:0;width:100%;height:100%}
+.mapsvg .bg{fill:var(--map-bg)}
+.mapsvg .park{fill:var(--map-park)}
+.mapsvg .water{fill:var(--map-water)}
+.mapsvg .rc{stroke:var(--map-casing);fill:none;stroke-linecap:round;stroke-linejoin:round}
+.mapsvg .rd{stroke:var(--map-road);fill:none;stroke-linecap:round;stroke-linejoin:round}
+.mapsvg .rm{stroke:var(--map-main);fill:none;stroke-linecap:round;stroke-linejoin:round}
+.mapsvg text{fill:var(--map-label);font:600 13px var(--font);letter-spacing:.5px}
+.mapsvg .routec{stroke:#fff;stroke-width:16;fill:none;stroke-linejoin:round;stroke-linecap:round;opacity:.9}
+.mapsvg .route{stroke:var(--accent);stroke-width:10;fill:none;stroke-linejoin:round;stroke-linecap:round}
+.mapsvg .pulse{fill:var(--accent);opacity:.25;transform-box:fill-box;transform-origin:center;animation:pulse 2.2s infinite}
+@keyframes pulse{0%{transform:scale(.6);opacity:.45}100%{transform:scale(2.2);opacity:0}}
+.mapui{position:absolute;inset:0;pointer-events:none;padding:16px;display:flex;flex-direction:column;justify-content:space-between}
+.mapui>*{pointer-events:auto}
+.turn{
+  align-self:flex-start;display:flex;align-items:center;gap:14px;padding:12px 20px 12px 14px;border-radius:22px;
+}
+.turn .ar{width:52px;height:52px;border-radius:16px;background:var(--accent);display:grid;place-items:center;color:#fff}
+.turn .ar svg{width:30px;height:30px;stroke-width:2.4}
+.turn .d{font-size:26px;font-weight:700;letter-spacing:-.5px;line-height:1}
+.turn .s{font-size:14px;color:var(--text-2);margin-top:4px}
+.mapbot{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.eta{display:flex;gap:18px;align-items:center;padding:12px 20px;border-radius:22px}
+.eta .big{font-size:24px;font-weight:700;letter-spacing:-.5px;line-height:1.1}
+.eta .sm{font-size:12px;color:var(--text-2);margin-top:2px}
+.eta .go{background:#ff453a;color:#fff;border-radius:14px;padding:9px 16px;font-weight:600;font-size:15px}
+.zoom{display:flex;flex-direction:column;border-radius:18px;overflow:hidden}
+.zoom button{width:46px;height:46px;font-size:24px;font-weight:300;color:var(--text)}
+.zoom button+button{border-top:1px solid var(--sep)}
+@container (max-width:760px){
+  .turn .s{display:none}.turn .d{font-size:21px}.turn .ar{width:42px;height:42px}
+  .eta{gap:10px;padding:10px 14px}.eta .big{font-size:19px}.eta .go{display:none}
+  .zoom{display:none}
+}
+
+/* Cards */
+.card{border-radius:28px;padding:18px;display:flex;flex-direction:column;min-width:0;overflow:hidden;container-type:inline-size}
+.mcard{flex:1.25;justify-content:space-between;gap:10px;cursor:pointer}
+.art{border-radius:18px;aspect-ratio:1;width:100%;max-height:100%;box-shadow:0 10px 24px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.35);transition:background .5s}
+.mcard .artw{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.mcard .art{width:auto;height:100%;max-width:100%}
+.ttl{font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{font-size:13px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{height:4px;border-radius:2px;background:var(--sep);overflow:hidden;margin:6px 0}
+.bar i{display:block;height:100%;width:0;background:var(--text);border-radius:2px}
+.ctl{display:flex;justify-content:space-around;align-items:center}
+.ctl button{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--text);transition:.2s}
+.ctl button:active{transform:scale(.88);background:var(--glass-2)}
+.ctl svg{width:26px;height:26px}
+.ctl .pp svg{width:32px;height:32px}
+@container (max-width:200px){.ctl button{width:36px;height:36px}.ctl svg{width:20px;height:20px}.ctl .pp svg{width:24px;height:24px}.ttl{font-size:15px}.card{padding:14px}}
+.wcard{flex:1;justify-content:space-between;background:linear-gradient(160deg,rgba(64,156,255,.55),rgba(10,60,160,.45));color:#fff}
+.screen.light .wcard{color:#fff}
+.wcard .city{font-size:15px;font-weight:600;display:flex;gap:6px;align-items:center}
+.wcard .t{font-size:54px;font-weight:300;letter-spacing:-2px;line-height:1}
+.wcard .d{font-size:13px;opacity:.85}
+.wcard svg.i{width:38px;height:38px;color:#ffd60a}
+.wcard .wrow{display:flex;justify-content:space-between;align-items:flex-end}
+@container (max-width:200px){.wcard .t{font-size:42px}}
+
+/* Apps */
+.panel{border-radius:28px;height:100%;padding:28px 32px;overflow:auto}
+.panel::-webkit-scrollbar{width:0}
+.h1{font-size:30px;font-weight:700;letter-spacing:-.6px;margin-bottom:4px}
+.h2{font-size:13px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.8px;margin:22px 0 14px}
+.flow{display:flex;flex-wrap:wrap;gap:22px 26px}
+.app{width:108px;display:flex;flex-direction:column;align-items:center;gap:9px;transition:.2s}
+.app:active{transform:scale(.92)}
+.app .lg{
+  width:92px;height:92px;border-radius:26px;display:grid;place-items:center;color:#fff;position:relative;
+  box-shadow:0 8px 20px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.5),inset 0 -8px 14px rgba(0,0,0,.12);
+}
+.app .lg svg{width:46px;height:46px;stroke-width:1.7}
+.app .nm{font-size:14px;font-weight:500;text-align:center}
+.app .pin{position:absolute;right:-4px;top:-4px;width:22px;height:22px;border-radius:50%;background:#fff;color:#444;display:grid;place-items:center;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+
+/* Music */
+.music{display:grid;grid-template-columns:400px 1fr;gap:40px;padding:34px;align-items:center}
+.music .art{width:100%;border-radius:28px}
+.music .ttl{font-size:34px;letter-spacing:-.8px}
+.music .sub{font-size:19px;margin-top:4px}
+.music .bar{height:6px;border-radius:3px;margin:24px 0 6px}
+.times{display:flex;justify-content:space-between;font-size:13px;color:var(--text-2)}
+.music .ctl{margin:12px 0 18px}
+.music .ctl button{width:64px;height:64px}
+.music .ctl svg{width:34px;height:34px}
+.music .ctl .pp{width:84px;height:84px;background:var(--text);color:var(--map-bg)}
+.music .ctl .pp svg{width:42px;height:42px}
+.queue{border-radius:20px;background:var(--glass-2);padding:6px;max-height:190px;overflow:auto}
+.queue::-webkit-scrollbar{width:0}
+.q{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:14px;width:100%;text-align:left}
+.q:hover{background:var(--glass-2)}
+.q.on{background:color-mix(in srgb,var(--accent) 28%,transparent)}
+.q .th{width:38px;height:38px;border-radius:9px;flex:none}
+.q .tx{flex:1;min-width:0}.q .tx div:first-child{font-weight:600;font-size:15px}
+.q .tm{font-size:12px;color:var(--text-2)}
+
+/* Settings */
+.settings{display:grid;grid-template-columns:270px 1fr;overflow:hidden;border-radius:28px;height:100%}
+.sl{padding:28px 16px;border-right:1px solid var(--sep);background:var(--glass-2)}
+.sl h2{font-size:30px;font-weight:700;letter-spacing:-.6px;padding:0 12px 18px}
+.si{display:flex;align-items:center;gap:14px;width:100%;padding:12px;border-radius:14px;font-size:17px;font-weight:500;margin-bottom:6px}
+.si .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:#fff}
+.si .ic svg{width:21px;height:21px}
+.si.on{background:color-mix(in srgb,var(--accent) 85%,transparent);color:#fff}
+.sr{padding:28px 36px;overflow:auto}
+.sr::-webkit-scrollbar{width:0}
+.sr h3{font-size:26px;font-weight:700;letter-spacing:-.5px;margin-bottom:18px}
+.sp{display:none}.sp.on{display:block;animation:in .3s}
+.grp-l{border-radius:20px;background:var(--glass-2);margin-bottom:22px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 20px;font-size:16px}
+.row+.row{border-top:1px solid var(--sep)}
+.row .l small{display:block;font-size:12.5px;color:var(--text-2);margin-top:2px}
+.row .l{display:flex;align-items:center;gap:12px}
+.row .l .ic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:#fff}
+.row .l .ic svg{width:19px;height:19px}
+.ok{color:#32d74b;font-size:14px;font-weight:500}
+.seg{display:inline-flex;padding:3px;border-radius:12px;background:var(--glass-2);border:1px solid var(--sep)}
+.seg button{padding:7px 16px;border-radius:9px;font-size:14px;font-weight:500;color:var(--text-2);transition:.2s}
+.seg button.on{background:var(--text);color:var(--map-bg);box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.tg{width:52px;height:32px;border-radius:16px;background:rgba(120,120,128,.4);position:relative;transition:.25s;flex:none}
+.tg::after{content:"";position:absolute;left:2px;top:2px;width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.3);transition:.25s}
+.tg.on{background:#32d74b}.tg.on::after{left:22px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:300px;height:6px;border-radius:3px;background:rgba(120,120,128,.4);outline:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer}
+.sw{display:flex;gap:12px}
+.sw button{width:32px;height:32px;border-radius:50%;border:3px solid transparent;outline:2px solid transparent;transition:.2s}
+.sw button.on{border-color:var(--map-bg);outline-color:var(--text)}
+.walls{display:flex;gap:14px;flex-wrap:wrap}
+.wall{width:116px;height:80px;border-radius:16px;border:2px solid transparent;position:relative;box-shadow:0 6px 16px rgba(0,0,0,.25);transition:.2s;overflow:hidden}
+.wall.on{border-color:var(--text);transform:scale(1.03)}
+.wall span{position:absolute;left:10px;bottom:7px;font-size:12px;font-weight:600;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+.chev{color:var(--text-2);width:18px;height:18px}
+
+/* Toast */
+.toast{
+  position:absolute;left:50%;bottom:34px;transform:translate(-50%,20px);opacity:0;pointer-events:none;
+  padding:12px 22px;border-radius:999px;font-size:15px;font-weight:500;transition:.3s;z-index:9;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<!-- ============ 图标库 ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7.5 9 7.5v8.5a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H4.5A1.5 1.5 0 0 1 3 19.5z"/></symbol>
+    <symbol id="i-apps" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M3.5 11L20.5 3.5 13 20.5l-2-7.5z"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></symbol>
+    <symbol id="i-split" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M15.5 4.5v15"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.3"/><circle cx="12" cy="12" r="2.4"/><circle cx="12" cy="12" r="9.2" stroke-width="3.2" stroke-dasharray="3 4.2" stroke-linecap="butt"/></symbol>
+    <symbol id="i-signal" viewBox="0 0 24 24"><rect class="f" x="3" y="15" width="3.5" height="5" rx="1"/><rect class="f" x="8.5" y="11" width="3.5" height="9" rx="1"/><rect class="f" x="14" y="7" width="3.5" height="13" rx="1"/><rect x="19.5" y="3" width="2" height="17" rx="1" style="fill:currentColor;opacity:.3;stroke:none"/></symbol>
+    <symbol id="i-battery" viewBox="0 0 24 24"><rect x="2.5" y="7" width="17" height="10" rx="3"/><rect class="f" x="4.7" y="9.2" width="10.5" height="5.6" rx="1.4" fill="#32d74b" style="fill:#32d74b"/><path d="M21.5 10.5v3"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></symbol>
+    <symbol id="i-msg" viewBox="0 0 24 24"><path d="M5 4.5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9.5L5 21v-3.5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2z"/></symbol>
+    <symbol id="i-theme" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path class="f" d="M12 3a9 9 0 0 1 0 18z"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18.5a4.2 4.2 0 0 1-.6-8.4A5.8 5.8 0 0 1 17.4 9 4.8 4.8 0 0 1 17.5 18.5z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="8" stroke-width="3" stroke-dasharray=".1 6.17" stroke-linecap="round"/></symbol>
+    <symbol id="i-car" viewBox="0 0 24 24"><path d="M5 17v2.5M19 17v2.5M3 17h18v-4l-2.2-5.2A1.5 1.5 0 0 0 17.4 7H6.6a1.5 1.5 0 0 0-1.4.8L3 13z"/><circle cx="7.5" cy="13.5" r=".9" class="f"/><circle cx="16.5" cy="13.5" r=".9" class="f"/></symbol>
+    <symbol id="i-bt" viewBox="0 0 24 24"><path d="M6.5 7.5l11 9-5.5 4.5V3l5.5 4.5-11 9"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2.5 9a14 14 0 0 1 19 0M5.5 12.3a9.5 9.5 0 0 1 13 0M8.7 15.5a5 5 0 0 1 6.6 0"/><circle class="f" cx="12" cy="19" r="1.4"/></symbol>
+    <symbol id="i-usb" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="8" rx="1.5"/><path d="M10 6h.01M14 6h.01M9 10.5V14a3 3 0 0 0 6 0v-3.5M12 17v4.5"/></symbol>
+    <symbol id="i-bright" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="8" stroke-width="3" stroke-dasharray=".1 6.17" stroke-linecap="round"/></symbol>
+    <symbol id="i-cell" viewBox="0 0 24 24"><rect x="3.5" y="15" width="3" height="5" rx="1"/><rect x="9" y="11" width="3" height="9" rx="1"/><rect x="14.5" y="7" width="3" height="13" rx="1"/><rect x="20" y="3" width="1.5" height="17" rx=".7"/></symbol>
+    <symbol id="i-hot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M4.9 4.9a10 10 0 0 0 0 14.2M19.1 4.9a10 10 0 0 1 0 14.2"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M4 19l5-14 5 14M5.8 14h6.4M16 19l3-8 3 8M17 17h4"/></symbol>
+    <symbol id="i-turn" viewBox="0 0 24 24"><path d="M7 20v-9a3 3 0 0 1 3-3h7M13 4l4 4-4 4"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path class="f" d="M7 4.6v14.8a1 1 0 0 0 1.5.86l12-7.4a1 1 0 0 0 0-1.72l-12-7.4A1 1 0 0 0 7 4.6z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect class="f" x="6" y="4.5" width="4.2" height="15" rx="1.3"/><rect class="f" x="13.8" y="4.5" width="4.2" height="15" rx="1.3"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><rect class="f" x="4" y="5" width="2.6" height="14" rx="1.2"/><path class="f" d="M20 6.2v11.6a.8.8 0 0 1-1.2.7l-9-5.8a.8.8 0 0 1 0-1.4l9-5.8a.8.8 0 0 1 1.2.7z"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><rect class="f" x="17.4" y="5" width="2.6" height="14" rx="1.2"/><path class="f" d="M4 6.2v11.6a.8.8 0 0 0 1.2.7l9-5.8a.8.8 0 0 0 0-1.4l-9-5.8A.8.8 0 0 0 4 6.2z"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 5.5l6.5 6.5L9 18.5"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============ 设计面板 ============ -->
+<div class="design">
+  <div class="grp"><b>设计选项</b></div>
+  <div class="grp">分屏比例 (地图 : 卡片)
+    <div class="seg" id="ratioSeg">
+      <button data-r="3">3 : 1</button><button data-r="4" class="on">4 : 1</button><button data-r="5">5 : 1</button>
+    </div>
+  </div>
+  <div class="grp">外观
+    <div class="seg" id="modeSeg"><button data-m="dark" class="on">深色</button><button data-m="light">浅色</button></div>
+  </div>
+</div>
+
+<div class="fit" id="fit">
+<div class="screen" id="screen">
+
+  <!-- Dock -->
+  <aside class="dock glass">
+    <div class="status">
+      <svg class="i"><use href="#i-signal"/></svg>
+      <svg class="i"><use href="#i-battery"/></svg>
+    </div>
+    <button class="nav active" data-go="home" title="Home"><svg class="i"><use href="#i-home"/></svg></button>
+    <button class="nav" data-go="apps" title="Apps"><svg class="i"><use href="#i-apps"/></svg></button>
+    <button class="nav" data-go="map" title="Map"><svg class="i"><use href="#i-map"/></svg></button>
+    <button class="nav" data-go="music" title="Music"><svg class="i"><use href="#i-music"/></svg></button>
+    <button class="nav" data-go="split" title="Split Map · Music"><svg class="i"><use href="#i-split"/></svg></button>
+    <div class="spacer"></div>
+    <button class="nav" data-go="settings" title="Settings"><svg class="i"><use href="#i-gear"/></svg></button>
+  </aside>
+
+  <main class="main">
+
+    <!-- Home -->
+    <section class="view active" id="v-home">
+      <div class="layout">
+        <div class="map" data-map></div>
+        <div class="cards" data-cards></div>
+      </div>
+    </section>
+
+    <!-- Apps -->
+    <section class="view" id="v-apps">
+      <div class="panel glass">
+        <div class="h1">应用</div>
+        <div class="h2">车机</div>
+        <div class="flow" id="appsPinned"></div>
+        <div class="h2">其他应用</div>
+        <div class="flow" id="appsOther"></div>
+      </div>
+    </section>
+
+    <!-- Map -->
+    <section class="view" id="v-map">
+      <div class="map" data-map style="height:100%"></div>
+    </section>
+
+    <!-- Music -->
+    <section class="view" id="v-music">
+      <div class="panel glass music">
+        <div class="m-art art"></div>
+        <div>
+          <div class="ttl m-title"></div>
+          <div class="sub m-artist"></div>
+          <div class="bar"><i class="m-bar"></i></div>
+          <div class="times"><span class="m-cur">0:00</span><span class="m-dur">0:00</span></div>
+          <div class="ctl">
+            <button data-act="prev"><svg class="i"><use href="#i-prev"/></svg></button>
+            <button class="pp" data-act="pp"><svg class="i"><use class="m-play" href="#i-pause"/></svg></button>
+            <button data-act="next"><svg class="i"><use href="#i-next"/></svg></button>
+          </div>
+          <div class="queue" id="queue"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Split -->
+    <section class="view" id="v-split">
+      <div class="layout">
+        <div class="map" data-map></div>
+        <div class="cards" data-cards></div>
+      </div>
+    </section>
+
+    <!-- Theme -->
+    <section class="view" id="v-theme">
+      <div class="panel glass">
+        <div class="h1">主题</div>
+        <div class="h2">外观</div>
+        <div class="seg" data-modeseg><button data-m="dark">深色</button><button data-m="light">浅色</button></div>
+        <div class="h2">壁纸</div>
+        <div class="walls" data-walls></div>
+        <div class="h2">强调色</div>
+        <div class="sw" data-accents></div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section class="view" id="v-settings">
+      <div class="settings glass">
+        <div class="sl">
+          <h2>设置</h2>
+          <button class="si on" data-tab="display"><span class="ic" style="background:#0a84ff"><svg class="i"><use href="#i-bright"/></svg></span>显示</button>
+          <button class="si" data-tab="connect"><span class="ic" style="background:#30d158"><svg class="i"><use href="#i-wifi"/></svg></span>连接</button>
+        </div>
+        <div class="sr">
+          <div class="sp on" id="tab-display">
+            <h3>显示</h3>
+            <div class="grp-l">
+              <div class="row"><div class="l">外观</div><div class="seg" data-modeseg><button data-m="dark">深色</button><button data-m="light">浅色</button></div></div>
+              <div class="row"><div class="l"><span class="ic" style="background:#ff9f0a"><svg class="i"><use href="#i-bright"/></svg></span>亮度</div><input type="range" min="20" max="100" value="80" id="brightness"></div>
+              <div class="row"><div class="l"><span class="ic" style="background:#8e8e93"><svg class="i"><use href="#i-text"/></svg></span>文字大小</div>
+                <div class="seg" id="fontSeg"><button data-f=".92">小</button><button data-f="1" class="on">标准</button><button data-f="1.1">大</button></div></div>
+              <div class="row"><div class="l"><span class="ic" style="background:#5e5ce6"><svg class="i"><use href="#i-split"/></svg></span>分屏比例<small>地图 : 卡片</small></div>
+                <div class="seg" data-ratioseg><button data-r="3">3 : 1</button><button data-r="4">4 : 1</button><button data-r="5">5 : 1</button></div></div>
+            </div>
+            <div class="grp-l"><div class="row" style="flex-direction:column;align-items:flex-start;gap:12px"><div class="l">强调色</div><div class="sw" data-accents></div></div></div>
+            <div class="grp-l"><div class="row" style="flex-direction:column;align-items:flex-start;gap:14px"><div class="l">壁纸</div><div class="walls" data-walls></div></div></div>
+          </div>
+
+          <div class="sp" id="tab-connect">
+            <h3>连接</h3>
+            <div class="grp-l">
+              <div class="row"><div class="l"><span class="ic" style="background:#30d158"><svg class="i"><use href="#i-car"/></svg></span>CarPlay<small>iPhone 16 Pro · 无线连接</small></div><span class="ok">已连接</span></div>
+              <div class="row"><div class="l"><span class="ic" style="background:#8e8e93"><svg class="i"><use href="#i-usb"/></svg></span>USB 有线连接<small>优先使用有线以便充电</small></div><div class="tg"></div></div>
+            </div>
+            <div class="grp-l">
+              <div class="row"><div class="l"><span class="ic" style="background:#0a84ff"><svg class="i"><use href="#i-bt"/></svg></span>蓝牙<small>已配对 3 台设备</small></div><div class="tg on"></div></div>
+              <div class="row"><div class="l"><span class="ic" style="background:#0a84ff"><svg class="i"><use href="#i-wifi"/></svg></span>Wi-Fi<small>Car-5G-Home</small></div><div class="tg on"></div></div>
+              <div class="row"><div class="l"><span class="ic" style="background:#30d158"><svg class="i"><use href="#i-cell"/></svg></span>蜂窝网络<small>5G · 信号良好</small></div><div class="tg on"></div></div>
+              <div class="row"><div class="l"><span class="ic" style="background:#ff9f0a"><svg class="i"><use href="#i-hot"/></svg></span>个人热点</div><div class="tg"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+  <div class="toast glass" id="toast"></div>
+</div>
+</div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const screenEl = $('#screen');
+const icon = id => `<svg class="i"><use href="#i-${id}"/></svg>`;
+
+/* ---------- 缩放适配 ---------- */
+function fit() {
+  const h = $('.design').offsetHeight + 14;
+  const s = Math.min((innerWidth - 24) / 1280, (innerHeight - h - 24) / 720);
+  const f = $('#fit');
+  f.style.width = 1280 * s + 'px';
+  f.style.height = 720 * s + 'px';
+  screenEl.style.transform = `scale(${s})`;
+}
+addEventListener('resize', fit);
+
+/* ---------- 路由 ---------- */
+const dockMap = { theme: 'apps' };
+function go(name) {
+  $$('.view').forEach(v => v.classList.toggle('active', v.id === 'v-' + name));
+  const d = dockMap[name] || name;
+  $$('.nav').forEach(n => n.classList.toggle('active', n.dataset.go === d));
+}
+$$('.nav').forEach(n => n.onclick = () => go(n.dataset.go));
+
+let toastT;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1600);
+}
+
+/* ---------- 地图 (SVG 绘制) ---------- */
+const MAP_SVG = `
+<svg class="mapsvg" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice">
+  <rect class="bg" width="1000" height="700"/>
+  <path class="water" d="M0 540 C150 495 270 580 430 555 S720 615 1000 565 V700 H0Z"/>
+  <rect class="park" x="610" y="150" width="220" height="95" rx="22"/>
+  <rect class="park" x="40" y="440" width="170" height="70" rx="20"/>
+  <rect class="park" x="370" y="30" width="120" height="70" rx="18"/>
+  <g class="rd" stroke-width="9">
+    <path d="M0 120H1000M0 330H1000M0 470H1000M70 0V700M240 0V700M420 0V540M600 0V560M790 0V560M940 0V560"/>
+  </g>
+  <g class="rc" stroke-width="30"><path d="M-20 640L330 440L640 300L1020 140"/><path d="M510 -20L560 300L650 560"/></g>
+  <g class="rm" stroke-width="24"><path d="M-20 640L330 440L640 300L1020 140"/><path d="M510 -20L560 300L650 560"/></g>
+  <path class="routec" d="M240 700V330H420V230H790V120H940"/>
+  <path class="route" d="M240 700V330H420V230H790V120H940"/>
+  <text x="90" y="112">Maple Ave</text><text x="640" y="322">Harbor Blvd</text><text x="258" y="462">Pine St</text>
+  <text x="640" y="190">Central Park</text><text x="410" y="52">Museum</text>
+  <g transform="translate(240 520)">
+    <circle class="pulse" r="26"/>
+    <circle r="17" fill="#fff"/>
+    <path d="M0 -10L8 9L0 5L-8 9Z" fill="var(--accent)" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+  </g>
+  <g transform="translate(940 120)">
+    <circle r="14" fill="#ff453a"/><circle r="5.5" fill="#fff"/>
+  </g>
+</svg>
+<div class="mapui">
+  <div class="turn glass"><div class="ar">${icon('turn')}</div><div><div class="d">300 米</div><div class="s">右转 · 进入 Harbor Blvd</div></div></div>
+  <div class="mapbot">
+    <div class="eta glass"><div><div class="big">18 分钟</div><div class="sm">9.4 公里 · 15:32 到达</div></div><button class="go">结束</button></div>
+    <div class="zoom glass"><button>+</button><button>−</button></div>
+  </div>
+</div>`;
+
+/* ---------- 卡片 (音乐 / 天气) ---------- */
+const CARDS = `
+<div class="card glass mcard" data-go-music>
+  <div class="artw"><div class="art m-art"></div></div>
+  <div><div class="ttl m-title"></div><div class="sub m-artist"></div></div>
+  <div class="bar"><i class="m-bar"></i></div>
+  <div class="ctl">
+    <button data-act="prev">${icon('prev')}</button>
+    <button class="pp" data-act="pp"><svg class="i"><use class="m-play" href="#i-pause"/></svg></button>
+    <button data-act="next">${icon('next')}</button>
+  </div>
+</div>
+<div class="card glass wcard">
+  <div class="city">${icon('map').replace('class="i"', 'class="i" style="width:15px;height:15px;color:#fff"')}上海</div>
+  <div class="wrow"><div><div class="t">24°</div><div class="d">晴 · 27° / 18°</div></div>${icon('sun')}</div>
+</div>`;
+
+$$('[data-map]').forEach(m => m.innerHTML = MAP_SVG);
+$$('[data-cards]').forEach(c => c.innerHTML = CARDS);
+
+/* ---------- 音乐 ---------- */
+const tracks = [
+  { t: '夜空中最亮的星', a: '逃跑计划', d: 252, g: ['#5e5ce6', '#ff375f'] },
+  { t: 'Blinding Lights', a: 'The Weeknd', d: 200, g: ['#ff453a', '#ff9f0a'] },
+  { t: '晴天', a: '周杰伦', d: 269, g: ['#32d74b', '#0a84ff'] },
+  { t: 'Midnight City', a: 'M83', d: 244, g: ['#bf5af2', '#0a84ff'] },
+  { t: 'Golden Hour', a: 'JVKE', d: 209, g: ['#ffd60a', '#ff453a'] },
+];
+let cur = 0, pos = 37, playing = true;
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const grad = g => `linear-gradient(135deg,${g[0]},${g[1]})`;
+
+function renderMusic() {
+  const tr = tracks[cur];
+  $$('.m-title').forEach(e => e.textContent = tr.t);
+  $$('.m-artist').forEach(e => e.textContent = tr.a);
+  $$('.m-art').forEach(e => e.style.background = `radial-gradient(circle at 30% 25%,rgba(255,255,255,.45),transparent 45%),${grad(tr.g)}`);
+  $$('.m-dur').forEach(e => e.textContent = fmt(tr.d));
+  $$('.m-play').forEach(e => e.setAttribute('href', playing ? '#i-pause' : '#i-play'));
+  $$('.q').forEach((q, i) => q.classList.toggle('on', i === cur));
+  tickMusic();
+}
+function tickMusic() {
+  const tr = tracks[cur];
+  $$('.m-bar').forEach(e => e.style.width = (pos / tr.d * 100) + '%');
+  $$('.m-cur').forEach(e => e.textContent = fmt(pos));
+}
+function setTrack(i) { cur = (i + tracks.length) % tracks.length; pos = 0; renderMusic(); }
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (b) {
+    e.stopPropagation();
+    if (b.dataset.act === 'pp') { playing = !playing; renderMusic(); }
+    else setTrack(cur + (b.dataset.act === 'next' ? 1 : -1));
+    return;
+  }
+  if (e.target.closest('[data-go-music]')) go('music');
+});
+setInterval(() => { if (!playing) return; pos++; if (pos >= tracks[cur].d) setTrack(cur + 1); else tickMusic(); }, 1000);
+
+$('#queue').innerHTML = tracks.map((t, i) => `
+  <button class="q" data-i="${i}"><div class="th" style="background:${grad(t.g)}"></div>
+  <div class="tx"><div>${t.t}</div><div class="tm">${t.a}</div></div><div class="tm">${fmt(t.d)}</div></button>`).join('');
+$$('.q').forEach(q => q.onclick = () => { playing = true; setTrack(+q.dataset.i); });
+renderMusic();
+
+/* ---------- 应用列表 ---------- */
+const pinned = [
+  { n: '车机主页', i: 'car', c: ['#0a84ff', '#5e5ce6'], go: 'home' },
+  { n: '设置', i: 'gear', c: ['#8e8e93', '#48484a'], go: 'settings' },
+  { n: '主题', i: 'theme', c: ['#ff375f', '#bf5af2'], go: 'theme' },
+];
+const others = [
+  { n: '电话', i: 'phone', c: ['#32d74b', '#248a3d'] },
+  { n: '信息', i: 'msg', c: ['#64d2ff', '#0a84ff'] },
+  { n: '地图', i: 'map', c: ['#30d158', '#0a84ff'], go: 'map' },
+  { n: '音乐', i: 'music', c: ['#ff453a', '#ff2d55'], go: 'music' },
+  { n: '日历', i: 'cal', c: ['#ff6961', '#ff3b30'] },
+  { n: '播客', i: 'mic', c: ['#bf5af2', '#8944ab'] },
+  { n: '图书', i: 'book', c: ['#ff9f0a', '#ff6a00'] },
+  { n: '天气', i: 'cloud', c: ['#64d2ff', '#3a7bd5'] },
+  { n: '蓝牙', i: 'bt', c: ['#0a84ff', '#0040dd'] },
+  { n: '无线网络', i: 'wifi', c: ['#5ac8fa', '#007aff'] },
+  { n: '亮度', i: 'sun', c: ['#ffd60a', '#ff9f0a'] },
+  { n: '分屏', i: 'split', c: ['#5e5ce6', '#3634a3'], go: 'split' },
+];
+const appHTML = (a, pin) => `
+  <button class="app" data-app="${a.n}"><div class="lg" style="background:linear-gradient(160deg,${a.c[0]},${a.c[1]})">${icon(a.i)}${pin ? '<span class="pin">★</span>' : ''}</div><div class="nm">${a.n}</div></button>`;
+$('#appsPinned').innerHTML = pinned.map(a => appHTML(a, true)).join('');
+$('#appsOther').innerHTML = others.map(a => appHTML(a)).join('');
+$$('.app').forEach(el => el.onclick = () => {
+  const a = [...pinned, ...others].find(x => x.n === el.dataset.app);
+  a.go ? go(a.go) : toast(`已打开「${a.n}」`);
+});
+
+/* ---------- 主题 / 外观 / 分屏比例 ---------- */
+const walls = [
+  { n: '极光', v: `radial-gradient(900px 600px at 15% 10%,#3a2bd6 0%,transparent 60%),radial-gradient(800px 600px at 90% 20%,#d6336c 0%,transparent 55%),radial-gradient(900px 700px at 60% 100%,#0e9aa7 0%,transparent 60%),#10101c` },
+  { n: '日落', v: `radial-gradient(900px 600px at 80% 10%,#ff9f0a 0%,transparent 60%),radial-gradient(900px 600px at 10% 90%,#ff375f 0%,transparent 60%),#2b1033` },
+  { n: '森林', v: `radial-gradient(900px 600px at 20% 15%,#30d158 0%,transparent 55%),radial-gradient(900px 700px at 90% 90%,#0a6f8f 0%,transparent 60%),#0b1f1a` },
+  { n: '深海', v: `radial-gradient(900px 600px at 70% 10%,#0a84ff 0%,transparent 55%),radial-gradient(900px 700px at 10% 100%,#5e5ce6 0%,transparent 60%),#06102a` },
+  { n: '石墨', v: `radial-gradient(900px 600px at 30% 0%,#4a4a55 0%,transparent 60%),#16161a` },
+];
+const accents = ['#0a84ff', '#30d158', '#ff9f0a', '#ff375f', '#bf5af2', '#64d2ff'];
+let wallIdx = 0, accent = accents[0], mode = 'dark', ratio = 4;
+
+function applyTheme() {
+  screenEl.classList.toggle('light', mode === 'light');
+  screenEl.style.setProperty('--accent', accent);
+  screenEl.style.setProperty('--wall', mode === 'light'
+    ? `linear-gradient(rgba(255,255,255,.42),rgba(255,255,255,.42)),${walls[wallIdx].v}` : walls[wallIdx].v);
+  screenEl.style.setProperty('--split', `${ratio}fr 1fr`);
+  $$('[data-modeseg] button,#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === mode));
+  $$('[data-ratioseg] button,#ratioSeg button').forEach(b => b.classList.toggle('on', +b.dataset.r === ratio));
+  $$('[data-walls] .wall').forEach(w => w.classList.toggle('on', +w.dataset.i === wallIdx));
+  $$('[data-accents] button').forEach(b => b.classList.toggle('on', b.dataset.c === accent));
+}
+$$('[data-walls]').forEach(c => c.innerHTML = walls.map((w, i) =>
+  `<button class="wall" data-i="${i}" style="background:${w.v.replace(/\d+px \d+px/g, '90% 90%')}"><span>${w.n}</span></button>`).join(''));
+$$('[data-accents]').forEach(c => c.innerHTML = accents.map(a => `<button data-c="${a}" style="background:${a}"></button>`).join(''));
+document.addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.m) mode = t.dataset.m;
+  else if (t.dataset.r) ratio = +t.dataset.r;
+  else if (t.classList.contains('wall')) wallIdx = +t.dataset.i;
+  else if (t.dataset.c) accent = t.dataset.c;
+  else return;
+  applyTheme();
+});
+applyTheme();
+
+/* ---------- 设置 ---------- */
+$$('.si').forEach(b => b.onclick = () => {
+  $$('.si').forEach(x => x.classList.toggle('on', x === b));
+  $$('.sp').forEach(p => p.classList.toggle('on', p.id === 'tab-' + b.dataset.tab));
+});
+$$('.tg').forEach(t => t.onclick = () => t.classList.toggle('on'));
+$('#brightness').oninput = e => screenEl.style.filter = `brightness(${0.5 + e.target.value / 200})`;
+$('#fontSeg').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  $$('#fontSeg button').forEach(x => x.classList.toggle('on', x === b));
+  $$('.sr,.panel').forEach(p => p.style.zoom = b.dataset.f);
+};
+
+fit();
+if (location.hash.length > 1) go(location.hash.slice(1));
+</script>
+</body>
+</html>

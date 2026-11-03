@@ -8,10 +8,10 @@ export struct SectionHeading {
       Text(this.title)
         .fontSize(25)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#18221D')
+        .fontColor('#F5F5F7')
       Text(this.subtitle)
         .fontSize(13)
-        .fontColor('#77817B')
+        .fontColor('#FFFFFF99')
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -29,16 +29,16 @@ export struct InfoCard {
       Text(this.title)
         .fontSize(15)
         .fontWeight(FontWeight.Medium)
-        .fontColor('#243129')
+        .fontColor('#F5F5F7')
       Text(this.body)
         .fontSize(13)
-        .fontColor('#6B756F')
+        .fontColor('#FFFFFFA6')
         .lineHeight(20)
     }
     .width('100%')
     .padding(16)
     .borderRadius(18)
-    .backgroundColor('#FFFFFF99')
-    .border({ width: 1, color: '#FFFFFFCC' })
+    .backgroundColor('#24FFFFFF')
+    .border({ width: 1, color: '#FFFFFF26' })
   }
 }

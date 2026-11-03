@@ -20,7 +20,8 @@ test('capture, encoder, Dock, safe-area and day/night settings stay within suppo
   assert.deepEqual(resolveProjectionRates(60, 60, 30), { capture: 30, encode: 30 });
   assert.deepEqual(resolveProjectionRates(NaN, -1, 999), { capture: 30, encode: 30 });
   assert.equal(projectionTheme('unknown').id, 'forest');
-  assert.equal(projectionTheme('graphite').background, '#161616');
+  assert.equal(projectionTheme('forest').background, '#10101C');
+  assert.equal(projectionTheme('graphite').background, '#16161A');
   assert.equal(resolveNightMode('AUTO', true), true);
   assert.equal(resolveNightMode('AUTO', false), false);
   assert.equal(resolveNightMode('DAY', true), false);
@@ -70,11 +71,21 @@ test('capture, encoder, Dock, safe-area and day/night settings stay within suppo
   assert.throws(() => resolveProjectionDisplayMode([], 'receiver-native'), /原生分辨率/);
 });
 
-test('projection settings provide spacious controls and a direct icon-led day/night selector', () => {
+test('projection settings match the reference glass palette and two-pane layout', () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
-  assert.match(source, /app\.media\.ic_day_night/);
-  assert.match(source, /\.height\(76\)\.padding\(12\)\.borderRadius\(16\)\.backgroundColor\(this\.glassPanelColor\(\)\)/);
+  const settingsStart = source.indexOf('SettingsPage()');
+  const settingsEnd = source.indexOf('private MediaControl', settingsStart);
+  const settingsSource = source.slice(settingsStart, settingsEnd);
+  assert.match(settingsSource, /app\.media\.ic_day_night/);
+  assert.match(settingsSource, /this\.settingsPanelColor\(\)/);
+  assert.match(settingsSource, /this\.settingsGroupColor\(\)/);
+  assert.match(settingsSource, /this\.settingsSeparatorColor\(\)/);
+  assert.doesNotMatch(settingsSource, /#DCE4DE|#AAB8AF|this\.glassPanelColor\(\)/);
   assert.match(source, /\.height\(42\)\.padding\(\{ left: 9, right: 9 \}\)/);
+  assert.ok(source.includes('private ConnectionSettingsPane()'));
+  assert.ok(source.includes('Slider({ value: this.displayBrightness'));
+  assert.ok(source.includes('.layoutWeight(this.splitRatio)'));
+  assert.match(settingsSource, /this\.splitRatio === ratio \? '#F5F5F7' : Color\.Transparent/);
   const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', ['selectDayNightMode']);
   const target = new Target();
   target.selectDayNightMode('NIGHT');
@@ -2180,7 +2191,7 @@ test('navigation preview and full view share the running app without returning i
   assert.equal((source.match(/id: 'projectionAppSurface'/g) || []).length, 1);
 });
 
-test('home selects a map preview and shows only navigation and AVSession music cards', async () => {
+test('home selects a map preview and shows HTML-style music and weather cards', async () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
   const parsed = ts.createSourceFile('ProjectionDashboard.ts',
     source.replace('struct ProjectionDashboard {', 'class ProjectionDashboard {'), ts.ScriptTarget.Latest, true);
@@ -2230,12 +2241,11 @@ test('home selects a map preview and shows only navigation and AVSession music c
   assert.equal(stored.get('carplayNavigationPreview'), true);
   assert.deepEqual(opened, [map.uri, map.uri]);
   assert.match(source, /private DashboardSidebar\(\)/);
-  for (const heading of ['\u97f3\u4e50', '\u5bfc\u822a']) {
-    assert.ok(source.includes(heading), `missing home card ${heading}`);
-  }
-  assert.doesNotMatch(source, /天气数据暂不可用|app\.media\.ic_cloud_sun/);
+  assert.match(source, /app\.media\.projection_album_art/);
+  assert.match(source, /app\.media\.projection_weather_sun/);
+  assert.match(source, /Text\('上海'\)/);
   assert.doesNotMatch(source, /在手机打开地图/);
-  assert.match(source, /this\.mediaState\.lyric/);
+  assert.doesNotMatch(source, /this\.mediaState\.lyric/);
   assert.match(source, /this\.mediaProgressPercent\(\)/);
   assert.ok(!source.includes('this.navigationPreview ? 0.7'), 'preview uses actual layout, not a floating scaled page');
 });
@@ -2315,9 +2325,15 @@ test('audio authorization is awaited and a cancelled start cannot reactivate cap
   let authorize;
   let released = 0;
   let options;
+  const startOrder = [];
   const capturer = {
     on() {}, off() {},
-    requestPlaybackCaptureStart(callback) { authorize = callback; },
+    setIndependentAudioSessionStrategy(strategy, behavior) {
+      assert.equal(strategy.concurrencyMode, 1);
+      assert.equal(behavior, 0);
+      startOrder.push('mix-strategy');
+    },
+    requestPlaybackCaptureStart(callback) { startOrder.push('capture-request'); authorize = callback; },
     async stop() {}, async release() { released++; }
   };
   const api = {
@@ -2325,6 +2341,8 @@ test('audio authorization is awaited and a cancelled start cannot reactivate cap
     AudioChannel: { CHANNEL_2: 2 }, AudioSampleFormat: { SAMPLE_FORMAT_S16LE: 1 },
     AudioEncodingType: { ENCODING_TYPE_RAW: 0 }, SourceType: { SOURCE_TYPE_PLAYBACK_CAPTURE: 2 },
     AudioPlaybackCaptureMode: { MODE_DEFAULT: 0 },
+    AudioConcurrencyMode: { CONCURRENCY_MIX_WITH_OTHERS: 1 },
+    AudioSessionBehaviorFlags: { DEFAULT_BEHAVIOR: 0 },
     PlaybackCaptureStartState: { STATE_SUCCESS: 0, STATE_FAILED: 1, STATE_NOT_AUTHORIZED: 2 },
     async createAudioCapturer(value) { options = value; return capturer; }
   };
@@ -2341,6 +2359,7 @@ test('audio authorization is awaited and a cancelled start cannot reactivate cap
   await Promise.resolve();
   assert.equal(completed, false);
   assert.equal(options.playbackCaptureMode, 0);
+  assert.deepEqual(startOrder, ['mix-strategy', 'capture-request']);
   authorize(0);
   await started;
   assert.equal(capture.started, true);
@@ -2886,7 +2905,7 @@ test('Dock supports Apps, Home, split and map/music alternative menus', () => {
   assert.match(dashboardSource, /DockItem\('split', '分屏', 'app\.media\.ic_split'/);
   assert.doesNotMatch(dashboardSource, /DockItem\([\s\S]{0,800}?\.layoutWeight\(1\)/);
   assert.match(dashboardSource, /accessibilityText\(this\.appOnPhone \? '切换地图到虚拟屏' : '切换地图到手机'\)/);
-  assert.match(dashboardSource, /'map', 'toggleDisplay', newArea, \(\): void => this\.onToggleMapDisplay\(\)/);
+  assert.match(dashboardSource, /'maps', 'toggleDisplay', newArea, \(\): void => this\.onToggleMapDisplay\(\)/);
   assert.match(dashboardSource, /this\.onToggleAppDisplay\(\)/);
   const target = new Target();
   target.apps = [
@@ -2945,10 +2964,11 @@ test('Apps grid includes only launchable third-party apps and adapts from three 
   }
 });
 
-test('split dashboard hides ratio controls and requires an opened music app', () => {
+test('split dashboard exposes ratio controls and requires an opened music app', () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
-  assert.doesNotMatch(source, /splitMapWeight|splitMusicWeight|selectSplitRatio|Text\('2:2'\)|Text\('3:1'\)|Text\('4:1'\)/);
-  assert.match(source, /\.layoutWeight\(2\)/);
+  assert.match(source, /splitRatio/);
+  assert.match(source, /Text\(`\$\{ratio\} : 1`\)/);
+  assert.match(source, /\.layoutWeight\(this\.splitRatio\)/);
   assert.match(source, /\.layoutWeight\(1\)/);
   assert.match(source, /if \(view === 'split' && !this\.activeMusicApp\(\)\)/);
   const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', ['showDashboardView'], {

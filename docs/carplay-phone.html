@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CarPlayer · 手机端</title>
+<style>
+:root{--font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","PingFang SC","Helvetica Neue","Segoe UI","Microsoft YaHei",sans-serif;--accent:#0a84ff;--ok:#32d74b}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:var(--font);background:#09090c;color:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;user-select:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+.fit{position:relative}
+.phone{
+  position:absolute;left:0;top:0;width:390px;height:844px;transform-origin:0 0;border-radius:52px;overflow:hidden;
+  background:
+    radial-gradient(420px 380px at 10% 8%,#3a2bd6 0%,transparent 62%),
+    radial-gradient(380px 380px at 100% 30%,#c2336c 0%,transparent 58%),
+    radial-gradient(480px 420px at 40% 105%,#0e9aa7 0%,transparent 62%),#10101c;
+  box-shadow:0 0 0 10px #17171c,0 0 0 11px #3a3a44,0 30px 80px rgba(0,0,0,.6);
+  transition:background .6s;
+}
+.phone[data-s=connected]{
+  background:
+    radial-gradient(420px 380px at 10% 8%,#0a6f8f 0%,transparent 62%),
+    radial-gradient(380px 380px at 100% 30%,#1b8f4a 0%,transparent 58%),
+    radial-gradient(480px 420px at 40% 105%,#0a84ff 0%,transparent 62%),#08121a;
+}
+.phone[data-s=off]{
+  background:radial-gradient(420px 380px at 20% 5%,#3a3a48 0%,transparent 62%),radial-gradient(480px 420px at 60% 105%,#2a2a36 0%,transparent 62%),#101014;
+}
+.glass{
+  background:rgba(40,40,50,.42);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);
+  border:1px solid rgba(255,255,255,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 10px 30px rgba(0,0,0,.25);
+}
+
+/* 状态栏 */
+.sb{height:54px;padding:18px 34px 0;display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:600}
+.sb .r{display:flex;gap:6px;align-items:center}
+.sb svg{width:18px;height:18px}
+.island{position:absolute;left:50%;top:11px;width:116px;height:34px;border-radius:20px;background:#000;transform:translateX(-50%)}
+
+/* 头部 */
+.hd{position:relative;height:56px;display:flex;align-items:center;justify-content:center;margin-top:6px}
+.hd h1{font-size:19px;font-weight:700;letter-spacing:-.3px;display:flex;align-items:center;gap:8px}
+.hd h1 svg{width:22px;height:22px;color:var(--accent)}
+.more{position:absolute;right:20px;top:8px;width:40px;height:40px;border-radius:50%;display:grid;place-items:center}
+.more:active{transform:scale(.92)}
+.menu{
+  position:absolute;right:20px;top:114px;width:176px;border-radius:18px;padding:6px;z-index:20;
+  transform-origin:top right;transform:scale(.85);opacity:0;pointer-events:none;transition:.22s cubic-bezier(.2,.9,.3,1.1);
+}
+.menu.open{transform:none;opacity:1;pointer-events:auto}
+.menu button{display:flex;align-items:center;gap:12px;width:100%;padding:12px 12px;border-radius:12px;font-size:16px;text-align:left}
+.menu button:active{background:rgba(255,255,255,.14)}
+.menu button+button{border-top:1px solid rgba(255,255,255,.1)}
+.menu svg{width:20px;height:20px;color:rgba(255,255,255,.75)}
+
+/* 主体 */
+.body{position:absolute;left:0;right:0;top:116px;bottom:0;display:flex;flex-direction:column;align-items:center}
+.status{margin-top:54px;display:flex;align-items:center;gap:10px;font-size:20px;font-weight:600;letter-spacing:-.2px;height:30px}
+.dot{width:10px;height:10px;border-radius:50%;background:#8e8e93;transition:.4s}
+[data-s=waiting] .dot{background:#ff9f0a;animation:blink 1.2s infinite}
+[data-s=connected] .dot{background:var(--ok);box-shadow:0 0 10px var(--ok)}
+@keyframes blink{50%{opacity:.25}}
+.sub{margin-top:8px;font-size:14px;color:rgba(255,255,255,.62);height:20px}
+
+.stage{position:relative;margin-top:70px;width:260px;height:260px;display:grid;place-items:center}
+.ring{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,255,255,.25);opacity:0}
+[data-s=waiting] .ring{animation:ripple 2.4s infinite;border-color:rgba(10,132,255,.7)}
+[data-s=waiting] .ring:nth-child(2){animation-delay:.8s}
+[data-s=waiting] .ring:nth-child(3){animation-delay:1.6s}
+[data-s=connected] .ring:nth-child(1){opacity:1;inset:-10px;border-color:rgba(50,215,75,.35);animation:none}
+@keyframes ripple{0%{transform:scale(.72);opacity:.9}100%{transform:scale(1.35);opacity:0}}
+
+.big{
+  position:relative;width:210px;height:210px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  font-size:20px;font-weight:700;letter-spacing:.3px;color:#fff;transition:transform .2s,background .5s,box-shadow .5s;
+  background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.55),transparent 45%),linear-gradient(150deg,#5a5a66,#2c2c34);
+  border:1px solid rgba(255,255,255,.3);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.4),inset 0 -14px 30px rgba(0,0,0,.25),0 20px 50px rgba(0,0,0,.45);
+}
+.big:active{transform:scale(.94)}
+.big svg{width:64px;height:64px;stroke-width:1.6}
+[data-s=waiting] .big{background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.55),transparent 45%),linear-gradient(150deg,#3d9bff,#0a54d6);box-shadow:inset 0 2px 0 rgba(255,255,255,.45),inset 0 -14px 30px rgba(0,0,40,.25),0 20px 60px rgba(10,132,255,.55)}
+[data-s=connected] .big{background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.55),transparent 45%),linear-gradient(150deg,#4be06a,#1d9a3f);box-shadow:inset 0 2px 0 rgba(255,255,255,.45),inset 0 -14px 30px rgba(0,40,0,.25),0 20px 60px rgba(50,215,75,.5)}
+.big .ic{display:none}
+[data-s=off] .ic-off,[data-s=waiting] .ic-wait,[data-s=connected] .ic-conn{display:block}
+[data-s=waiting] .ic-wait{animation:spin 3s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.hint{margin-top:44px;font-size:13px;color:rgba(255,255,255,.5);text-align:center;line-height:1.6;padding:0 40px;min-height:42px}
+
+.info{position:absolute;left:20px;right:20px;bottom:34px;border-radius:24px;padding:4px 16px;opacity:0;transform:translateY(16px);pointer-events:none;transition:.45s}
+[data-s=connected] .info{opacity:1;transform:none}
+.info .row{display:flex;justify-content:space-between;align-items:center;padding:13px 0;font-size:15px}
+.info .row+.row{border-top:1px solid rgba(255,255,255,.12)}
+.info .row span:first-child{color:rgba(255,255,255,.62)}
+
+/* 页面 sheet */
+.sheet{position:absolute;inset:0;z-index:30;background:rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:.3s}
+.sheet.open{opacity:1;pointer-events:auto}
+.sheet .pn{
+  position:absolute;left:0;right:0;bottom:0;top:70px;border-radius:32px 32px 0 0;padding:20px 20px 30px;overflow:auto;
+  transform:translateY(100%);transition:.4s cubic-bezier(.2,.9,.3,1);background:rgba(30,30,40,.92);
+}
+.sheet.open .pn{transform:none}
+.pn::-webkit-scrollbar{width:0}
+.pn .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.pn h2{font-size:24px;letter-spacing:-.4px}
+.pn .x{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.16);display:grid;place-items:center}
+.pn .x svg{width:16px;height:16px}
+.grp{border-radius:18px;background:rgba(255,255,255,.08);margin-bottom:18px}
+.item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;font-size:16px}
+.item+.item{border-top:1px solid rgba(255,255,255,.1)}
+.item small{display:block;font-size:12.5px;color:rgba(255,255,255,.55);margin-top:2px}
+.tg{width:51px;height:31px;border-radius:16px;background:rgba(120,120,128,.45);position:relative;transition:.25s;flex:none}
+.tg::after{content:"";position:absolute;left:2px;top:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.3);transition:.25s}
+.tg.on{background:var(--ok)}.tg.on::after{left:22px}
+.faq{width:100%;text-align:left;padding:14px 16px;font-size:16px;font-weight:500}
+.faq p{display:none;font-size:14px;line-height:1.6;color:rgba(255,255,255,.65);font-weight:400;margin-top:8px}
+.faq.open p{display:block}
+.faq+.faq{border-top:1px solid rgba(255,255,255,.1)}
+.about{text-align:center;padding:30px 0 20px}
+.about .lg{width:96px;height:96px;border-radius:26px;margin:0 auto 16px;display:grid;place-items:center;background:linear-gradient(160deg,#0a84ff,#5e5ce6);box-shadow:0 10px 30px rgba(10,132,255,.4),inset 0 1px 0 rgba(255,255,255,.5)}
+.about .lg svg{width:54px;height:54px;stroke-width:1.6}
+.about h3{font-size:22px}.about p{color:rgba(255,255,255,.55);font-size:14px;margin-top:4px}
+.toast{position:absolute;left:50%;top:62px;transform:translate(-50%,-12px);padding:10px 20px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:.3s;z-index:40;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.home-ind{position:absolute;left:50%;bottom:8px;width:134px;height:5px;border-radius:3px;background:rgba(255,255,255,.8);transform:translateX(-50%);z-index:50}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-car" viewBox="0 0 24 24"><path d="M5 17v2.5M19 17v2.5M3 17h18v-4l-2.2-5.2A1.5 1.5 0 0 0 17.4 7H6.6a1.5 1.5 0 0 0-1.4.8L3 13z"/><circle cx="7.5" cy="13.5" r=".9" fill="currentColor" stroke="none"/><circle cx="16.5" cy="13.5" r=".9" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v8.5M6.8 6.6a7.5 7.5 0 1 0 10.4 0"/></symbol>
+    <symbol id="i-wait" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9" /><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.3"/><circle cx="12" cy="12" r="2.4"/><circle cx="12" cy="12" r="9.2" stroke-width="3.2" stroke-dasharray="3 4.2" stroke-linecap="butt"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.5h.01"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-sig" viewBox="0 0 24 24"><rect x="3" y="15" width="3.5" height="5" rx="1" fill="currentColor" stroke="none"/><rect x="8.5" y="11" width="3.5" height="9" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="7" width="3.5" height="13" rx="1" fill="currentColor" stroke="none"/><rect x="19.5" y="3" width="2" height="17" rx="1" fill="currentColor" stroke="none" opacity=".3"/></symbol>
+    <symbol id="i-bat" viewBox="0 0 24 24"><rect x="2" y="7" width="17" height="10" rx="3"/><rect x="4.2" y="9.2" width="11" height="5.6" rx="1.4" fill="currentColor" stroke="none"/><path d="M21.5 10.5v3"/></symbol>
+  </defs>
+</svg>
+
+<div class="fit" id="fit">
+<div class="phone" id="phone" data-s="off">
+  <div class="island"></div>
+  <div class="sb"><span id="clock">9:41</span><span class="r"><svg class="i"><use href="#i-sig"/></svg><svg class="i" style="width:22px"><use href="#i-bat"/></svg></span></div>
+
+  <header class="hd">
+    <h1><svg class="i"><use href="#i-car"/></svg>CarPlayer</h1>
+    <button class="more glass" id="moreBtn" aria-label="更多"><svg class="i"><use href="#i-dots"/></svg></button>
+  </header>
+  <div class="menu glass" id="dropMenu">
+    <button data-page="settings"><svg class="i"><use href="#i-gear"/></svg>设置</button>
+    <button data-page="help"><svg class="i"><use href="#i-help"/></svg>帮助</button>
+    <button data-page="about"><svg class="i"><use href="#i-info"/></svg>关于</button>
+  </div>
+
+  <main class="body" id="body">
+    <div class="status"><span class="dot"></span><span id="stText">已关闭</span></div>
+    <div class="sub" id="stSub"></div>
+
+    <div class="stage">
+      <i class="ring"></i><i class="ring"></i><i class="ring"></i>
+      <button class="big" id="big">
+        <svg class="i ic ic-off"><use href="#i-power"/></svg>
+        <svg class="i ic ic-wait"><use href="#i-wait"/></svg>
+        <svg class="i ic ic-conn"><use href="#i-link"/></svg>
+        <span id="bigText">开启</span>
+      </button>
+    </div>
+
+    <p class="hint" id="hint"></p>
+
+    <section class="info glass">
+      <div class="row"><span>车辆</span><span>My Car · Wireless</span></div>
+      <div class="row"><span>连接时长</span><span id="dur">00:00</span></div>
+    </section>
+  </main>
+
+  <div class="sheet" id="sheet">
+    <div class="pn glass" id="panel"></div>
+  </div>
+  <div class="toast glass" id="toast"></div>
+  <div class="home-ind"></div>
+</div>
+</div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const phone = $('#phone');
+const ic = id => `<svg class="i"><use href="#i-${id}"/></svg>`;
+
+/* 适配窗口 */
+function fit() {
+  const s = Math.min((innerWidth - 40) / 390, (innerHeight - 40) / 844, 1.15);
+  $('#fit').style.width = 390 * s + 'px';
+  $('#fit').style.height = 844 * s + 'px';
+  phone.style.transform = `scale(${s})`;
+}
+addEventListener('resize', fit); fit();
+
+setInterval(() => { const d = new Date(); $('#clock').textContent = d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'); }, 1000);
+(() => { const d = new Date(); $('#clock').textContent = d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'); })();
+
+/* 状态机: off(关闭) → waiting(开启·等待连接) → connected(已连接)
+   按钮文字: 开启 / 关闭 / 断开连接 */
+const S = {
+  off:       { text: '已关闭',  sub: '',                 btn: '开启',     hint: '点击按钮开启 CarPlay 服务' },
+  waiting:   { text: '已开启',  sub: '等待连接车机…',     btn: '关闭',     hint: '请确认车机蓝牙 / Wi-Fi 已开启，靠近车辆后将自动连接' },
+  connected: { text: '已开启',  sub: '已连接到 My Car',   btn: '断开连接', hint: '' },
+};
+let state = 'off', autoT, durT, sec = 0;
+let autoOn = true;
+const auto = () => autoOn;
+
+function setState(s) {
+  state = s; phone.dataset.s = s;
+  const c = S[s];
+  $('#stText').textContent = c.text;
+  $('#stSub').textContent = c.sub;
+  $('#bigText').textContent = c.btn;
+  $('#hint').textContent = c.hint;
+  clearTimeout(autoT); clearInterval(durT);
+  if (s === 'waiting' && auto()) autoT = setTimeout(() => setState('connected'), 4000); // 模拟车机自动连入
+  if (s === 'connected') {
+    sec = 0; $('#dur').textContent = '00:00';
+    durT = setInterval(() => { sec++; $('#dur').textContent = `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`; }, 1000);
+    toast('已连接到 My Car');
+  }
+}
+$('#big').onclick = () => {
+  if (state === 'off') setState('waiting');
+  else if (state === 'waiting') setState('off');
+  else { setState('waiting'); toast('已断开连接'); }
+};
+// 等待连接时，点击提示文字可手动模拟车机连入
+$('#hint').onclick = () => { if (state === 'waiting') setState('connected'); };
+setState('off');
+
+let toastT;
+function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1800); }
+
+/* 下拉菜单 */
+const menu = $('#dropMenu');
+$('#moreBtn').onclick = e => { e.stopPropagation(); menu.classList.toggle('open'); };
+phone.addEventListener('click', e => { if (!e.target.closest('#dropMenu')) menu.classList.remove('open'); });
+
+/* 页面: 设置 / 帮助 / 关于 */
+const tg = (id, on, t, s = '') => `<div class="item"><div>${t}${s ? `<small>${s}</small>` : ''}</div><div class="tg ${on ? 'on' : ''}" ${id ? `id="${id}"` : ''}></div></div>`;
+const PAGES = {
+  settings: { t: '设置', h: `
+    <div class="grp" id="grpA">
+      ${tg('autoConn', true, '自动连接', '检测到车机后自动建立连接')}
+      ${tg('', true, '无线 CarPlay', '通过蓝牙 + Wi-Fi 连接')}
+      ${tg('', false, '开机自启动')}
+    </div>
+    <div class="grp">
+      ${tg('', true, '连接通知')}
+      ${tg('', true, '连接时保持屏幕常亮')}
+    </div>
+    <div class="grp"><div class="item"><span>已配对车辆</span><span style="color:rgba(255,255,255,.55)">My Car</span></div></div>` },
+  help: { t: '帮助', h: `
+    <div class="grp">
+      <button class="faq">无法连接车机怎么办？<p>请确认手机蓝牙与 Wi-Fi 已开启，车机处于无线 CarPlay 配对模式，并重新点击「开启」。</p></button>
+      <button class="faq">如何断开连接？<p>已连接时点击中间的圆形按钮「断开连接」即可，服务仍保持开启状态。</p></button>
+      <button class="faq">如何完全关闭服务？<p>在「等待连接」状态下点击「关闭」按钮。</p></button>
+      <button class="faq">连接后手机还能使用吗？<p>可以，手机可继续正常使用，通话与导航将同步显示在车机端。</p></button>
+    </div>` },
+  about: { t: '关于', h: `
+    <div class="about"><div class="lg">${ic('car')}</div><h3>CarPlayer</h3><p>版本 1.0.0 (100)</p></div>
+    <div class="grp"><div class="item"><span>隐私政策</span><span>›</span></div><div class="item"><span>用户协议</span><span>›</span></div><div class="item"><span>开源许可</span><span>›</span></div></div>` },
+};
+const sheet = $('#sheet'), panel = $('#panel');
+function openPage(k) {
+  const p = PAGES[k]; menu.classList.remove('open');
+  panel.innerHTML = `<div class="top"><h2>${p.t}</h2><button class="x" id="closeP">${ic('x')}</button></div>${p.h}`;
+  sheet.classList.add('open');
+  $('#closeP').onclick = () => sheet.classList.remove('open');
+  $$('.tg', panel).forEach(t => t.onclick = () => t.classList.toggle('on'));
+  const ac = $('#autoConn', panel);
+  if (ac) { ac.classList.toggle('on', autoOn); ac.onclick = () => { autoOn = ac.classList.toggle('on'); }; }
+  $$('.faq', panel).forEach(f => f.onclick = () => f.classList.toggle('open'));
+}
+$$('#dropMenu button').forEach(b => b.onclick = () => openPage(b.dataset.page));
+sheet.onclick = e => { if (e.target === sheet) sheet.classList.remove('open'); };
+
+// 调试: carplay-phone.html#waiting / #connected / #menu / #settings / #help / #about
+const h = location.hash.slice(1);
+if (S[h]) setState(h); else if (PAGES[h]) openPage(h); else if (h === 'menu') menu.classList.add('open');
+</script>
+</body>
+</html>

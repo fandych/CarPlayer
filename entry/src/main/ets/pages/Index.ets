@@ -47,6 +47,9 @@ struct Index {
   @State trustedMfiFingerprints: string[] = [];
   @State logs: string[] = [];
   @State projectionDisplayId: number = -1;
+  @State connectionDuration: string = '00:00';
+  private connectionStartedAt: number = 0;
+  private connectionTimer: number = -1;
   private controller?: SessionController;
   private readonly settingsStore: CarPlayerSettingsStore = new CarPlayerSettingsStore();
   private protocolLogger?: ProtocolLogger;
@@ -63,34 +66,42 @@ struct Index {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
+      if (this.status === 'connected') {
+        Image($r('app.media.phone_background_connected'))
+          .width('100%').height('100%').objectFit(ImageFit.Cover)
+      } else if (this.status === 'waiting' || this.status === 'connecting') {
+        Image($r('app.media.phone_background_waiting'))
+          .width('100%').height('100%').objectFit(ImageFit.Cover)
+      } else {
+        Image($r('app.media.phone_background_off'))
+          .width('100%').height('100%').objectFit(ImageFit.Cover)
+      }
       Column() {
         this.Header()
-        if (this.page === 'home') {
-          HomePage({
-            status: this.status,
-            statusLabel: this.statusLabel(),
-            statusDescription: this.statusDescription(),
-            statusEyebrow: this.statusEyebrow(),
-            statusIcon: this.statusIcon(),
-            statusColor: this.statusColor(),
-            ringColor: this.ringColor(),
-            projectionActive: this.projectionDisplayId >= 0,
-            onAction: (): void => this.onMainAction(),
-            onReturnToProjectionHome: (): void => { void this.returnToProjectionHome(); }
-          })
-        } else {
-          this.ActivePage()
-        }
+        HomePage({
+          status: this.status,
+          statusLabel: this.statusLabel(),
+          statusDescription: this.statusDescription(),
+          statusEyebrow: this.statusEyebrow(),
+          statusIcon: this.statusIcon(),
+          statusColor: this.statusColor(),
+          ringColor: this.ringColor(),
+          connectionDuration: this.connectionDuration,
+          onAction: (): void => this.onMainAction()
+        })
       }
       .width('100%')
       .height('100%')
-      .backgroundColor('#F4F6F2')
+      .backgroundColor(Color.Transparent)
 
       if (this.showMenu && this.page !== 'logs') {
         this.MenuLayer()
       }
       if (this.showMenu && this.page === 'logs') {
         this.LogMenuLayer()
+      }
+      if (this.page !== 'home') {
+        this.PageSheet()
       }
       if (this.showWelcome) {
         this.WelcomeLayer()
@@ -107,50 +118,35 @@ struct Index {
     }
     .height('100%')
     .width('100%')
-    .backgroundColor('#F4F6F2')
+    .backgroundColor('#101014')
   }
 
   @Builder
   Header() {
     Stack({ alignContent: Alignment.Center }) {
-      Text(this.page === 'home' ? 'CarPlayer' : this.pageTitle())
-        .fontSize(19)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#18221D')
+      Row({ space: 8 }) {
+        Image($r('app.media.ic_car_front')).width(22).height(22).objectFit(ImageFit.Contain)
+        Text('CarPlayer')
+          .fontSize(19)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#FFFFFF')
+      }
+      .alignItems(VerticalAlign.Center)
 
       Row({ space: 8 }) {
-        if (this.page !== 'home') {
-          Button('‹')
-            .width(42)
-            .height(42)
-            .fontSize(34)
-            .fontColor('#18221D')
-            .backgroundColor('#00000000')
-            .onClick(() => {
-              this.navigateHome();
-            })
-        } else {
-          Blank()
-            .width(42)
-            .height(42)
-        }
+        Blank().width(42).height(42)
         Blank()
-        if (this.page === 'home' || this.page === 'logs') {
-          Button('⋮')
-            .width(42)
-            .height(42)
-            .fontSize(24)
-            .fontColor('#18221D')
-            .backgroundColor('#FFFFFF')
-            .borderRadius(21)
-            .onClick(() => {
-              this.showMenu = !this.showMenu;
-            })
-        } else {
-          Blank()
-            .width(42)
-            .height(42)
-        }
+        Button('⋯')
+          .width(42)
+          .height(42)
+          .fontSize(21)
+          .fontColor('#FFFFFF')
+          .backgroundColor('#66282832')
+          .borderRadius(20)
+          .border({ width: 1, color: '#FFFFFF30' })
+          .onClick(() => {
+            this.showMenu = !this.showMenu;
+          })
       }
       .width('100%')
       .justifyContent(FlexAlign.SpaceBetween)
@@ -189,6 +185,46 @@ struct Index {
   }
 
   @Builder
+  PageSheet() {
+    Stack({ alignContent: Alignment.Bottom }) {
+      Column()
+        .width('100%')
+        .height('100%')
+        .backgroundColor('#66000000')
+        .onClick((): void => this.navigateHome())
+      Column() {
+        Row() {
+          Text(this.pageTitle())
+            .fontSize(24)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#FFFFFF')
+          Blank()
+          Button({ type: ButtonType.Circle }) {
+            SymbolGlyph($r('sys.symbol.xmark')).fontSize(16).fontColor(['#FFFFFF'])
+          }
+          .width(34)
+          .height(34)
+          .backgroundColor('#FFFFFF20')
+          .accessibilityText('关闭')
+          .onClick((): void => this.navigateHome())
+        }
+        .width('100%')
+        .height(46)
+        .margin({ bottom: 8 })
+        this.ActivePage()
+      }
+      .width('100%')
+      .height('92%')
+      .padding({ left: 20, right: 20, top: 20 })
+      .backgroundColor('#F01E1E28')
+      .border({ width: 1, color: '#FFFFFF30' })
+      .borderRadius({ topLeft: 32, topRight: 32 })
+    }
+    .width('100%')
+    .height('100%')
+  }
+
+  @Builder
   MenuLayer() {
     Stack({ alignContent: Alignment.TopEnd }) {
       Column()
@@ -206,10 +242,11 @@ struct Index {
       }
       .width(142)
       .padding(4)
-      .margin({ top: 58, right: 18 })
-      .borderRadius(15)
-      .backgroundColor('#FFFFFF')
-      .shadow({ radius: 18, color: '#22000000', offsetX: 0, offsetY: 7 })
+      .margin({ top: 58, right: 20 })
+      .borderRadius(18)
+      .backgroundColor('#D9282832')
+      .border({ width: 1, color: '#FFFFFF30' })
+      .shadow({ radius: 22, color: '#60000000', offsetX: 0, offsetY: 9 })
     }
     .width('100%')
     .height('100%')
@@ -261,13 +298,26 @@ struct Index {
 
   @Builder
   MenuItem(title: string, destination: string) {
-    Button(title + ' ›')
+    Button({ type: ButtonType.Normal }) {
+      Row({ space: 12 }) {
+        if (destination === 'settings') {
+          SymbolGlyph($r('sys.symbol.gearshape')).fontSize(19).fontColor(['#FFFFFFB3'])
+        } else if (destination === 'help') {
+          Image($r('app.media.phone_help')).width(19).height(19).objectFit(ImageFit.Contain)
+        } else if (destination === 'logs') {
+          Image($r('app.media.phone_log')).width(19).height(19).objectFit(ImageFit.Contain)
+        } else {
+          Image($r('app.media.phone_info')).width(19).height(19).objectFit(ImageFit.Contain)
+        }
+        Text(title).fontSize(15).fontColor('#FFFFFF').layoutWeight(1)
+      }
+      .width('100%')
+    }
       .width('100%')
       .height(46)
-      .fontSize(14)
-      .fontColor('#28352D')
-      .backgroundColor('#FFFFFF')
-      .borderRadius(10)
+      .padding({ left: 12, right: 12 })
+      .backgroundColor(Color.Transparent)
+      .borderRadius(12)
       .onClick(() => {
         if (destination === 'logs') {
           this.flushPendingUiLogLines();
@@ -446,42 +496,33 @@ struct Index {
   }
 
   statusLabel(): string {
-    if (this.status === 'waiting') {
-      return '等待连接';
-    }
-    if (this.status === 'connecting') {
-      return '连接中';
-    }
-    if (this.status === 'connected') {
-      return '已连接';
-    }
-    return '已关闭';
+    return this.status === 'closed' ? '已关闭' : '已开启';
   }
 
   statusDescription(): string {
     if (this.status === 'waiting') {
-      return '正在等待车机连接';
+      return '等待连接车机…';
     }
     if (this.status === 'connecting') {
-      return '正在连接 CarPlay…';
+      return '正在连接车机…';
     }
     if (this.status === 'connected') {
-      return 'CarPlay 已连接';
+      return '已连接到车机';
     }
-    return '点击开启 CarPlayer';
+    return '';
   }
 
   statusEyebrow(): string {
     if (this.status === 'waiting') {
-      return '等待连接';
+      return '请确认车机蓝牙 / Wi-Fi 已开启，靠近车辆后将自动连接';
     }
     if (this.status === 'connecting') {
-      return '连接中';
+      return '正在建立 CarPlay 会话，请稍候';
     }
     if (this.status === 'connected') {
-      return '已连接';
+      return '';
     }
-    return '已关闭';
+    return '点击按钮开启 CarPlay 服务';
   }
 
   statusIcon(): string {
@@ -499,28 +540,28 @@ struct Index {
 
   statusColor(): string {
     if (this.status === 'waiting') {
-      return '#B86B2C';
+      return '#0A84FF';
     }
     if (this.status === 'connecting') {
-      return '#167D8D';
+      return '#0A84FF';
     }
     if (this.status === 'connected') {
-      return '#27845B';
+      return '#32D74B';
     }
-    return '#79847D';
+    return '#8E8E93';
   }
 
   ringColor(): string {
     if (this.status === 'waiting') {
-      return '#F5EADF';
+      return '#0A84FF55';
     }
     if (this.status === 'connecting') {
-      return '#E2F0F1';
+      return '#0A84FF55';
     }
     if (this.status === 'connected') {
-      return '#E4F0E8';
+      return '#32D74B55';
     }
-    return '#E7EBE7';
+    return '#FFFFFF25';
   }
 
   pageTitle(): string {
@@ -544,6 +585,29 @@ struct Index {
     } else {
       void this.stopSession();
     }
+  }
+
+  private syncConnectionDuration(): void {
+    if (this.status === 'connected') {
+      if (this.connectionTimer >= 0) {
+        return;
+      }
+      this.connectionStartedAt = Date.now();
+      this.connectionDuration = '00:00';
+      this.connectionTimer = setInterval((): void => {
+        const elapsed = Math.max(0, Math.floor((Date.now() - this.connectionStartedAt) / 1000));
+        const minutes = `${Math.floor(elapsed / 60)}`.padStart(2, '0');
+        const seconds = `${elapsed % 60}`.padStart(2, '0');
+        this.connectionDuration = `${minutes}:${seconds}`;
+      }, 1000);
+      return;
+    }
+    if (this.connectionTimer >= 0) {
+      clearInterval(this.connectionTimer);
+      this.connectionTimer = -1;
+    }
+    this.connectionStartedAt = 0;
+    this.connectionDuration = '00:00';
   }
 
   onBackPress(): boolean {
@@ -695,6 +759,7 @@ struct Index {
     this.isStarting = true;
     this.isSessionActive = true;
     this.status = 'connecting';
+    this.syncConnectionDuration();
     this.statusMessage = '正在请求蓝牙权限并启动 RFCOMM 监听';
     this.logProtocol(
       'bluetooth',
@@ -705,24 +770,10 @@ struct Index {
     } catch (error) {
       this.isSessionActive = false;
       this.status = 'closed';
+      this.syncConnectionDuration();
       this.showError(error);
     } finally {
       this.isStarting = false;
-    }
-  }
-
-  private async returnToProjectionHome(): Promise<void> {
-    const displayId = this.projectionDisplayId;
-    if (displayId < 0) {
-      return;
-    }
-    try {
-      await this.getAppContext().startAbility({
-        deviceId: '', bundleName: 'com.fandy.carplayer', moduleName: 'entry', abilityName: 'ProjectionHomeAbility'
-      }, { displayId });
-      this.logProtocol('projection', `请求返回车机首页：displayId=${displayId}`);
-    } catch (error) {
-      this.showError(error);
     }
   }
 
@@ -836,6 +887,7 @@ struct Index {
     try {
       await this.controller?.disconnectAirPlay();
       this.status = this.isSessionActive ? 'waiting' : 'closed';
+      this.syncConnectionDuration();
       this.logProtocol('airplay', '用户请求断开 AirPlay；iAP2 监听保持活动');
     } catch (error) {
       this.showError(error);
@@ -845,6 +897,7 @@ struct Index {
   private async retryAirPlay(): Promise<void> {
     try {
       this.status = 'connecting';
+      this.syncConnectionDuration();
       this.statusMessage = '正在重试 AirPlay';
       await this.controller?.retryAirPlay();
     } catch (error) {
@@ -858,6 +911,7 @@ struct Index {
     }
     this.wifiJoinInProgress = true;
     this.status = 'connecting';
+    this.syncConnectionDuration();
     this.statusMessage = '正在自动连接车机 Wi-Fi';
     try {
       await this.controller?.joinVehicleWifi();
@@ -878,6 +932,7 @@ struct Index {
     try {
       await this.controller?.stop();
       this.status = 'closed';
+      this.syncConnectionDuration();
       this.statusMessage = '监听已关闭';
     } catch (error) {
       this.showError(error);
@@ -905,6 +960,7 @@ struct Index {
         ? 'connecting'
         : 'waiting';
     }
+    this.syncConnectionDuration();
   }
 
   private async confirmMfiTrust(info: MfiTrustPromptInfo): Promise<boolean> {

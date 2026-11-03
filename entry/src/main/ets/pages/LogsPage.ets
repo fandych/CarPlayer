@@ -16,11 +16,12 @@ export struct LogsPage {
           Text(this.logs.join('\n'))
             .width('100%')
             .fontSize(10)
-            .fontColor('#34443A')
+            .fontColor('#F5F5F7')
             .lineHeight(16)
             .padding(12)
             .borderRadius(8)
-            .backgroundColor('#FFFFFF')
+            .backgroundColor('#1EFFFFFF')
+            .border({ width: 1, color: '#FFFFFF26' })
         }
       }
       .width('100%')

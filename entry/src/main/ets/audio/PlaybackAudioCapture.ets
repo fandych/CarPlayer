@@ -6,6 +6,7 @@ export type PcmDataHandler = (data: Uint8Array) => void;
 export class PlaybackAudioCapture {
   private capturer?: audio.AudioCapturer;
   private readHandler?: (data: ArrayBuffer) => void;
+  private interruptHandler?: (event: audio.InterruptEvent) => void;
   private readonly onPcmData: PcmDataHandler;
   private readonly onStatus: (status: string) => void;
   private readonly sampleRate: number;
@@ -53,6 +54,23 @@ export class PlaybackAudioCapture {
       return;
     }
     this.capturer = capturer;
+    const strategy: audio.AudioSessionStrategy = {
+      concurrencyMode: audio.AudioConcurrencyMode.CONCURRENCY_MIX_WITH_OTHERS
+    };
+    try {
+      capturer.setIndependentAudioSessionStrategy(strategy, audio.AudioSessionBehaviorFlags.DEFAULT_BEHAVIOR);
+      this.onStatus('播放音频采集焦点策略：CONCURRENCY_MIX_WITH_OTHERS');
+    } catch (error) {
+      await capturer.release();
+      this.capturer = undefined;
+      throw new Error(`设置播放音频混音策略失败：${error instanceof Error ? error.message : String(error)}`);
+    }
+    this.interruptHandler = (event: audio.InterruptEvent): void => {
+      this.onStatus(
+        `播放音频采集焦点事件：force=${event.forceType}, hint=${event.hintType}, ` +
+          `captureRunning=${this.started}`
+      );
+    };
     this.readHandler = (data: ArrayBuffer): void => {
       if (this.capturer !== capturer || !this.started) {
         return;
@@ -65,6 +83,7 @@ export class PlaybackAudioCapture {
       this.onPcmData(scalePlaybackPcm(pcm, AppStorage.get<number>('carplayRemoteVolume') ?? 100));
     };
     try {
+      capturer.on('audioInterrupt', this.interruptHandler);
       capturer.on('readData', this.readHandler);
       this.onStatus('等待系统授权播放音频捕获');
       await new Promise<void>((resolve, reject) => {
@@ -129,6 +148,14 @@ export class PlaybackAudioCapture {
       }
     }
     this.readHandler = undefined;
+    if (this.interruptHandler) {
+      try {
+        capturer.off('audioInterrupt');
+      } catch (error) {
+        failures.push(`取消音频焦点监听：${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    this.interruptHandler = undefined;
     this.capturer = undefined;
     if (this.started) {
       try {
