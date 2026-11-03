@@ -17,6 +17,13 @@
 - 连接配置由现有 settings/store 模块负责；不要从页面或协议代码绕过存储层读写配置。
 - 不要将签名材料或机器相关路径从 `build-profile.json5`、`certs/` 复制到源代码、文档或日志。
 
+## 文档位置
+
+- CarPlay 协议、实现方案和分析资料统一放在 `docs/`，不要再从仓库根目录引用这些文档。
+- 实现方案：[HarmonyOS CarPlay 客户端实现方案](docs/HarmonyOS_CarPlay客户端实现方案.md)。
+- 协议资料：[iAP2 控制码字典](docs/CarPlay-iAP2控制码字典.md)、[功能与通道分析](docs/CarPlay功能与通道分析.md)、[协议依据与核查记录](docs/CarPlay协议依据与核查记录.md)、[发送端与 USB 无线协议分析](docs/CarPlay发送端与USB无线协议深度分析.md)、[完整协议说明](docs/CarPlay完整协议最终版.md)、[控制码认证与媒体格式](docs/CarPlay控制码认证与媒体格式详解.md)。
+- 手机端和车机端 HTML 原型位于 `docs/carplay-phone.html` 与 `docs/carplay.html`。
+
 ## 构建与验证
 
 - 在 DevEco Studio 中构建 `entry` module 的 `default` product（Build > Build Hap(s)/APP(s)）；仓库没有签入 Hvigor wrapper 或 npm build script。

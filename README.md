@@ -41,8 +41,14 @@ node --test --test-name-pattern="irregular-display calibration preserves aspect 
 ## 相关文档
 
 - [原生模块说明与测试边界](entry/src/main/cpp/README.md)
-- [CarPlay 客户端实现方案（设计背景）](HarmonyOS_CarPlay客户端实现方案.md)
-- [CarPlay 功能与通道分析](CarPlay功能与通道分析.md)
-- [协议依据与核查记录](CarPlay协议依据与核查记录.md)
+- [HarmonyOS CarPlay 客户端实现方案（设计背景）](docs/HarmonyOS_CarPlay客户端实现方案.md)
+- [CarPlay iAP2 控制码字典](docs/CarPlay-iAP2控制码字典.md)
+- [CarPlay 功能与通道分析](docs/CarPlay功能与通道分析.md)
+- [CarPlay 协议依据与核查记录](docs/CarPlay协议依据与核查记录.md)
+- [CarPlay 发送端与 USB 无线协议分析](docs/CarPlay发送端与USB无线协议深度分析.md)
+- [CarPlay 完整协议说明](docs/CarPlay完整协议最终版.md)
+- [CarPlay 控制码认证与媒体格式详解](docs/CarPlay控制码认证与媒体格式详解.md)
+- [手机端 HTML 原型](docs/carplay-phone.html)
+- [车机端 HTML 原型](docs/carplay.html)
 
 实现状态和实际支持范围以源码、模块配置及设备测试为准；方案和协议分析文档用于补充背景。
