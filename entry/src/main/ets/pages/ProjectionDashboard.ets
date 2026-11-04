@@ -78,6 +78,11 @@ interface ProjectionTouchArea extends ProjectionBounds {
   drag?: (pointX: number) => void;
 }
 
+interface OptimisticPlaybackState {
+  isPlaying: boolean;
+  expiresAt: number;
+}
+
 const HOME_APP: ProjectionApp = {
   appId: 'shell-home',
   uri: 'carplay-client://v1/shell/home',
@@ -147,10 +152,6 @@ export struct ProjectionDashboard {
   @StorageLink('carplayProjectionDisplayModes') projectionModeOptions: ProjectionDisplayMode[] = [];
   @StorageLink('carplayProjectionNativeWidth') projectionNativeWidth: number = 0;
   @StorageLink('carplayProjectionNativeHeight') projectionNativeHeight: number = 0;
-  @StorageLink('carplayProjectionOutputWidth') projectionOutputWidth: number = 0;
-  @StorageLink('carplayProjectionOutputHeight') projectionOutputHeight: number = 0;
-  @StorageLink('carplayProjectionViewAreaWidth') projectionViewAreaWidth: number = 0;
-  @StorageLink('carplayProjectionViewAreaHeight') projectionViewAreaHeight: number = 0;
   @StorageLink('carplayProjectionActiveModeId') activeProjectionModeId: string = '';
   @StorageLink('carplayProjectionResolutionMessage') projectionResolutionMessage: string = '';
   @State safeInsetTop: number = 0;
@@ -192,6 +193,8 @@ export struct ProjectionDashboard {
   private statusTimer: number = -1;
   private mediaTimer: number = -1;
   private mediaSessionBridge?: MediaSessionBridge;
+  private mediaCommandGeneration: number = 0;
+  private optimisticPlaybackState?: OptimisticPlaybackState;
   private lastLoggedMediaSignature: string = '';
   private readonly mapXComponentController: XComponentController = new XComponentController();
   private readonly appXComponentController: XComponentController = new XComponentController();
@@ -606,22 +609,48 @@ export struct ProjectionDashboard {
   }
 
   private async refreshMediaSession(bridge: MediaSessionBridge): Promise<boolean> {
+    const commandGeneration = this.mediaCommandGeneration;
     try {
       const state = await bridge.refresh();
-      if (this.mediaSessionBridge === bridge) {
-        this.mediaState = state;
+      if (this.mediaSessionBridge === bridge && commandGeneration === this.mediaCommandGeneration) {
+        const optimisticPlayback = this.optimisticPlaybackState;
+        if (optimisticPlayback && state.isPlaying !== optimisticPlayback.isPlaying &&
+          Date.now() < optimisticPlayback.expiresAt) {
+          this.mediaState = this.mediaStateWithPlaybackState(state, optimisticPlayback.isPlaying);
+        } else {
+          this.optimisticPlaybackState = undefined;
+          this.mediaState = state;
+        }
         this.apps = includeMediaSessionApp(this.apps, state.bundleName, state.abilityName);
-        this.logMediaSnapshotIfChanged(state);
+        this.logMediaSnapshotIfChanged(this.mediaState);
       }
       return true;
     } catch (error) {
-      if (this.mediaSessionBridge === bridge) {
+      if (this.mediaSessionBridge === bridge && commandGeneration === this.mediaCommandGeneration) {
         this.mediaState = this.mediaStateWithMessage(
           `媒体会话不可用：${error instanceof Error ? error.message : String(error)}`
         );
       }
       return false;
     }
+  }
+
+  private mediaStateWithPlaybackState(
+    state: ProjectionMediaSnapshot, isPlaying: boolean
+  ): ProjectionMediaSnapshot {
+    return {
+      title: state.title,
+      artist: state.artist,
+      lyric: state.lyric,
+      positionMs: state.positionMs,
+      durationMs: state.durationMs,
+      bundleName: state.bundleName,
+      abilityName: state.abilityName,
+      isPlaying,
+      commands: state.commands,
+      queue: state.queue,
+      message: state.message
+    };
   }
 
   private logMediaSnapshotIfChanged(state: ProjectionMediaSnapshot): void {
@@ -656,12 +685,27 @@ export struct ProjectionDashboard {
       this.mediaActionMessage = `当前音乐应用未开放${command}控制`;
       return;
     }
+    const commandGeneration = ++this.mediaCommandGeneration;
     try {
       await bridge.send(command);
+      if (commandGeneration !== this.mediaCommandGeneration) {
+        return;
+      }
       this.mediaActionMessage = '控制命令已发送';
+      this.mediaCommandGeneration++;
+      if (command === 'play' || command === 'pause') {
+        const isPlaying = command === 'play';
+        this.optimisticPlaybackState = { isPlaying, expiresAt: Date.now() + 2000 };
+        this.mediaState = this.mediaStateWithPlaybackState(this.mediaState, isPlaying);
+      }
       await this.refreshMediaSession(bridge);
     } catch (error) {
-      this.mediaActionMessage = `媒体控制失败：${error instanceof Error ? error.message : String(error)}`;
+      if (commandGeneration === this.mediaCommandGeneration) {
+        this.mediaCommandGeneration++;
+        this.optimisticPlaybackState = undefined;
+        this.mediaActionMessage = `媒体控制失败：${error instanceof Error ? error.message : String(error)}`;
+        await this.refreshMediaSession(bridge);
+      }
     }
   }
 
@@ -691,6 +735,28 @@ export struct ProjectionDashboard {
 
   private isDashboardHome(): boolean {
     return this.dashboardView === 'home' && (this.navigationPreview || this.activeAppLabel.length === 0);
+  }
+
+  private activeAppHasCategory(category: 'map' | 'music'): boolean {
+    return this.dashboardView === 'home' && !this.navigationPreview && this.activeAppUri.length > 0 &&
+      this.apps.some((app: ProjectionApp): boolean =>
+        app.uri === this.activeAppUri && app.category === category);
+  }
+
+  private isDockItemSelected(id: string): boolean {
+    if (id === 'home') {
+      return this.isDashboardHome();
+    }
+    if (id === 'apps' || id === 'split' || id === 'settings') {
+      return this.dashboardView === id;
+    }
+    if (id === 'map') {
+      return this.dashboardView === 'maps' || this.activeAppHasCategory('map');
+    }
+    if (id === 'music') {
+      return this.dashboardView === 'music' || this.activeAppHasCategory('music');
+    }
+    return false;
   }
 
   private toggleDockPosition(): void {
@@ -723,6 +789,10 @@ export struct ProjectionDashboard {
 
   private glassStrokeColor(): string {
     return this.isLightAppearance() ? '#BFFFFFFF' : '#38FFFFFF';
+  }
+
+  private cardStrokeColor(): string {
+    return this.isLightAppearance() ? '#243C3C43' : '#20FFFFFF';
   }
 
   private glassSecondaryColor(): string {
@@ -1028,15 +1098,6 @@ export struct ProjectionDashboard {
     }
   }
 
-  private projectionContentAspectRatio(): number {
-    const width = this.projectionViewAreaWidth > 0 ? this.projectionViewAreaWidth :
-      this.projectionOutputWidth > 0 ? this.projectionOutputWidth : this.projectionNativeWidth;
-    const height = this.projectionViewAreaHeight > 0 ? this.projectionViewAreaHeight :
-      this.projectionOutputHeight > 0 ? this.projectionOutputHeight : this.projectionNativeHeight;
-    return Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0
-      ? width / height : 0;
-  }
-
   private selectProjectionResolution(modeId: string): void {
     const mode = this.projectionModeOptions.find((item: ProjectionDisplayMode): boolean => item.id === modeId);
     if (!mode || !this.vehicleDisplayUuid) {
@@ -1323,15 +1384,12 @@ export struct ProjectionDashboard {
           .height(32)
           .justifyContent(FlexAlign.Center)
           .padding({ left: 2, right: 2 })
-              this.DockItem('home', '首页', 'app.media.ic_house', this.isDashboardHome(), true)
-              this.DockItem('apps', '应用', 'app.media.ic_layout_grid', this.dashboardView === 'apps', true)
-              this.DockItem('map', '地图', 'app.media.ic_navigation',
-            this.dashboardView === 'maps' ||
-              (!this.navigationPreview && this.activeAppUri === this.categoryApp('map')?.uri), true)
-              this.DockItem('music', '音乐', 'app.media.ic_music',
-            this.dashboardView === 'music' || this.activeAppUri === this.categoryApp('music')?.uri, true)
-          this.DockItem('split', '分屏', 'app.media.ic_split', this.dashboardView === 'split', true)
-          this.DockItem('settings', '设置', 'app.media.ic_settings', this.dashboardView === 'settings', true)
+          this.DockItem('home', '首页', 'app.media.ic_house', this.isDockItemSelected('home'), true)
+          this.DockItem('apps', '应用', 'app.media.ic_layout_grid', this.isDockItemSelected('apps'), true)
+          this.DockItem('map', '地图', 'app.media.ic_navigation', this.isDockItemSelected('map'), true)
+          this.DockItem('music', '音乐', 'app.media.ic_music', this.isDockItemSelected('music'), true)
+          this.DockItem('split', '分屏', 'app.media.ic_split', this.isDockItemSelected('split'), true)
+          this.DockItem('settings', '设置', 'app.media.ic_settings', this.isDockItemSelected('settings'), true)
         }
         .width('100%')
         .height('100%')
@@ -1357,15 +1415,12 @@ export struct ProjectionDashboard {
           .width(36)
           .height('100%')
           .justifyContent(FlexAlign.Center)
-          this.DockItem('home', '首页', 'app.media.ic_house', this.isDashboardHome(), false)
-          this.DockItem('apps', '应用', 'app.media.ic_layout_grid', this.dashboardView === 'apps', false)
-          this.DockItem('map', '地图', 'app.media.ic_navigation',
-            this.dashboardView === 'maps' ||
-              (!this.navigationPreview && this.activeAppUri === this.categoryApp('map')?.uri), false)
-          this.DockItem('music', '音乐', 'app.media.ic_music',
-            this.dashboardView === 'music' || this.activeAppUri === this.categoryApp('music')?.uri, false)
-          this.DockItem('split', '分屏', 'app.media.ic_split', this.dashboardView === 'split', false)
-          this.DockItem('settings', '设置', 'app.media.ic_settings', this.dashboardView === 'settings', false)
+          this.DockItem('home', '首页', 'app.media.ic_house', this.isDockItemSelected('home'), false)
+          this.DockItem('apps', '应用', 'app.media.ic_layout_grid', this.isDockItemSelected('apps'), false)
+          this.DockItem('map', '地图', 'app.media.ic_navigation', this.isDockItemSelected('map'), false)
+          this.DockItem('music', '音乐', 'app.media.ic_music', this.isDockItemSelected('music'), false)
+          this.DockItem('split', '分屏', 'app.media.ic_split', this.isDockItemSelected('split'), false)
+          this.DockItem('settings', '设置', 'app.media.ic_settings', this.isDockItemSelected('settings'), false)
         }
         .width('100%').height('100%').constraintSize({ minWidth: 396 })
         .padding({ left: 8, right: 8, top: 4, bottom: 4 })
@@ -1522,7 +1577,7 @@ export struct ProjectionDashboard {
             .width('100%').height(60).padding({ left: 12, right: 12 }).borderRadius(16)
             .backgroundColor(this.categoryApp(app.category)?.uri === app.uri
               ? this.colorWithAlpha(this.accent, '2A') : this.glassPanelColor())
-            .border({ width: 1, color: this.glassStrokeColor() })
+            .border({ width: 1, color: this.cardStrokeColor() })
             .onClick((): void => this.selectApp(app))
             .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
               app.category === 'map' ? 'maps' : 'music', app.uri, newArea, (): void => this.selectApp(app)))
@@ -1565,7 +1620,6 @@ export struct ProjectionDashboard {
           })
             .width('100%')
             .height('100%')
-            .aspectRatio(this.projectionContentAspectRatio())
             .onLoad((): void => {
               this.mapSurfaceLoaded = true;
               this.mapSurfaceId = this.mapXComponentController.getXComponentSurfaceId();
@@ -1593,7 +1647,7 @@ export struct ProjectionDashboard {
       .padding(12)
       .borderRadius(22)
       .backgroundColor(this.glassPanelColor())
-      .border({ width: 1, color: this.glassStrokeColor() })
+      .border({ width: 1, color: this.cardStrokeColor() })
       .clip(true)
 
       Column({ space: 6 }) {
@@ -1624,7 +1678,7 @@ export struct ProjectionDashboard {
                 .textAlign(TextAlign.Center).padding(12)
             }
           }
-          .layoutWeight(this.splitMusicRatio)
+          .layoutWeight(1)
           .width('100%')
           .clip(true)
         } else {
@@ -1632,12 +1686,12 @@ export struct ProjectionDashboard {
             .fontSize(11).fontColor(this.secondaryTextColor()).maxLines(2).layoutWeight(1)
         }
       }
-      .layoutWeight(1)
+      .layoutWeight(this.splitMusicRatio)
       .height('100%')
       .padding(12)
       .borderRadius(22)
       .backgroundColor(this.glassPanelColor())
-      .border({ width: 1, color: this.glassStrokeColor() })
+      .border({ width: 1, color: this.cardStrokeColor() })
       .clip(true)
     }
     .width('100%')
@@ -2191,19 +2245,20 @@ export struct ProjectionDashboard {
   @Builder
   private DashboardSidebar() {
     Column({ space: 10 }) {
-      Column({ space: 10 }) {
-        Image($r('app.media.projection_album_art'))
-          .width('100%').aspectRatio(1).objectFit(ImageFit.Cover).borderRadius(18)
+      Column({ space: 8 }) {
         Column({ space: 3 }) {
           Text(this.mediaState.title).fontSize(16).fontWeight(FontWeight.Bold).fontColor(this.primaryTextColor())
-            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text(this.mediaState.artist || '未知歌手').fontSize(12).fontColor(this.secondaryTextColor())
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         }
         .width('100%').alignItems(HorizontalAlign.Start)
         .onClick((): void => this.openMediaApp())
         .onAreaChange((_oldArea, newArea) => this.updateTouchArea(
           'media', 'open', newArea, (): void => this.openMediaApp()))
+        Text(this.mediaState.lyric || '暂无歌词')
+          .fontSize(12).fontColor(this.secondaryTextColor())
+          .width('100%').layoutWeight(1)
+          .textAlign(TextAlign.Start).maxLines(3)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
         Progress({ value: this.mediaProgressPercent(), total: 100 })
           .width('100%').height(4).color('#FFFFFF')
         Row({ space: 4 }) {
@@ -2216,7 +2271,7 @@ export struct ProjectionDashboard {
       }
       .layoutWeight(1.25).width('100%').padding(16).borderRadius(24)
       .backgroundColor(this.glassPanelColor())
-      .border({ width: 1, color: this.glassStrokeColor() })
+      .border({ width: 1, color: this.cardStrokeColor() })
       .clip(true)
 
       Stack({ alignContent: Alignment.TopStart }) {
@@ -2239,7 +2294,7 @@ export struct ProjectionDashboard {
         .width('100%').height('100%').padding(16)
       }
       .layoutWeight(1).width('100%').borderRadius(24)
-      .border({ width: 1, color: this.glassStrokeColor() })
+      .border({ width: 1, color: this.cardStrokeColor() })
       .clip(true)
     }
     .layoutWeight(this.splitMusicRatio).height('100%')
@@ -2259,10 +2314,9 @@ export struct ProjectionDashboard {
               type: XComponentType.SURFACE,
               controller: this.appXComponentController
             })
-              .width('100%')
-              .height('100%')
-            .aspectRatio(this.navigationPreview ? this.projectionContentAspectRatio() : 0)
-              .onLoad((): void => {
+            .width('100%')
+            .height('100%')
+            .onLoad((): void => {
                 this.appSurfaceId = this.appXComponentController.getXComponentSurfaceId();
                 this.notifyAppSurface();
               })
@@ -2322,7 +2376,7 @@ export struct ProjectionDashboard {
               }
               .width('100%').padding(12).borderRadius(18)
               .backgroundColor(this.glassPanelColor())
-              .border({ width: 1, color: this.glassStrokeColor() })
+              .border({ width: 1, color: this.cardStrokeColor() })
               Blank()
               Row({ space: 12 }) {
                 Column({ space: 4 }) {
@@ -2348,13 +2402,13 @@ export struct ProjectionDashboard {
               }
               .width('100%').padding(12).borderRadius(18)
               .backgroundColor(this.glassPanelColor())
-              .border({ width: 1, color: this.glassStrokeColor() })
+              .border({ width: 1, color: this.cardStrokeColor() })
             }
             .width('100%').height('100%').padding(14)
           }
           .layoutWeight(this.splitMapRatio).height('100%')
           .borderRadius(22).clip(true)
-          .border({ width: 1, color: this.glassStrokeColor() })
+          .border({ width: 1, color: this.cardStrokeColor() })
           .onAreaChange((_oldArea, newArea) => this.touchBounds.set('map', this.areaBounds(newArea)))
           this.DashboardSidebar()
         }

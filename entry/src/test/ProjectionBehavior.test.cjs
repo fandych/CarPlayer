@@ -252,28 +252,6 @@ test('split ratio stepper taps update layout values through the projection touch
   assert.equal(target.splitMusicRatio, 1);
 });
 
-test('third-party map surfaces retain the negotiated projection aspect ratio', () => {
-  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', [
-    'projectionContentAspectRatio'
-  ]);
-  const target = new Target();
-  target.projectionViewAreaWidth = 1920;
-  target.projectionViewAreaHeight = 720;
-  target.projectionOutputWidth = 1280;
-  target.projectionOutputHeight = 720;
-  target.projectionNativeWidth = 1280;
-  target.projectionNativeHeight = 720;
-  assert.equal(target.projectionContentAspectRatio(), 1920 / 720);
-  target.projectionViewAreaWidth = 0;
-  target.projectionViewAreaHeight = 0;
-  assert.equal(target.projectionContentAspectRatio(), 1280 / 720);
-  target.projectionOutputWidth = 0;
-  target.projectionOutputHeight = 0;
-  target.projectionNativeWidth = 0;
-  target.projectionNativeHeight = 0;
-  assert.equal(target.projectionContentAspectRatio(), 0);
-});
-
 test('accepted launch statuses are logged rather than rendered over app surfaces', () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionHome.ets'), 'utf8');
   assert.doesNotMatch(source, /this\.launchMessage\s*=\s*`[^`]*请求已受理/);
@@ -328,7 +306,7 @@ test('dashboard text and glass colors switch between the exact HTML dark and lig
   const { projectionTheme, resolveNightMode } = loadEts('video/ProjectionSettings.ets');
   const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', [
     'isLightAppearance', 'colorWithAlpha', 'primaryTextColor', 'secondaryTextColor', 'mutedTextColor',
-    'mapBackgroundColor', 'glassStrokeColor', 'glassSecondaryColor', 'glassPanelColor',
+    'mapBackgroundColor', 'glassStrokeColor', 'cardStrokeColor', 'glassSecondaryColor', 'glassPanelColor',
     'glassSurfaceColor', 'settingsPanelColor', 'settingsGroupColor', 'settingsSeparatorColor'
   ], { projectionTheme, resolveNightMode });
   const target = new Target();
@@ -343,6 +321,7 @@ test('dashboard text and glass colors switch between the exact HTML dark and lig
   assert.equal(target.glassPanelColor(), '#75262630');
   assert.equal(target.glassSurfaceColor(), '#9E1E1E26');
   assert.equal(target.glassStrokeColor(), '#38FFFFFF');
+  assert.equal(target.cardStrokeColor(), '#20FFFFFF');
   assert.equal(target.glassSecondaryColor(), '#14FFFFFF');
   assert.equal(target.settingsPanelColor(), '#75262630');
   assert.equal(target.settingsGroupColor(), '#14FFFFFF');
@@ -358,6 +337,7 @@ test('dashboard text and glass colors switch between the exact HTML dark and lig
   assert.equal(target.glassPanelColor(), '#85FFFFFF');
   assert.equal(target.glassSurfaceColor(), '#B8FFFFFF');
   assert.equal(target.glassStrokeColor(), '#BFFFFFFF');
+  assert.equal(target.cardStrokeColor(), '#243C3C43');
   assert.equal(target.glassSecondaryColor(), '#0D000000');
   assert.equal(target.settingsPanelColor(), '#85FFFFFF');
   assert.equal(target.settingsGroupColor(), '#0D000000');
@@ -1655,6 +1635,52 @@ test('active media metadata is logged once per track or playback-state change', 
   assert.match(logs[1], /Track Two/);
 });
 
+test('play and pause state stays optimistic until AVSession confirms the command', async () => {
+  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', [
+    'refreshMediaSession', 'sendMediaCommand', 'mediaStateWithPlaybackState'
+  ], {
+    includeMediaSessionApp: apps => apps
+  });
+  const commands = [];
+  let actualIsPlaying = false;
+  const target = new Target();
+  target.mediaCommandGeneration = 0;
+  target.optimisticPlaybackState = undefined;
+  target.mediaSessionBridge = {
+    async send(command) { commands.push(command); },
+    async refresh() {
+      return {
+        title: 'Track', artist: 'Artist', lyric: '', positionMs: 1000, durationMs: 5000,
+        bundleName: 'music.app', isPlaying: actualIsPlaying, commands: ['play', 'pause'],
+        queue: [], message: ''
+      };
+    }
+  };
+  target.mediaState = {
+    title: 'Track', artist: 'Artist', lyric: '', positionMs: 1000, durationMs: 5000,
+    isPlaying: false, commands: ['play', 'pause'], queue: [], message: ''
+  };
+  target.apps = [];
+  target.logMediaSnapshotIfChanged = () => {};
+  target.mediaActionMessage = '';
+
+  await target.sendMediaCommand('play');
+  assert.equal(target.mediaState.isPlaying, true);
+  assert.equal(target.optimisticPlaybackState.isPlaying, true);
+  actualIsPlaying = true;
+  await target.refreshMediaSession(target.mediaSessionBridge);
+  assert.equal(target.mediaState.isPlaying, true);
+  assert.equal(target.optimisticPlaybackState, undefined);
+
+  await target.sendMediaCommand('pause');
+  assert.equal(target.mediaState.isPlaying, false);
+  actualIsPlaying = true;
+  await target.refreshMediaSession(target.mediaSessionBridge);
+  assert.equal(target.mediaState.isPlaying, false,
+    'an older playing snapshot must not immediately undo the pause state');
+  assert.deepEqual(commands, ['play', 'pause']);
+});
+
 test('leaving projection pauses the active media session without terminating its app', async () => {
   const commands = [];
   let destroyed = false;
@@ -2821,12 +2847,21 @@ test('home selects a map preview and shows HTML-style music and weather cards', 
   assert.equal(stored.get('carplayNavigationPreview'), true);
   assert.deepEqual(opened, [map.uri, map.uri]);
   assert.match(source, /private DashboardSidebar\(\)/);
-  assert.match(source, /app\.media\.projection_album_art/);
+  const sidebarStart = source.indexOf('private DashboardSidebar()');
+  const sidebarEnd = source.indexOf('@Builder', sidebarStart + 1);
+  const sidebarSource = source.slice(sidebarStart, sidebarEnd);
+  const musicCardEnd = sidebarSource.indexOf("Stack({ alignContent: Alignment.TopStart })");
+  const musicCardSource = sidebarSource.slice(0, musicCardEnd);
+  assert.doesNotMatch(musicCardSource, /projection_album_art|Image\(/);
+  assert.equal((sidebarSource.match(/\.border\(\{ width: 1, color: this\.cardStrokeColor\(\) \}\)/g) || []).length, 2);
+  assert.match(musicCardSource, /Text\(this\.mediaState\.title\)/);
+  assert.match(musicCardSource, /Text\(this\.mediaState\.lyric \|\| '暂无歌词'\)/);
+  assert.match(musicCardSource, /this\.MediaControl\('playPrevious'/);
+  assert.match(musicCardSource, /this\.MediaControl\('playNext'/);
+  assert.match(musicCardSource, /this\.mediaProgressPercent\(\)/);
   assert.match(source, /app\.media\.projection_weather_sun/);
   assert.match(source, /Text\('上海'\)/);
   assert.doesNotMatch(source, /在手机打开地图/);
-  assert.doesNotMatch(source, /this\.mediaState\.lyric/);
-  assert.match(source, /this\.mediaProgressPercent\(\)/);
   assert.ok(!source.includes('this.navigationPreview ? 0.7'), 'preview uses actual layout, not a floating scaled page');
 });
 
@@ -3468,7 +3503,8 @@ test('phone media volume changes update car gain and the route releases its subs
 test('Dock supports Apps, Home, split and map/music alternative menus', () => {
   const { findLaunchableProjectionApp, isProjectionAppLaunchable } = loadEts('pages/ProjectionAppCatalog.ets');
   const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard',
-    ['activateDock', 'isDashboardHome', 'categoryApp', 'launchableCategoryApp'], {
+    ['activateDock', 'isDashboardHome', 'activeAppHasCategory', 'isDockItemSelected',
+      'categoryApp', 'launchableCategoryApp'], {
       HOME_APP: { uri: 'home' },
       PROJECTION_MAP_URI: 'amap',
       findLaunchableProjectionApp,
@@ -3483,6 +3519,7 @@ test('Dock supports Apps, Home, split and map/music alternative menus', () => {
   assert.match(dashboardSource, /DockItem\('map', '地图', 'app\.media\.ic_navigation'/);
   assert.match(dashboardSource, /DockItem\('music', '音乐', 'app\.media\.ic_music'/);
   assert.match(dashboardSource, /DockItem\('split', '分屏', 'app\.media\.ic_split'/);
+  assert.equal((dashboardSource.match(/DockItem\('[^']+', '[^']+', '[^']+', this\.isDockItemSelected\(/g) || []).length, 12);
   assert.doesNotMatch(dashboardSource, /DockItem\([\s\S]{0,800}?\.layoutWeight\(1\)/);
   assert.match(dashboardSource, /accessibilityText\(this\.appOnPhone \? '切换地图到虚拟屏' : '切换地图到手机'\)/);
   assert.match(dashboardSource, /'maps', 'toggleDisplay', newArea, \(\): void => this\.onToggleMapDisplay\(\)/);
@@ -3503,6 +3540,27 @@ test('Dock supports Apps, Home, split and map/music alternative menus', () => {
   target.selectedMusicUri = 'music';
   target.activeAppLabel = '';
   target.dashboardView = 'home';
+  target.navigationPreview = true;
+  target.activeAppUri = 'amap';
+  assert.equal(target.isDockItemSelected('home'), true);
+  assert.equal(target.isDockItemSelected('map'), false);
+  target.navigationPreview = false;
+  target.activeAppLabel = 'Map';
+  assert.equal(target.isDockItemSelected('home'), false);
+  assert.equal(target.isDockItemSelected('map'), true);
+  target.activeAppUri = 'otherMusic';
+  target.activeAppLabel = 'Music';
+  target.selectedMusicUri = 'music';
+  assert.equal(target.isDockItemSelected('music'), true,
+    'highlight follows the running music app rather than the previous selection');
+  target.dashboardView = 'maps';
+  assert.equal(target.isDockItemSelected('map'), true);
+  assert.equal(target.isDockItemSelected('music'), false);
+  target.dashboardView = 'split';
+  assert.equal(target.isDockItemSelected('split'), true);
+  assert.equal(target.isDockItemSelected('map'), false);
+  target.dashboardView = 'home';
+  target.activeAppUri = '';
   const actions = [];
   target.showDashboardView = view => actions.push(view);
   target.selectApp = app => actions.push(app.uri);
@@ -3521,6 +3579,36 @@ test('Dock supports Apps, Home, split and map/music alternative menus', () => {
   target.activateDock('split');
   target.activateDock('settings');
   assert.deepEqual(actions, ['apps', 'home', 'amap', 'baidu', 'maps', 'music', 'otherMusic', 'music', 'split', 'settings']);
+});
+
+test('Dock selection follows the active app and current dashboard view', () => {
+  const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', [
+    'isDashboardHome', 'activeAppHasCategory', 'isDockItemSelected'
+  ]);
+  const target = new Target();
+  target.apps = [
+    { uri: 'map-a', category: 'map' },
+    { uri: 'music-a', category: 'music' },
+    { uri: 'music-b', category: 'music' }
+  ];
+  target.dashboardView = 'home';
+  target.activeAppLabel = '音乐';
+  target.activeAppUri = 'music-b';
+  target.navigationPreview = false;
+  assert.equal(target.isDockItemSelected('music'), true);
+  assert.equal(target.isDockItemSelected('map'), false);
+
+  target.activeAppUri = 'map-a';
+  assert.equal(target.isDockItemSelected('map'), true);
+  target.navigationPreview = true;
+  assert.equal(target.isDockItemSelected('home'), true);
+  assert.equal(target.isDockItemSelected('map'), false);
+
+  target.dashboardView = 'music';
+  assert.equal(target.isDockItemSelected('music'), true);
+  target.dashboardView = 'split';
+  assert.equal(target.isDockItemSelected('split'), true);
+  assert.equal(target.isDockItemSelected('music'), false);
 });
 
 test('Apps grid includes only launchable third-party apps and adapts from three to six columns', () => {
@@ -3554,8 +3642,18 @@ test('split dashboard exposes ratio controls and requires an opened music app', 
   assert.equal((source.match(/\.layoutWeight\(this\.splitMapRatio\)/g) || []).length, 3);
   assert.equal((source.match(/\.layoutWeight\(this\.splitMusicRatio\)/g) || []).length, 2);
   assert.doesNotMatch(source, /\.width\('22%'\)/);
-  assert.match(source, /\.aspectRatio\(this\.projectionContentAspectRatio\(\)\)/);
-  assert.match(source, /private projectionContentAspectRatio\(\): number/);
+  const splitStart = source.indexOf('SplitPage()');
+  const splitEnd = source.indexOf('SafeInsetRow(', splitStart);
+  const splitSource = source.slice(splitStart, splitEnd);
+  assert.match(splitSource, /\.layoutWeight\(this\.splitMapRatio\)\s*\.height\('100%'\)/);
+  assert.match(splitSource, /\.layoutWeight\(this\.splitMusicRatio\)\s*\.height\('100%'\)/);
+  assert.match(splitSource, /id: 'projectionSplitMapSurface'[\s\S]*?\.width\('100%'\)\s*\.height\('100%'\)/);
+  assert.doesNotMatch(splitSource, /id: 'projectionSplitMapSurface'[\s\S]*?\.aspectRatio\(/);
+  const mainPanelStart = source.indexOf('MainPanel(');
+  const mainPanelEnd = source.indexOf('build()', mainPanelStart);
+  const mainPanelSource = source.slice(mainPanelStart, mainPanelEnd);
+  assert.match(mainPanelSource, /id: 'projectionAppSurface'[\s\S]*?\.width\('100%'\)\s*\.height\('100%'\)/);
+  assert.doesNotMatch(mainPanelSource, /id: 'projectionAppSurface'[\s\S]*?\.aspectRatio\(/);
   assert.doesNotMatch(source, /\b[345] : 1\b/);
   assert.match(source, /if \(view === 'split' && !this\.activeMusicApp\(\)\)/);
   const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', ['showDashboardView'], {
@@ -4127,6 +4225,8 @@ test('disabled media commands cannot be invoked through fallback touch', async (
   const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', ['sendMediaCommand']);
   const target = new Target();
   const commands = [];
+  target.mediaCommandGeneration = 0;
+  target.optimisticPlaybackState = undefined;
   target.mediaState = { commands: ['play'] };
   target.mediaSessionBridge = { async send(command) { commands.push(command); } };
   target.refreshMediaSession = async () => {};
