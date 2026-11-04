@@ -160,24 +160,26 @@ export class AirPlayEventChannel {
     this.wifiNetworkLease = wifiNetworkLease;
   }
 
-  async connect(host: string, port: number, sharedSecret: Uint8Array): Promise<void> {
+  async connect(host: string, port: number, sharedSecret?: Uint8Array): Promise<void> {
     if (this.socket) {
       throw new Error('AirPlay event channel is already connected');
     }
-    if (!host || port < 1 || port > 65535 || sharedSecret.length === 0) {
-      throw new Error('Invalid AirPlay event endpoint or missing verified shared secret');
+    if (!host || port < 1 || port > 65535 || sharedSecret?.length === 0) {
+      throw new Error('Invalid AirPlay event endpoint or empty shared secret');
     }
-    const phoneWriteKey = await hkdfSha512(
-      sharedSecret,
-      encodeUtf8('Events-Salt'),
-      encodeUtf8('Events-Read-Encryption-Key')
-    );
-    const phoneReadKey = await hkdfSha512(
-      sharedSecret,
-      encodeUtf8('Events-Salt'),
-      encodeUtf8('Events-Write-Encryption-Key')
-    );
-    this.cipher = new AirPlayControlCipher(phoneReadKey, phoneWriteKey);
+    if (sharedSecret) {
+      const phoneWriteKey = await hkdfSha512(
+        sharedSecret,
+        encodeUtf8('Events-Salt'),
+        encodeUtf8('Events-Read-Encryption-Key')
+      );
+      const phoneReadKey = await hkdfSha512(
+        sharedSecret,
+        encodeUtf8('Events-Salt'),
+        encodeUtf8('Events-Write-Encryption-Key')
+      );
+      this.cipher = new AirPlayControlCipher(phoneReadKey, phoneWriteKey);
+    }
     const socket = netSocket.constructTCPSocketInstance();
     this.socket = socket;
     this.running = true;
@@ -227,7 +229,7 @@ export class AirPlayEventChannel {
         address: { address: host, port },
         timeout: 5000
       });
-      this.log(`AirPlay encrypted event channel connected to ${host}:${port}`);
+      this.log(`AirPlay ${this.cipher ? 'encrypted' : 'plaintext'} event channel connected to ${host}:${port}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       try {
@@ -298,11 +300,11 @@ export class AirPlayEventChannel {
     const processingStartedAt = Date.now();
     this.logQueueDelay(processingStartedAt - receivedAt);
     try {
-      const cipher = this.cipher;
-      if (!cipher || !this.running) {
+      if (!this.running) {
         return;
       }
-      const plaintext = await cipher.decrypt(data);
+      const cipher = this.cipher;
+      const plaintext = cipher ? await cipher.decrypt(data) : data;
       this.receiveBuffer = concatBytes(this.receiveBuffer, plaintext);
       const parsed = parseAirPlayEventRequests(this.receiveBuffer);
       this.receiveBuffer = parsed.remaining;
@@ -383,15 +385,18 @@ export class AirPlayEventChannel {
     const operation = this.writeQueue.then(async (): Promise<void> => {
       const socket = this.socket;
       const cipher = this.cipher;
-      if (!socket || !cipher || !this.running) {
+      if (!socket || !this.running) {
         throw new Error('AirPlay event channel closed before send');
       }
-      const encrypted = await cipher.encrypt(plaintext);
+      const encrypted = cipher ? await cipher.encrypt(plaintext) : plaintext;
       if (logTraffic) {
-        this.log(formatRawBytesDiagnostic('TX', 'AirPlay event TCP ciphertext', encrypted, 256));
+        if (cipher) {
+          this.log(formatRawBytesDiagnostic('TX', 'AirPlay event TCP ciphertext', encrypted, 256));
+        }
         this.log(formatProtocolEvent('airplay.event.plaintext.tx',
           'bytes', plaintext.length,
-          'encryptedBytes', encrypted.length,
+          'wireBytes', encrypted.length,
+          'encrypted', cipher !== undefined,
           'meaning', meaning
         ));
       }

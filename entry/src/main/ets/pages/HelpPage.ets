@@ -7,7 +7,10 @@ export struct HelpPage {
       Column({ space: 18 }) {
         SectionHeading({ title: '快速帮助', subtitle: '连接流程与状态说明' })
         InfoCard({ title: '开启 CarPlayer', body: '在主界面点击中央圆形按钮，界面会切换为等待连接状态。' })
-        InfoCard({ title: '连接车机', body: '车机通过 iAP2 返回热点信息后，CarPlayer 会自动请求加入该 Wi-Fi 并继续 AirPlay 协商。' })
+        InfoCard({
+          title: '连接车机',
+          body: '车机可通过 iAP2 返回热点信息，CarPlayer 最多等待 25 秒加入车机 Wi-Fi，并继续确认车机网络选路，再按 AirPlay 能力进行配对。明确不支持配对的接收端会使用 et=NONE 兼容会话：控制通道不加密、视频使用 AES-CTR、音频关闭。MFi challenge 默认验签保持开启。'
+        })
         InfoCard({ title: '断开与关闭', body: '已连接时点击圆形按钮会中断 AirPlay；连接中或等待连接时点击会关闭 CarPlayer。' })
         InfoCard({
           title: '主流应用投影',

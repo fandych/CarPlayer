@@ -1,10 +1,14 @@
-import cryptoFramework from '@ohos.security.cryptoFramework';
 import netSocket from '@ohos.net.socket';
-import { hkdfSha512 } from './AirPlayCrypto';
+import { AirPlayMediaSessionTransport } from './media/AirPlayMediaSessionTransport';
+import { hkdfSha512, sha512 } from './AirPlayCrypto';
 import { AirPlayEventChannel, AirPlayEventRequest } from './AirPlayEventChannel';
 import { AirPlayRtspClient, AirPlayRtspResponse } from './AirPlayRtspClient';
 import { BinaryPlist, PlistNode } from './BinaryPlist';
-import { AirPlayVideoStreamSender, EncodedH264Event } from './AirPlayVideoStream';
+import {
+  AirPlayVideoEncryptionMode,
+  AirPlayVideoStreamSender,
+  EncodedH264Event
+} from './AirPlayVideoStream';
 import { settleSocketWithin } from '../network/SocketDeadline';
 import {
   DEFAULT_TOUCH_HID_UUID,
@@ -18,11 +22,35 @@ import { CARPLAY_SENDER_OS_BUILD_VERSION, CARPLAY_SENDER_SOURCE_VERSION } from '
 import { AudioRtpSession, SAMPLES_PER_PACKET } from '../audio/AudioRtpSender';
 import { getSocketAddressFamily, WifiNetworkLease } from '../network/WifiNetworkLease';
 import { formatProtocolEvent, formatRawBytesDiagnostic } from '../session/ProtocolLogger';
+import { ProjectionDisplayMode } from '../video/ProjectionSettings';
+import { Iap2SenderSession } from '../session/Iap2SenderSession';
 import {
-  projectionDisplayModes, ProjectionDisplayMode, readProjectionResolutionPreference,
-  resolveProjectionDisplayMode, saveProjectionResolutionPreference, VERIFIED_PROJECTION_DISPLAY_MODES
-} from '../video/ProjectionSettings';
-import { isH264EncoderSizeSupported } from '../video/H264EncoderCapabilities';
+  AirPlayMediaSessionStatusError,
+  AirPlayViewArea,
+  createNtpTimestamp,
+  createUuid,
+  describeNetworkError,
+  isForceKeyFrameCommand,
+  normalizeDeviceId,
+  parseIapSendMessagePayload,
+  randomPositiveInt64,
+  readAudioLatency,
+  readDisplayInfo,
+  readPort,
+  readStringArray,
+  requireDictionary,
+  requireSuccess,
+  selectPcmAudioFormat
+} from './media/AirPlayMediaHelpers';
+
+export {
+  AirPlayMediaSessionStatusError,
+  AirPlayViewArea,
+  PcmAudioFormat,
+  isForceKeyFrameCommand,
+  parseIapSendMessagePayload,
+  selectPcmAudioFormat
+} from './media/AirPlayMediaHelpers';
 
 const CONTROLLER_FEATURES: string[] = [
   'uiContext',
@@ -41,6 +69,7 @@ const CONTROLLER_FEATURES: string[] = [
   'videoPlayback'
 ];
 const CARPLAY_SENDER_MAC_ADDRESS: string = 'aa:bb:cc:dd:ee:ff';
+const MIB3_IAP2_DETECT_MARKER: Uint8Array = new Uint8Array([0xff, 0x55, 0x02, 0x00, 0xee, 0x10]);
 
 export interface AirPlayMediaSessionInfo {
   eventPort: number;
@@ -62,16 +91,6 @@ export interface AirPlayMediaSessionInfo {
   videoConnectionId: bigint;
   videoStreamKey: Uint8Array;
   audioSession: AudioRtpSession | undefined;
-}
-
-export interface AirPlayViewArea {
-  originX: number;
-  originY: number;
-  width: number;
-  height: number;
-}
-interface AirPlayNetworkError extends Error {
-  code?: string | number;
 }
 
 // Entities: 0 none, 1 controller (phone), 2 accessory (vehicle).
@@ -99,64 +118,53 @@ export function createDefaultModes(): AirPlayModes {
   };
 }
 
-export class AirPlayMediaSession {
-  private readonly client: AirPlayRtspClient;
-  private readonly receiverHost: string;
-  private readonly log: (message: string) => void;
-  private readonly onTransportDisconnected: (message: string) => void;
-  private readonly wifiNetworkLease: WifiNetworkLease;
-  private videoDataSocket?: netSocket.TCPSocket;
-  private videoSocketErrorHandler?: (error: Error) => void;
-  private videoSocketCloseHandler?: () => void;
-  private videoStreamSender?: AirPlayVideoStreamSender;
-  private videoWriteQueue: Promise<void> = Promise.resolve();
-  private videoWriteFailed: boolean = false;
-  private timingRequestsReceived: number = 0;
-  private lowPowerKeepAlivesSent: number = 0;
-  private forceKeyFrameHandler?: () => void;
-  private touchReportHandler?: (report: Uint8Array) => void;
-  private nightModeHandler?: (night: boolean) => void;
-  private nightMode: boolean = false;
-  private modes: AirPlayModes = createDefaultModes();
-  private touchHid?: TouchHidDevice;
-  private videoWidth: number = 0;
-  private videoHeight: number = 0;
-  private videoKeepAliveTimer: number = -1;
-  private videoKeepAlivePending: boolean = false;
-  private timingSocket?: netSocket.UDPSocket;
-  private timingHandler?: (info: netSocket.SocketMessageInfo) => void;
-  private keepAliveSocket?: netSocket.UDPSocket;
-  private eventChannel?: AirPlayEventChannel;
-  private keepAliveTimer: number = -1;
-  private feedbackTimer: number = -1;
-  private feedbackPending: boolean = false;
-  private feedbackEnabled: boolean = true;
-  private running: boolean = false;
-  private recorded: boolean = false;
-
-  constructor(
-    client: AirPlayRtspClient,
-    receiverHost: string,
-    log: (message: string) => void,
-    onTransportDisconnected: (message: string) => void,
-    wifiNetworkLease: WifiNetworkLease
-  ) {
-    this.client = client;
-    this.receiverHost = receiverHost;
-    this.log = log;
-    this.onTransportDisconnected = onTransportDisconnected;
-    this.wifiNetworkLease = wifiNetworkLease;
+export class AirPlayMediaSession extends AirPlayMediaSessionTransport {
+  protected createTimingResponse(request: Uint8Array, nowMillis: number): Uint8Array | undefined {
+    return AirPlayMediaSession.buildTimingResponse(request, nowMillis);
   }
 
-  async start(deviceId: string, sharedSecret: Uint8Array):
+  protected createVideoKeepAliveFrame(nowMillis: number): Uint8Array {
+    return AirPlayMediaSession.buildVideoKeepAliveFrame(nowMillis);
+  }
+
+  protected createAudioSetupPayload(connectionId: bigint, formatBit: bigint, latencyMs: number): Uint8Array {
+    return AirPlayMediaSession.buildAudioSetupPayload(connectionId, formatBit, latencyMs);
+  }
+
+  protected applyModeChanges(modes: AirPlayModes, params: PlistNode | undefined): AirPlayModes {
+    return AirPlayMediaSession.applyChangeModes(modes, params);
+  }
+
+  protected createModesDictionary(modes: AirPlayModes): PlistNode {
+    return AirPlayMediaSession.buildModesDictionary(modes);
+  }
+
+  protected createModesChangedPayload(modes: AirPlayModes): Uint8Array {
+    return AirPlayMediaSession.buildModesChangedPayload(modes);
+  }
+
+  protected createLowPowerKeepAliveBeacon(): Uint8Array {
+    return AirPlayMediaSession.buildLowPowerKeepAliveBeacon();
+  }
+
+  async start(
+    deviceId: string,
+    sharedSecret?: Uint8Array,
+    mib3VirtualLink: boolean = false,
+    virtualIap2Session?: Iap2SenderSession
+  ):
     Promise<AirPlayMediaSessionInfo> {
     if (this.running) {
       throw new Error('AirPlay media session is already active');
     }
-    if (sharedSecret.length === 0) {
-      throw new Error('AirPlay shared secret is missing; refusing to negotiate an unauthenticated media session');
+    if (sharedSecret?.length === 0) {
+      throw new Error('AirPlay shared secret is empty');
     }
+    const paired = sharedSecret !== undefined;
+    const mediaSessionKey = sharedSecret ?? new Uint8Array(16);
     const normalizedDeviceId = normalizeDeviceId(deviceId);
+    const sessionUuid = createUuid().toUpperCase();
+    const sessionCorrelationUuid = createUuid().toUpperCase();
     this.running = true;
     this.videoWriteFailed = false;
     this.timingRequestsReceived = 0;
@@ -169,7 +177,9 @@ export class AirPlayMediaSession {
       const initialSetup = await this.request(
         'SETUP',
         '/setup',
-        AirPlayMediaSession.buildSessionSetupPayload(normalizedDeviceId, timingPort),
+        AirPlayMediaSession.buildSessionSetupPayload(
+          normalizedDeviceId, timingPort, !paired, sessionUuid, sessionCorrelationUuid
+        ),
         'initial session SETUP'
       );
       this.ensureRunning();
@@ -213,23 +223,6 @@ export class AirPlayMediaSession {
         );
       }
       const eventPort = readPort(initialResponse.get('eventPort'));
-      if (eventPort > 0) {
-        const eventChannel = new AirPlayEventChannel(
-          (message: string): void => this.log(message),
-          (request: AirPlayEventRequest): boolean => this.handleEventRequest(request),
-          this.wifiNetworkLease
-        );
-        this.eventChannel = eventChannel;
-        try {
-          await eventChannel.connect(this.receiverHost, eventPort, sharedSecret);
-        } catch (error) {
-          this.log(`AirPlay event channel unavailable: ${error instanceof Error ? error.message : String(error)}`);
-          this.eventChannel = undefined;
-          await eventChannel.close();
-        }
-      } else {
-        this.log('Receiver did not provide an event port before resource claim');
-      }
       this.ensureRunning();
       await this.request(
         'POST',
@@ -238,17 +231,6 @@ export class AirPlayMediaSession {
         'modesChanged resource declaration'
       );
       this.ensureRunning();
-      const eventChannel = this.eventChannel;
-      if (touchHid && eventChannel) {
-        try {
-          await eventChannel.sendCommand(AirPlayMediaSession.buildHidSetInputModePayload(touchHid.uuid));
-          this.ensureRunning();
-          this.log(`AirPlay touch HID input mode armed: uuid=${touchHid.uuid}, mode=0`);
-        } catch (error) {
-          this.ensureRunning();
-          this.log(`AirPlay touch HID input mode unavailable: ${error instanceof Error ? error.message : String(error)}`);
-        }
-      }
       const videoConnectionId = await randomPositiveInt64();
       const videoSetup = await this.request(
         'SETUP',
@@ -272,8 +254,59 @@ export class AirPlayMediaSession {
       if (videoDataPort === 0) {
         throw new Error('Video SETUP response did not include a valid data port');
       }
+      if (mib3VirtualLink && paired) {
+        await this.request(
+          'POST',
+          '/command',
+          AirPlayMediaSession.buildIapSendMessagePayload(MIB3_IAP2_DETECT_MARKER),
+          'MIB3 virtual iAP2 DETECT'
+        );
+        this.ensureRunning();
+        if (!virtualIap2Session) {
+          throw new Error('MIB3 virtual iAP2 link engine is unavailable');
+        }
+        virtualIap2Session.setMib3WirelessSessionUuid(sessionUuid);
+        await virtualIap2Session.start(false);
+        this.virtualIap2Session = virtualIap2Session;
+      }
       await this.openVideoDataPort(videoDataPort);
       this.ensureRunning();
+      if (eventPort > 0) {
+        const eventChannel = new AirPlayEventChannel(
+          (message: string): void => this.log(message),
+          (request: AirPlayEventRequest): boolean => this.handleEventRequest(request),
+          this.wifiNetworkLease
+        );
+        this.eventChannel = eventChannel;
+        try {
+          await eventChannel.connect(this.receiverHost, eventPort, sharedSecret);
+        } catch (error) {
+          this.log(`AirPlay event channel unavailable: ${error instanceof Error ? error.message : String(error)}`);
+          this.eventChannel = undefined;
+          await eventChannel.close();
+          if (mib3VirtualLink && paired) {
+            throw new Error(
+              `MIB3 virtual iAP2 event channel unavailable: ${error instanceof Error ? error.message : String(error)}`
+            );
+          }
+        }
+      } else {
+        this.log('Receiver did not provide an event port before resource claim');
+        if (mib3VirtualLink && paired) {
+          throw new Error('MIB3 virtual iAP2 requires an AirPlay event channel');
+        }
+      }
+      const eventChannel = this.eventChannel;
+      if (touchHid && eventChannel) {
+        try {
+          await eventChannel.sendCommand(AirPlayMediaSession.buildHidSetInputModePayload(touchHid.uuid));
+          this.ensureRunning();
+          this.log(`AirPlay touch HID input mode armed: uuid=${touchHid.uuid}, mode=0`);
+        } catch (error) {
+          this.ensureRunning();
+          this.log(`AirPlay touch HID input mode unavailable: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
       await this.startKeepAlive(keepAlivePort);
       this.ensureRunning();
       this.startFeedbackLoop();
@@ -297,28 +330,44 @@ export class AirPlayMediaSession {
           }
         });
       }, 1000);
-      const videoStreamKey = await hkdfSha512(
-        sharedSecret,
-        encodeUtf8(`DataStream-Salt${videoConnectionId.toString()}`),
-        encodeUtf8('DataStream-Output-Encryption-Key')
-      );
-      this.videoStreamSender = new AirPlayVideoStreamSender(
+      const connectionIdText = videoConnectionId.toString();
+      const videoEncryption = paired
+        ? AirPlayVideoEncryptionMode.CHACHA20_POLY1305
+        : AirPlayVideoEncryptionMode.AES_128_CTR;
+      const videoStreamKey = paired
+        ? await hkdfSha512(
+          mediaSessionKey,
+          encodeUtf8(`DataStream-Salt${connectionIdText}`),
+          encodeUtf8('DataStream-Output-Encryption-Key')
+        )
+        : (await sha512(encodeUtf8(`AirPlayStreamKey${connectionIdText}`), mediaSessionKey)).slice(0, 16);
+      const videoStreamIv = paired
+        ? undefined
+        : (await sha512(encodeUtf8(`AirPlayStreamIV${connectionIdText}`), mediaSessionKey)).slice(0, 16);
+      const videoStreamSender = new AirPlayVideoStreamSender(
         videoStreamKey,
         display.width,
         display.height,
         (data: Uint8Array): Promise<void> => this.enqueueVideoBytes(data),
         this.log,
-        (): void => this.forceKeyFrameHandler?.()
+        (): void => this.forceKeyFrameHandler?.(),
+        videoEncryption,
+        videoStreamIv
       );
+      await videoStreamSender.initialize();
+      this.videoStreamSender = videoStreamSender;
       let audioSession: AudioRtpSession | undefined = undefined;
-      try {
-        // The session is already recording, so the receiver starts a newly set up stream immediately.
-        audioSession = await this.setupAudioStream(info, sharedSecret);
-        this.ensureRunning();
-      } catch (error) {
-        this.ensureRunning();
-        audioSession = undefined;
-        this.log(`AirPlay audio SETUP unavailable: ${error instanceof Error ? error.message : String(error)}`);
+      if (paired) {
+        try {
+          audioSession = await this.setupAudioStream(info, mediaSessionKey);
+          this.ensureRunning();
+        } catch (error) {
+          this.ensureRunning();
+          audioSession = undefined;
+          this.log(`AirPlay audio SETUP unavailable: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      } else {
+        this.log('AirPlay et=NONE session: audio RTP is disabled because no paired DataStream key exists');
       }
       if (audioSession) {
         const audioRecord = await this.request(
@@ -362,19 +411,27 @@ export class AirPlayMediaSession {
       return result;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      let cleanupMessage = '';
       try {
         await this.stop();
       } catch (cleanupError) {
-        const cleanupMessage = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+        cleanupMessage = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+      }
+      if (error instanceof AirPlayMediaSessionStatusError) {
+        if (cleanupMessage.length > 0) {
+          throw new AirPlayMediaSessionStatusError(
+            error.statusCode,
+            error.statusLine,
+            error.stage,
+            `${message}; media-session cleanup failed: ${cleanupMessage}`
+          );
+        }
+        throw error;
+      }
+      if (cleanupMessage.length > 0) {
         throw new Error(`${message}; media-session cleanup failed: ${cleanupMessage}`);
       }
       throw new Error(`AirPlay media session failed: ${message}`);
-    }
-  }
-
-  private ensureRunning(): void {
-    if (!this.running) {
-      throw new Error('AirPlay media session startup was cancelled');
     }
   }
 
@@ -394,8 +451,23 @@ export class AirPlayMediaSession {
     this.log('Receiver acknowledged OEM UI request; media streams remain active');
   }
 
+  async sendVirtualIap2Message(bytes: Uint8Array): Promise<void> {
+    this.ensureRunning();
+    if (!this.virtualIap2Session) {
+      throw new Error('MIB3 virtual iAP2 link is not active');
+    }
+    await this.request(
+      'POST',
+      '/command',
+      AirPlayMediaSession.buildIapSendMessagePayload(bytes),
+      'MIB3 virtual iAP2 message'
+    );
+  }
+
   async stop(abort: boolean = false): Promise<void> {
     this.running = false;
+    this.virtualIap2Session?.cancel();
+    this.virtualIap2Session = undefined;
     if (abort) {
       this.recorded = false;
     }
@@ -443,6 +515,11 @@ export class AirPlayMediaSession {
         await settleSocketWithin(videoStreamSender.flush(), 1500, 'encoder queue shutdown timed out');
       } catch (error) {
         failures.push(`screen-stream encoder queue: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      try {
+        await settleSocketWithin(videoStreamSender.finish(), 1500, 'screen-stream cipher shutdown timed out');
+      } catch (error) {
+        failures.push(`screen-stream cipher: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
     try {
@@ -506,7 +583,13 @@ export class AirPlayMediaSession {
     }
   }
 
-  static buildSessionSetupPayload(deviceId: string, timingPort: number): Uint8Array {
+  static buildSessionSetupPayload(
+    deviceId: string,
+    timingPort: number,
+    encryptionTypeNone: boolean = false,
+    sessionUuid: string = createUuid().toUpperCase(),
+    sessionCorrelationUuid: string = createUuid().toUpperCase()
+  ): Uint8Array {
     if (timingPort < 1 || timingPort > 65535) {
       throw new Error('AirPlay timing server must have a bound UDP port before SETUP');
     }
@@ -523,13 +606,16 @@ export class AirPlayMediaSession {
       ['osVersion', PlistNode.string('15.0.2')],
       ['sourceVersion', PlistNode.string(CARPLAY_SENDER_SOURCE_VERSION)],
       ['timingPort', PlistNode.integer(timingPort)],
-      ['sessionUUID', PlistNode.string(createUuid().toUpperCase())],
-      ['sessionCorrelationUUID', PlistNode.string(createUuid().toUpperCase())],
+      ['sessionUUID', PlistNode.string(sessionUuid)],
+      ['sessionCorrelationUUID', PlistNode.string(sessionCorrelationUuid)],
       ['statsCollectionEnabled', PlistNode.boolean(false)],
       ['updateSessionRequest', PlistNode.boolean(false)],
       ['keepAliveLowPower', PlistNode.boolean(true)],
       ['features', PlistNode.array(features)]
     ]);
+    if (encryptionTypeNone) {
+      fields.set('et', PlistNode.integer(1));
+    }
     return BinaryPlist.encode(PlistNode.dictionary(fields));
   }
 
@@ -624,6 +710,18 @@ export class AirPlayMediaSession {
       ['params', PlistNode.dictionary(new Map<string, PlistNode>([
         ['hidInputMode', PlistNode.integer(0)],
         ['uuid', PlistNode.string(uuid.toLowerCase())]
+      ]))]
+    ])));
+  }
+
+  static buildIapSendMessagePayload(frame: Uint8Array): Uint8Array {
+    if (frame.length === 0) {
+      throw new Error('Virtual iAP2 message must contain a frame');
+    }
+    return BinaryPlist.encode(PlistNode.dictionary(new Map<string, PlistNode>([
+      ['type', PlistNode.string('iAPSendMessage')],
+      ['params', PlistNode.dictionary(new Map<string, PlistNode>([
+        ['data', PlistNode.data(frame)]
       ]))]
     ])));
   }
@@ -727,696 +825,5 @@ export class AirPlayMediaSession {
     return header;
   }
 
-  private async startTimingServer(): Promise<number> {
-    const socket = netSocket.constructUDPSocketInstance();
-    const handler = (info: netSocket.SocketMessageInfo): void => {
-      const request = new Uint8Array(info.message);
-      this.log(formatRawBytesDiagnostic('RX', 'AirPlay timing UDP', request, 64));
-      const response = AirPlayMediaSession.buildTimingResponse(request, Date.now());
-      if (!response) {
-        this.log(formatProtocolEvent('airplay.timing.request.invalid',
-          'bytes', request.length,
-          'source', `${info.remoteInfo.address}:${info.remoteInfo.port}`,
-          'meaning', '长度或类型不符合 AirPlay timing 请求格式，未发送响应'
-        ));
-        return;
-      }
-      const requestNumber = ++this.timingRequestsReceived;
-      this.log(formatProtocolEvent('airplay.timing.request',
-        'packet', requestNumber,
-        'bytes', request.length,
-        'source', `${info.remoteInfo.address}:${info.remoteInfo.port}`,
-        'meaning', '请求本机时钟时间；已构造对应 NTP 时间戳响应'
-      ));
 
-      const options: netSocket.UDPSendOptions = {
-        data: toArrayBuffer(response),
-        address: { address: info.remoteInfo.address, port: info.remoteInfo.port }
-      };
-      void socket.send(options).then((): void => {
-        this.log(formatRawBytesDiagnostic('TX', 'AirPlay timing UDP', response, 64));
-        this.log(formatProtocolEvent('airplay.timing.response',
-          'requestPacket', requestNumber,
-          'bytes', response.length,
-          'destination', `${info.remoteInfo.address}:${info.remoteInfo.port}`,
-          'meaning', '发送时钟响应，供对端校准 RTP 播放时间'
-        ));
-      }).catch((error: Error): void => {
-        this.log(formatProtocolEvent('airplay.timing.response.failure',
-          'requestPacket', requestNumber,
-          'error', describeNetworkError(error),
-          'meaning', '时钟响应未能通过 UDP socket 发送'
-        ));
-      });
-    };
-    try {
-      socket.on('message', handler);
-      const boundToCarWifi = await this.wifiNetworkLease.bindSocket(
-        socket, 'AirPlay timing UDP', getSocketAddressFamily(this.receiverHost));
-      this.log(boundToCarWifi ? 'AirPlay timing UDP socket 已绑定指定车机 Wi-Fi 网络' :
-        'AirPlay timing UDP socket 使用系统默认网络路由');
-      const localAddress = await socket.getLocalAddress();
-      const localPort = localAddress.port;
-      if (typeof localPort !== 'number' || localPort < 1) {
-        throw new Error('System did not allocate a timing UDP port');
-      }
-      this.timingSocket = socket;
-      this.timingHandler = handler;
-      return localPort;
-    } catch (error) {
-      try {
-        socket.off('message', handler);
-      } catch (cleanupError) {
-        this.log(`AirPlay timing listener cleanup failed: ${cleanupError instanceof Error ?
-          cleanupError.message : String(cleanupError)}`);
-      }
-      try {
-        await socket.close();
-      } catch (cleanupError) {
-        this.log(`AirPlay timing socket cleanup failed: ${cleanupError instanceof Error ?
-          cleanupError.message : String(cleanupError)}`);
-      }
-      throw new Error(`Unable to start AirPlay timing service: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  private async openVideoDataPort(port: number): Promise<void> {
-    const socket = netSocket.constructTCPSocketInstance();
-    const errorHandler = (error: Error): void => {
-      this.reportVideoSocketFailure(socket, `socket error: ${describeNetworkError(error)}`);
-    };
-    const closeHandler = (): void => {
-      this.reportVideoSocketFailure(socket, 'socket closed by peer');
-    };
-    this.videoDataSocket = socket;
-    this.videoSocketErrorHandler = errorHandler;
-    this.videoSocketCloseHandler = closeHandler;
-    socket.on('error', errorHandler);
-    socket.on('close', closeHandler);
-    try {
-      if (await this.wifiNetworkLease.bindSocket(
-        socket, 'AirPlay video TCP', getSocketAddressFamily(this.receiverHost))) {
-        this.log('AirPlay video TCP socket 已绑定指定车机 Wi-Fi 网络');
-      }
-      await socket.connect({
-        address: { address: this.receiverHost, port },
-        timeout: 5000
-      });
-      this.log(`AirPlay screen data TCP connected: ${this.receiverHost}:${port}`);
-    } catch (error) {
-      if (this.videoDataSocket === socket) {
-        this.videoDataSocket = undefined;
-      }
-      this.videoSocketErrorHandler = undefined;
-      this.videoSocketCloseHandler = undefined;
-      try {
-        socket.off('error', errorHandler);
-        socket.off('close', closeHandler);
-      } catch (_cleanupError) {
-      }
-      try {
-        await socket.close();
-      } catch (cleanupError) {
-        this.log(`AirPlay screen TCP cleanup failed: ${cleanupError instanceof Error ?
-          cleanupError.message : String(cleanupError)}`);
-      }
-      throw new Error(`Unable to connect screen data port: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  private async sendVideoKeepAlive(): Promise<void> {
-    const socket = this.videoDataSocket;
-    if (!socket || !this.recorded || this.videoKeepAlivePending) {
-      return;
-    }
-    const header = AirPlayMediaSession.buildVideoKeepAliveFrame(Date.now());
-    this.videoKeepAlivePending = true;
-    try {
-      await this.enqueueVideoBytes(header);
-    } finally {
-      this.videoKeepAlivePending = false;
-    }
-  }
-
-  async pushEncodedVideo(event: EncodedH264Event): Promise<void> {
-    const sender = this.videoStreamSender;
-    if (!sender || !this.running || !this.recorded) {
-      throw new Error('AirPlay screen stream is not ready for encoded frames');
-    }
-    await sender.handleEncoderEvent(event);
-  }
-
-  setForceKeyFrameHandler(handler: (() => void) | undefined): void {
-    this.forceKeyFrameHandler = handler;
-  }
-
-  setTouchReportHandler(handler: ((report: Uint8Array) => void) | undefined): void {
-    this.touchReportHandler = handler;
-  }
-
-  setNightModeHandler(handler: ((night: boolean) => void) | undefined): void {
-    this.nightModeHandler = handler;
-    handler?.(this.nightMode);
-  }
-
-  private reportVideoSocketFailure(socket: netSocket.TCPSocket, reason: string): void {
-    if (this.videoDataSocket !== socket || !this.running || !this.recorded || this.videoWriteFailed) {
-      return;
-    }
-    this.videoWriteFailed = true;
-    this.log(`AirPlay screen data TCP ${reason}`);
-    this.onTransportDisconnected(`AirPlay screen data TCP ${reason}`);
-  }
-
-  private enqueueVideoBytes(data: Uint8Array): Promise<void> {
-    const operation = this.videoWriteQueue.then(async (): Promise<void> => {
-      if (!this.running || this.videoWriteFailed) {
-        throw new Error('AirPlay screen stream is closed or failed');
-      }
-      const socket = this.videoDataSocket;
-      if (!socket) {
-        throw new Error('AirPlay screen data socket is closed');
-      }
-      const options: netSocket.TCPSendOptions = { data: toArrayBuffer(data) };
-      try {
-        await socket.send(options);
-      } catch (error) {
-        this.reportVideoSocketFailure(socket, `write failed: ${describeNetworkError(error)}`);
-        throw error instanceof Error ? error : new Error(String(error));
-      }
-    });
-    this.videoWriteQueue = operation.catch((error: Error): void => {
-      this.log(`AirPlay screen stream send failed: ${error.message}`);
-    });
-    return operation;
-  }
-
-  private async setupAudioStream(info: PlistNode, sharedSecret: Uint8Array): Promise<AudioRtpSession | undefined> {
-    const format = selectPcmAudioFormat(info);
-    if (!format) {
-      this.log('Receiver /info has no supported PCM media-audio format; audio RTP will remain disabled');
-      return undefined;
-    }
-    const connectionId = await randomPositiveInt64();
-    const audioLatencyMs = readAudioLatency(info, format.sampleRate);
-    const response = await this.request(
-      'SETUP',
-      '/',
-      AirPlayMediaSession.buildAudioSetupPayload(connectionId, format.formatBit, audioLatencyMs),
-      'audio stream SETUP'
-    );
-    const root = requireDictionary(response, 'audio stream SETUP');
-    const streams = root.get('streams');
-    if (!streams || streams.kind !== 'array') {
-      throw new Error('Audio SETUP response has no streams array');
-    }
-    const audio = streams.arrayValue.find((item: PlistNode): boolean =>
-      item.kind === 'dictionary' && item.get('type')?.integerValue === BigInt(100)
-    );
-    const dataPort = readPort(audio?.get('dataPort'));
-    if (!audio || dataPort === 0) {
-      throw new Error('Audio SETUP response has no type 100 data port');
-    }
-    const streamKey = await hkdfSha512(
-      sharedSecret,
-      encodeUtf8(`DataStream-Salt${connectionId.toString()}`),
-      encodeUtf8('DataStream-Output-Encryption-Key')
-    );
-    this.log(`AirPlay PCM audio stream negotiated: ${format.sampleRate}Hz → UDP ${dataPort}`);
-    return {
-      host: this.receiverHost,
-      dataPort,
-      controlPort: readPort(audio.get('controlPort')),
-      streamKey,
-      sampleRate: format.sampleRate
-    };
-  }
-
-  private handleChangeModes(request: AirPlayEventRequest, params: PlistNode | undefined): void {
-    this.modes = AirPlayMediaSession.applyChangeModes(this.modes, params);
-    request.responseBody = BinaryPlist.encode(PlistNode.dictionary(new Map<string, PlistNode>([
-      ['status', PlistNode.integer(0)],
-      ['params', AirPlayMediaSession.buildModesDictionary(this.modes)]
-    ])));
-    this.log(`AirPlay changeModes granted: screen=${this.modes.screenEntity}, audio=${this.modes.audioEntity}, ` +
-      `speech=${this.modes.speechMode}, call=${this.modes.phoneCallEntity}, nav=${this.modes.turnByTurnEntity}`);
-    const payload = AirPlayMediaSession.buildModesChangedPayload(this.modes);
-    void this.client.request('POST', '/command', payload, { contentType: 'application/x-apple-binary-plist' })
-      .then((response: AirPlayRtspResponse): void => {
-        if (response.statusCode !== 200) {
-          this.log(`AirPlay modesChanged rejected: ${response.statusLine}`);
-        }
-      })
-      .catch((error: Error): void => this.log(`AirPlay modesChanged failed: ${error.message}`));
-  }
-
-  private handleEventRequest(request: AirPlayEventRequest): boolean {
-    let commandSummary = '';
-    if (request.body.length > 0) {
-      try {
-        const command = BinaryPlist.decode(request.body);
-        if (command.kind === 'dictionary') {
-          commandSummary = ` fields=${Array.from(command.dictionaryValue.keys()).join(',')}`;
-          const touchReport = extractCarPlayTouchReport(command, this.touchHid?.uuid);
-          if (request.method === 'POST' && request.target === '/command' && touchReport) {
-            const device = this.touchHid;
-            this.touchReportHandler?.(device ?
-              scaleCarPlayTouchReport(touchReport, device, this.videoWidth, this.videoHeight) : touchReport);
-          }
-          const type = command.get('type');
-          if (request.method === 'POST' && request.target === '/command' &&
-            type?.kind === 'string' && type.stringValue === 'changeModes') {
-            this.handleChangeModes(request, command.get('params'));
-          }
-          if (request.method === 'POST' && request.target === '/command' &&
-            type?.kind === 'string' && type.stringValue === 'setNightMode') {
-            const night = command.get('params')?.get('nightMode');
-            if (night?.kind !== 'boolean') {
-              throw new Error('setNightMode requires params.nightMode Boolean');
-            }
-            this.nightMode = night.boolValue;
-            this.nightModeHandler?.(this.nightMode);
-          }
-          if (request.method === 'POST' && request.target === '/command' &&
-            type?.kind === 'string' && type.stringValue === 'hidSendReport') {
-            return true;
-          }
-          if (request.method === 'POST' && request.target === '/command' && isForceKeyFrameCommand(command)) {
-            this.log('AirPlay receiver requested an immediate H.264 key frame');
-            this.forceKeyFrameHandler?.();
-          }
-        }
-      } catch (error) {
-        commandSummary = ` plistError=${error instanceof Error ? error.message : String(error)}`;
-      }
-    }
-    this.log(
-      `AirPlay event ${request.method} ${request.target} cseq=${request.cseq} body=${request.body.length}B${commandSummary}`
-    );
-    return false;
-  }
-
-  private async startKeepAlive(port: number): Promise<void> {
-    if (port === 0) {
-      this.log('Receiver did not advertise a keep-alive UDP port');
-      return;
-    }
-    const socket = netSocket.constructUDPSocketInstance();
-    try {
-      const boundToCarWifi = await this.wifiNetworkLease.bindSocket(
-        socket, 'AirPlay keep-alive UDP', getSocketAddressFamily(this.receiverHost));
-      this.log(boundToCarWifi ? 'AirPlay keep-alive UDP socket 已绑定指定车机 Wi-Fi 网络' :
-        'AirPlay keep-alive UDP socket 使用系统默认网络路由');
-      this.keepAliveSocket = socket;
-      this.keepAliveTimer = setInterval((): void => {
-        void this.sendKeepAlive(port).catch((error: Error): void => {
-          this.log(`AirPlay UDP keep-alive failed: ${error.message}`);
-        });
-      }, 5000);
-      await this.sendKeepAlive(port);
-    } catch (error) {
-      try {
-        await socket.close();
-      } catch (cleanupError) {
-        this.log(`AirPlay keep-alive socket cleanup failed: ${cleanupError instanceof Error ?
-          cleanupError.message : String(cleanupError)}`);
-      }
-      this.keepAliveSocket = undefined;
-      throw new Error(`Unable to start AirPlay keep-alive: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  private async sendKeepAlive(port: number): Promise<void> {
-    const socket = this.keepAliveSocket;
-    if (!socket || !this.running) {
-      return;
-    }
-    const beacon = AirPlayMediaSession.buildLowPowerKeepAliveBeacon();
-    const options: netSocket.UDPSendOptions = {
-      data: toArrayBuffer(beacon),
-      address: { address: this.receiverHost, port }
-    };
-    await socket.send(options);
-    const packetNumber = ++this.lowPowerKeepAlivesSent;
-    this.log(formatRawBytesDiagnostic('TX', 'AirPlay low-power keep-alive UDP', beacon, 64));
-    this.log(formatProtocolEvent('airplay.keep_alive.tx',
-      'packet', packetNumber,
-      'destination', `${this.receiverHost}:${port}`,
-      'bytes', beacon.length,
-      'meaning', '向接收端发送低功耗会话保活信标，避免控制会话因空闲被回收'
-    ));
-  }
-
-  private startFeedbackLoop(): void {
-    const run = async (): Promise<void> => {
-      this.feedbackTimer = -1;
-      if (!this.running || this.feedbackPending) {
-        return;
-      }
-      this.feedbackPending = true;
-      try {
-        const response = await this.client.request(
-          'POST',
-          '/feedback',
-          new Uint8Array(0),
-          { contentType: 'application/x-apple-binary-plist' }
-        );
-        if (response.statusCode !== 200) {
-          this.log(`AirPlay feedback returned ${response.statusLine}`);
-          this.feedbackEnabled = false;
-        }
-      } catch (error) {
-        this.log(`AirPlay feedback failed: ${error instanceof Error ? error.message : String(error)}`);
-        this.feedbackEnabled = false;
-      } finally {
-        this.feedbackPending = false;
-        if (this.running && this.feedbackEnabled) {
-          this.feedbackTimer = setTimeout((): void => {
-            void run();
-          }, 1000);
-        }
-      }
-    };
-    this.feedbackTimer = setTimeout((): void => {
-      void run();
-    }, 1000);
-  }
-
-  private async request(method: string, path: string, body: Uint8Array, label: string):
-    Promise<AirPlayRtspResponse> {
-    const response = await this.client.request(method, path, body, {
-      contentType: 'application/x-apple-binary-plist'
-    });
-    requireSuccess(response, label);
-    return response;
-  }
-}
-
-function requireDictionary(response: AirPlayRtspResponse, label: string): PlistNode {
-  const value = BinaryPlist.decode(response.body);
-  if (value.kind !== 'dictionary') {
-    throw new Error(`${label} response is not a binary plist dictionary`);
-  }
-  return value;
-}
-
-function requireSuccess(response: AirPlayRtspResponse, label: string): void {
-  if (response.statusCode !== 200) {
-    throw new Error(`${label} rejected: ${response.statusLine}`);
-  }
-}
-
-function readPort(node: PlistNode | undefined): number {
-  if (!node || node.kind !== 'integer') {
-    return 0;
-  }
-  const port = Number(node.integerValue);
-  return Number.isSafeInteger(port) && port >= 0 && port <= 65535 ? port : 0;
-}
-
-export function isForceKeyFrameCommand(command: PlistNode): boolean {
-  if (command.kind !== 'dictionary') {
-    return false;
-  }
-  const type = command.get('type');
-  const legacyCommand = command.get('command');
-  return (type?.kind === 'string' && type.stringValue === 'forceKeyFrame') ||
-    (legacyCommand?.kind === 'string' && legacyCommand.stringValue === 'forceKeyFrame');
-}
-
-export interface PcmAudioFormat {
-  formatBit: bigint;
-  sampleRate: number;
-}
-
-export function selectPcmAudioFormat(info: PlistNode): PcmAudioFormat | undefined {
-  const formats = info.get('audioFormats');
-  if (!formats || formats.kind !== 'array') {
-    return undefined;
-  }
-  let supports48k = false;
-  let supports44k = false;
-  for (const entry of formats.arrayValue) {
-    if (entry.kind !== 'dictionary' || entry.get('type')?.integerValue !== BigInt(100) ||
-      entry.get('audioType')?.stringValue !== 'media') {
-      continue;
-    }
-    const output = entry.get('audioOutputFormats');
-    if (!output || output.kind !== 'integer') {
-      continue;
-    }
-    supports48k ||= (output.integerValue & (BigInt(1) << BigInt(15))) !== BigInt(0);
-    supports44k ||= (output.integerValue & (BigInt(1) << BigInt(11))) !== BigInt(0);
-  }
-  if (supports48k) {
-    return { formatBit: BigInt(1) << BigInt(15), sampleRate: 48000 };
-  }
-  if (supports44k) {
-    return { formatBit: BigInt(1) << BigInt(11), sampleRate: 44100 };
-  }
-  return undefined;
-}
-
-function readAudioLatency(info: PlistNode, sampleRate: number): number {
-  const latencies = info.get('audioLatencies');
-  if (!latencies || latencies.kind !== 'array') {
-    return 250;
-  }
-  const selected = latencies.arrayValue.find((entry: PlistNode): boolean =>
-    entry.kind === 'dictionary' &&
-    entry.get('type')?.integerValue === BigInt(100) &&
-    entry.get('audioType')?.stringValue === 'media'
-  );
-  const outputLatency = selected?.get('outputLatencyMicros');
-  if (!outputLatency || outputLatency.kind !== 'integer') {
-    return 250;
-  }
-  const milliseconds = Number(outputLatency.integerValue) / 1000;
-  if (!Number.isFinite(milliseconds) || milliseconds < 0) {
-    return 250;
-  }
-  return Math.max(32, Math.min(2000, Math.round(milliseconds + (sampleRate === 44100 ? 30 : 0))));
-}
-
-function readStringArray(node: PlistNode | undefined): string[] {
-  if (!node || node.kind !== 'array') {
-    return [];
-  }
-  return node.arrayValue
-    .filter((item: PlistNode): boolean => item.kind === 'string')
-    .map((item: PlistNode): string => item.stringValue);
-}
-
-interface AirPlayDisplayDescriptor {
-  uuid: string;
-  displayType: number;
-  width: number;
-  height: number;
-  nativeWidth: number;
-  nativeHeight: number;
-  viewArea: AirPlayViewArea;
-  sourceWidth: number;
-  sourceHeight: number;
-  maxFrameRate: number;
-  modeId: string;
-  availableModes: ProjectionDisplayMode[];
-  resolutionMessage: string;
-}
-
-function readActiveViewArea(display: PlistNode, canvasWidth: number, canvasHeight: number): AirPlayViewArea {
-  const fullCanvas: AirPlayViewArea = { originX: 0, originY: 0, width: canvasWidth, height: canvasHeight };
-  const areas = display.get('viewAreas');
-  if (!areas || areas.kind !== 'array' || areas.arrayValue.length === 0) {
-    return fullCanvas;
-  }
-  const initialNode = display.get('initialViewArea');
-  const initialIndex = initialNode?.kind === 'integer' ? Number(initialNode.integerValue) : 0;
-  const selected = Number.isSafeInteger(initialIndex) && initialIndex >= 0 && initialIndex < areas.arrayValue.length
-    ? areas.arrayValue[initialIndex] : areas.arrayValue[0];
-  if (!selected || selected.kind !== 'dictionary') {
-    return fullCanvas;
-  }
-  const view = selected.get('viewArea') ?? selected;
-  if (view.kind !== 'dictionary') {
-    return fullCanvas;
-  }
-  const readInteger = (primary: string, fallback: string, defaultValue: number): number => {
-    const node = view.get(primary) ?? view.get(fallback);
-    if (!node || node.kind !== 'integer') {
-      return defaultValue;
-    }
-    const value = Number(node.integerValue);
-    return Number.isSafeInteger(value) ? value : defaultValue;
-  };
-  const originX = readInteger('originXPixels', 'originX', 0);
-  const originY = readInteger('originYPixels', 'originY', 0);
-  const width = readInteger('widthPixels', 'width', canvasWidth);
-  const height = readInteger('heightPixels', 'height', canvasHeight);
-  if (originX < 0 || originY < 0 || width < 1 || height < 1 ||
-    originX + width > canvasWidth || originY + height > canvasHeight) {
-    return fullCanvas;
-  }
-  return { originX, originY, width, height };
-}
-
-function readDisplayInfo(info: PlistNode): AirPlayDisplayDescriptor {
-  const displays = info.get('displays');
-  if (!displays || displays.kind !== 'array' || displays.arrayValue.length === 0) {
-    throw new Error('AirPlay /info did not provide a display descriptor; refusing to invent a display UUID');
-  }
-  const display = displays.arrayValue[0];
-  if (display.kind !== 'dictionary') {
-    throw new Error('AirPlay /info displays[0] is not a dictionary');
-  }
-  const uuid = display.get('uuid') ?? display.get('UUID');
-  if (!uuid) {
-    throw new Error('AirPlay /info display descriptor has no UUID');
-  }
-  let normalizedUuid: string;
-  if (uuid.kind === 'string' && uuid.stringValue.length > 0) {
-    normalizedUuid = uuid.stringValue;
-  } else if (uuid.kind === 'integer') {
-    normalizedUuid = uuid.integerValue.toString();
-  } else if (uuid.kind === 'data' && uuid.dataValue.length === 16) {
-    const hex = Array.from(uuid.dataValue).map((value: number): string =>
-      value.toString(16).padStart(2, '0')
-    ).join('');
-    normalizedUuid =
-      `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-  } else {
-    throw new Error('AirPlay /info display UUID has an unsupported type or length');
-  }
-  const widthNode = display.get('widthPixels') ?? display.get('width');
-  const heightNode = display.get('heightPixels') ?? display.get('height');
-  const maxFpsNode = display.get('maxFPS');
-  const readPositiveInteger = (node: PlistNode | undefined): number | undefined => {
-    if (!node || node.kind !== 'integer') {
-      return undefined;
-    }
-    const value = Number(node.integerValue);
-    return Number.isSafeInteger(value) && value > 0 ? value : undefined;
-  };
-  const rawWidth = readPositiveInteger(widthNode);
-  const rawHeight = readPositiveInteger(heightNode);
-  const frameRate = readPositiveInteger(maxFpsNode);
-  if (rawWidth === undefined || rawHeight === undefined) {
-    throw new Error('AirPlay /info display is missing valid widthPixels/heightPixels; refusing to guess output size');
-  }
-  const nativeWidth = rawWidth;
-  const nativeHeight = rawHeight;
-  const nativeViewArea = readActiveViewArea(display, nativeWidth, nativeHeight);
-  const displayType = readPositiveInteger(display.get('type')) ?? 0;
-  const availableModes = projectionDisplayModes(
-    normalizedUuid,
-    nativeWidth,
-    nativeHeight,
-    VERIFIED_PROJECTION_DISPLAY_MODES,
-    isH264EncoderSizeSupported
-  );
-  const preferredModeId = readProjectionResolutionPreference(normalizedUuid);
-  const selectedMode = resolveProjectionDisplayMode(availableModes, preferredModeId);
-  const resolutionMessage = selectedMode.usedNativeFallback
-    ? selectedMode.mode.isNative
-      ? `保存的分辨率档位 ${preferredModeId} 未在当前显示 Profile 验证，已恢复车机原生 ${nativeWidth}×${nativeHeight}`
-      : `H.264 编码器不支持车机原生 ${nativeWidth}×${nativeHeight}，已自动下采样到 ` +
-        `${selectedMode.mode.width}×${selectedMode.mode.height}`
-    : '';
-  if (selectedMode.usedNativeFallback) {
-    saveProjectionResolutionPreference(normalizedUuid, selectedMode.mode.id);
-  }
-  const scaleX = selectedMode.mode.width / nativeWidth;
-  const scaleY = selectedMode.mode.height / nativeHeight;
-  const viewAreaOriginX = Math.round(nativeViewArea.originX * scaleX);
-  const viewAreaOriginY = Math.round(nativeViewArea.originY * scaleY);
-  const viewArea: AirPlayViewArea = {
-    originX: viewAreaOriginX,
-    originY: viewAreaOriginY,
-    width: Math.max(1, Math.min(selectedMode.mode.width - viewAreaOriginX,
-      Math.round(nativeViewArea.width * scaleX))),
-    height: Math.max(1, Math.min(selectedMode.mode.height - viewAreaOriginY,
-      Math.round(nativeViewArea.height * scaleY)))
-  };
-  const resolutionMessages: string[] = [];
-  if (selectedMode.usedNativeFallback) {
-    resolutionMessages.push(selectedMode.mode.isNative
-      ? `保存的分辨率档位 ${preferredModeId} 未在当前显示 Profile 验证，已恢复车机原生 ${nativeWidth}×${nativeHeight}`
-      : `H.264 编码器不支持车机原生 ${nativeWidth}×${nativeHeight}，已自动下采样到 ` +
-        `${selectedMode.mode.width}×${selectedMode.mode.height}`);
-  }
-  if (viewArea.width !== selectedMode.mode.width || viewArea.height !== selectedMode.mode.height ||
-    viewArea.originX !== 0 || viewArea.originY !== 0) {
-    resolutionMessages.push(
-      `DiPlay type=${displayType} 编码画布 ${selectedMode.mode.width}×${selectedMode.mode.height}，` +
-        `当前 viewArea=${viewArea.width}×${viewArea.height}@${viewArea.originX},${viewArea.originY}`
-    );
-  }
-  return {
-    uuid: normalizedUuid,
-    displayType,
-    width: selectedMode.mode.width,
-    height: selectedMode.mode.height,
-    nativeWidth,
-    nativeHeight,
-    viewArea,
-    sourceWidth: nativeWidth,
-    sourceHeight: nativeHeight,
-    maxFrameRate: Math.min(60, frameRate ?? 30),
-    modeId: selectedMode.mode.id,
-    availableModes,
-    resolutionMessage: resolutionMessages.join('；')
-  };
-}
-
-function normalizeDeviceId(value: string): string {
-  const normalized = value.trim().toUpperCase();
-  if (!/^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/.test(normalized) ||
-    normalized === '02:00:00:00:00:00') {
-    throw new Error('AirPlay session requires a real Bluetooth device address; replace the placeholder in Settings');
-  }
-  return normalized;
-}
-
-async function randomPositiveInt64(): Promise<bigint> {
-  const blob = await cryptoFramework.createRandom().generateRandom(8);
-  const random = new Uint8Array(blob.data);
-  let value = BigInt(0);
-  for (const byte of random) {
-    value = (value << BigInt(8)) | BigInt(byte);
-  }
-  value &= (BigInt(1) << BigInt(63)) - BigInt(1);
-  return value === BigInt(0) ? BigInt(1) : value;
-}
-
-function createUuid(): string {
-  const digits: string[] = [];
-  for (let index = 0; index < 32; index++) {
-    digits.push(Math.floor(Math.random() * 16).toString(16));
-  }
-  digits[12] = '4';
-  const variant = Number.parseInt(digits[16], 16);
-  digits[16] = ((variant & 3) | 8).toString(16);
-  const raw = digits.join('').toUpperCase();
-  return `${raw.slice(0, 8)}-${raw.slice(8, 12)}-${raw.slice(12, 16)}-${raw.slice(16, 20)}-${raw.slice(20)}`;
-}
-
-function createNtpTimestamp(nowMillis: number): Uint8Array {
-  const seconds = Math.floor(nowMillis / 1000) + 2208988800;
-  const fraction = Math.floor(((nowMillis % 1000) * 0x100000000) / 1000);
-  const result = new Uint8Array(8);
-  writeBe32(result, 0, seconds);
-  writeBe32(result, 4, fraction);
-  return result;
-}
-
-function describeNetworkError(error: Error): string {
-  const details = error as AirPlayNetworkError;
-  const message = details.message || String(error);
-  return details.code === undefined ? message : `${message} (code=${details.code})`;
-}
-
-function writeBe32(target: Uint8Array, offset: number, value: number): void {
-  target[offset] = (value >>> 24) & 0xff;
-  target[offset + 1] = (value >>> 16) & 0xff;
-  target[offset + 2] = (value >>> 8) & 0xff;
-  target[offset + 3] = value & 0xff;
 }

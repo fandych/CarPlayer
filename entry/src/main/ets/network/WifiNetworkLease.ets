@@ -1,5 +1,8 @@
 import connection from '@ohos.net.connection';
 
+const WIFI_NETWORK_BIND_WAIT_MS: number = 15_000;
+const WIFI_NETWORK_BIND_WARNING_MS: number = 5000;
+
 interface LocalNetworkAddresses {
   ipv4?: string;
   ipv6?: string;
@@ -25,6 +28,7 @@ export class WifiNetworkLease {
   private lostHandler?: (handle: connection.NetHandle) => void;
   private unavailableHandler?: () => void;
   private availabilityTimer?: number;
+  private availabilityWarningTimer?: number;
   private cancelAcquire?: () => void;
   private generation: number = 0;
   private localAddresses?: LocalNetworkAddresses;
@@ -67,7 +71,7 @@ export class WifiNetworkLease {
       netCapabilities: {
         bearerTypes: [connection.NetBearType.BEARER_WIFI]
       }
-    }, 5000);
+    }, WIFI_NETWORK_BIND_WAIT_MS);
     this.netConnection = netConnection;
     this.netHandle = connectedHandle;
     this.localAddresses = connectedLocalAddresses;
@@ -81,8 +85,13 @@ export class WifiNetworkLease {
     void available.catch((): void => {});
     this.cancelAcquire = (): void => rejectAvailable(new Error('车机 Wi-Fi 网络选择已取消'));
     this.availabilityTimer = setTimeout((): void => {
-      rejectAvailable(new Error(`5 秒内未找到匹配本机地址的车机 WLAN：${ssid}`));
-    }, 5000);
+      rejectAvailable(new Error(`15 秒内未找到匹配本机地址的车机 WLAN：${ssid}`));
+    }, WIFI_NETWORK_BIND_WAIT_MS);
+    this.availabilityWarningTimer = setTimeout((): void => {
+      if (this.netConnection === netConnection && generation === this.generation) {
+        log(`匹配车机 WLAN 已等待 ${WIFI_NETWORK_BIND_WARNING_MS / 1000} 秒；仍等待 netAvailable，暂不使用默认路由`);
+      }
+    }, WIFI_NETWORK_BIND_WARNING_MS);
     this.availableHandler = (handle: connection.NetHandle): void => {
       void this.getMatchingLocalAddresses(handle, localAddress).then((addresses: LocalNetworkAddresses | undefined): void => {
         if (!addresses || this.netConnection !== netConnection || generation !== this.generation ||
@@ -134,6 +143,10 @@ export class WifiNetworkLease {
       if (this.availabilityTimer !== undefined) {
         clearTimeout(this.availabilityTimer);
         this.availabilityTimer = undefined;
+      }
+      if (this.availabilityWarningTimer !== undefined) {
+        clearTimeout(this.availabilityWarningTimer);
+        this.availabilityWarningTimer = undefined;
       }
       this.cancelAcquire = undefined;
       log(`已匹配车机 WLAN：netId=${handle.netId}，localIp=${localAddress}`);
@@ -221,6 +234,10 @@ export class WifiNetworkLease {
     if (this.availabilityTimer !== undefined) {
       clearTimeout(this.availabilityTimer);
       this.availabilityTimer = undefined;
+    }
+    if (this.availabilityWarningTimer !== undefined) {
+      clearTimeout(this.availabilityWarningTimer);
+      this.availabilityWarningTimer = undefined;
     }
     const netConnection = this.netConnection;
     this.netConnection = undefined;

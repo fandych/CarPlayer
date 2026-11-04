@@ -1,0 +1,297 @@
+import { concatBytes, decodeUtf8, encodeUtf8 } from '../../protocol/Iap2Codec';
+import { chachaOpen, chachaSeal } from '../../crypto/AirPlayStreamCrypto';
+import {
+  generateX25519KeyPair,
+  hkdfSha512,
+  signEd25519,
+  verifyEd25519,
+  x25519SharedSecret
+} from '../AirPlayCrypto';
+import { AirPlayControllerIdentity } from '../AirPlayIdentityStore';
+import { AirPlayRtspClient, AirPlayRtspResponse } from '../AirPlayRtspClient';
+import { Srp6aSession } from '../Srp6aClient';
+import { decodeTlv8, encodeTlv8, Tlv8Item, Tlv8Type } from '../Tlv8';
+
+interface PairSetupResult {
+  receiverId: string;
+}
+
+interface PairSetupErrorDetails {
+  code?: number | string;
+  message?: string;
+  name?: string;
+}
+
+interface PairVerifyKeys {
+  phoneWriteKey: Uint8Array;
+  phoneReadKey: Uint8Array;
+  sharedSecret: Uint8Array;
+  receiverId: string;
+}
+
+export class AirPlayRtspStatusError extends Error {
+  readonly statusCode: number;
+
+  constructor(response: AirPlayRtspResponse) {
+    super(`AirPlay RTSP server returned ${response.statusLine}`);
+    this.statusCode = response.statusCode;
+  }
+}
+
+export class PairSetupClient {
+  private readonly client: AirPlayRtspClient;
+  private readonly identity: AirPlayControllerIdentity;
+  private readonly log: (message: string) => void;
+
+  constructor(client: AirPlayRtspClient, identity: AirPlayControllerIdentity, log: (message: string) => void) {
+    this.client = client;
+    this.identity = identity;
+    this.log = log;
+  }
+
+  async run(receiverPublicKey: Uint8Array): Promise<PairSetupResult> {
+    const m2 = decodeTlv8(await this.exchange('/pair-setup', [
+      { type: Tlv8Type.METHOD, value: new Uint8Array([0]) },
+      { type: Tlv8Type.STATE, value: new Uint8Array([1]) }
+    ]));
+    const salt = required(m2, Tlv8Type.SALT, 'pair-setup M2 salt');
+    const serverPublic = required(m2, Tlv8Type.PUBLIC_KEY, 'pair-setup M2 public key');
+    this.log(`pair-setup M2 received: salt=${salt.length}B, B=${serverPublic.length}B`);
+
+    const srp = await Srp6aSession.start(salt, serverPublic);
+    const clientProof = await srp.clientProof();
+    const m4 = decodeTlv8(await this.exchange('/pair-setup', [
+      { type: Tlv8Type.STATE, value: new Uint8Array([3]) },
+      { type: Tlv8Type.PUBLIC_KEY, value: srp.publicKeyA },
+      { type: Tlv8Type.PROOF, value: clientProof }
+    ]));
+    requireState(m4, 4, 'pair-setup M4');
+    const serverProof = required(m4, Tlv8Type.PROOF, 'pair-setup M4 proof');
+    if (!(await srp.verifyServerProof(serverProof))) {
+      throw new Error('pair-setup SRP server proof verification failed');
+    }
+    const sessionKey = srp.getSessionKey();
+    this.log('pair-setup SRP mutual proof verified');
+
+    const encryptionKey = await withPairSetupStage('derive pair-setup encryption key', () => hkdfSha512(
+      sessionKey,
+      encodeUtf8('Pair-Setup-Encrypt-Salt'),
+      encodeUtf8('Pair-Setup-Encrypt-Info')
+    ));
+    const controllerSignKey = await withPairSetupStage('derive controller signing key', () => hkdfSha512(
+      sessionKey,
+      encodeUtf8('Pair-Setup-Controller-Sign-Salt'),
+      encodeUtf8('Pair-Setup-Controller-Sign-Info')
+    ));
+    const identifier = encodeUtf8(this.identity.pairingId);
+    const controllerSignature = await withPairSetupStage('sign pair-setup M5 with Ed25519', () => signEd25519(
+      this.identity.privateKeyDer,
+      concatBytes(controllerSignKey, identifier, this.identity.publicKeyRaw)
+    ));
+    const innerM5 = encodeTlv8([
+      { type: Tlv8Type.IDENTIFIER, value: identifier },
+      { type: Tlv8Type.PUBLIC_KEY, value: this.identity.publicKeyRaw },
+      { type: Tlv8Type.SIGNATURE, value: controllerSignature }
+    ]);
+    const encryptedM5 = await withPairSetupStage('encrypt pair-setup M5 with ChaCha20-Poly1305', () =>
+      chachaSeal(encryptionKey, nonceLabel('PS-Msg05'), innerM5, new Uint8Array(0))
+    );
+    const m6 = decodeTlv8(await this.exchange('/pair-setup', [
+      { type: Tlv8Type.STATE, value: new Uint8Array([5]) },
+      { type: Tlv8Type.ENCRYPTED_DATA, value: encryptedM5 }
+    ]));
+    requireState(m6, 6, 'pair-setup M6');
+
+    const encryptedM6 = required(m6, Tlv8Type.ENCRYPTED_DATA, 'pair-setup M6 encrypted data');
+    const innerM6 = decodeTlv8(await chachaOpen(
+      encryptionKey,
+      nonceLabel('PS-Msg06'),
+      encryptedM6,
+      new Uint8Array(0)
+    ));
+    const receiverIdentifierBytes = required(innerM6, Tlv8Type.IDENTIFIER, 'pair-setup receiver identifier');
+    const receiverKey = required(innerM6, Tlv8Type.PUBLIC_KEY, 'pair-setup receiver public key');
+    const receiverSignature = required(innerM6, Tlv8Type.SIGNATURE, 'pair-setup receiver signature');
+    if (receiverKey.length !== receiverPublicKey.length || !constantTimeEqual(receiverKey, receiverPublicKey)) {
+      throw new Error('pair-setup receiver key does not match the AirPlay mDNS identity');
+    }
+    const accessorySignKey = await hkdfSha512(
+      sessionKey,
+      encodeUtf8('Pair-Setup-Accessory-Sign-Salt'),
+      encodeUtf8('Pair-Setup-Accessory-Sign-Info')
+    );
+    const receiverSignedMessage = concatBytes(accessorySignKey, receiverIdentifierBytes, receiverKey);
+    if (!(await verifyEd25519(receiverKey, receiverSignedMessage, receiverSignature))) {
+      throw new Error('pair-setup receiver Ed25519 signature verification failed');
+    }
+    const receiver: PairSetupResult = {
+      receiverId: decodeUtf8(receiverIdentifierBytes)
+    };
+    this.log(`pair-setup receiver identity verified: ${receiver.receiverId}`);
+    return receiver;
+  }
+
+  private async exchange(path: string, items: Tlv8Item[]): Promise<Uint8Array> {
+    const body = encodeTlv8(items);
+    const response = await this.client.request(
+      'POST',
+      path,
+      body,
+      { contentType: 'application/pairing+tlv8', appleHkp: true }
+    );
+    if (response.statusCode !== 200) {
+      throw new AirPlayRtspStatusError(response);
+    }
+    return response.body;
+  }
+}
+
+export class PairVerifyClient {
+  private readonly client: AirPlayRtspClient;
+  private readonly identity: AirPlayControllerIdentity;
+  private readonly log: (message: string) => void;
+
+  constructor(client: AirPlayRtspClient, identity: AirPlayControllerIdentity, log: (message: string) => void) {
+    this.client = client;
+    this.identity = identity;
+    this.log = log;
+  }
+
+  async run(receiverStaticPublicKey: Uint8Array): Promise<PairVerifyKeys> {
+    const ephemeral = await generateX25519KeyPair();
+    const m2 = decodeTlv8(await this.exchange('/pair-verify', [
+      { type: Tlv8Type.STATE, value: new Uint8Array([1]) },
+      { type: Tlv8Type.PUBLIC_KEY, value: ephemeral.publicKeyRaw }
+    ]));
+    requireState(m2, 2, 'pair-verify M2');
+    const receiverEphemeral = required(m2, Tlv8Type.PUBLIC_KEY, 'pair-verify M2 public key');
+    const encryptedM2 = required(m2, Tlv8Type.ENCRYPTED_DATA, 'pair-verify M2 encrypted data');
+
+    const sharedSecret = await x25519SharedSecret(ephemeral.privateKeyDer, receiverEphemeral);
+    const encryptionKey = await hkdfSha512(
+      sharedSecret,
+      encodeUtf8('Pair-Verify-Encrypt-Salt'),
+      encodeUtf8('Pair-Verify-Encrypt-Info')
+    );
+    const innerM2 = decodeTlv8(await chachaOpen(
+      encryptionKey,
+      nonceLabel('PV-Msg02'),
+      encryptedM2,
+      new Uint8Array(0)
+    ));
+    const receiverIdentifierBytes = required(innerM2, Tlv8Type.IDENTIFIER, 'pair-verify receiver identifier');
+    const receiverSignature = required(innerM2, Tlv8Type.SIGNATURE, 'pair-verify receiver signature');
+    const receiverSignedMessage = concatBytes(receiverEphemeral, receiverIdentifierBytes, ephemeral.publicKeyRaw);
+    if (!(await verifyEd25519(receiverStaticPublicKey, receiverSignedMessage, receiverSignature))) {
+      throw new Error('pair-verify receiver signature does not match the mDNS identity');
+    }
+
+    const controllerIdentifier = encodeUtf8(this.identity.pairingId);
+    const controllerSignature = await signEd25519(
+      this.identity.privateKeyDer,
+      concatBytes(ephemeral.publicKeyRaw, controllerIdentifier, receiverEphemeral)
+    );
+    const innerM3 = encodeTlv8([
+      { type: Tlv8Type.IDENTIFIER, value: controllerIdentifier },
+      { type: Tlv8Type.SIGNATURE, value: controllerSignature }
+    ]);
+    const encryptedM3 = await chachaSeal(
+      encryptionKey,
+      nonceLabel('PV-Msg03'),
+      innerM3,
+      new Uint8Array(0)
+    );
+    const m4 = decodeTlv8(await this.exchange('/pair-verify', [
+      { type: Tlv8Type.STATE, value: new Uint8Array([3]) },
+      { type: Tlv8Type.ENCRYPTED_DATA, value: encryptedM3 }
+    ]));
+    requireState(m4, 4, 'pair-verify M4');
+
+    const phoneWriteKey = await hkdfSha512(
+      sharedSecret,
+      encodeUtf8('Control-Salt'),
+      encodeUtf8('Control-Write-Encryption-Key')
+    );
+    const phoneReadKey = await hkdfSha512(
+      sharedSecret,
+      encodeUtf8('Control-Salt'),
+      encodeUtf8('Control-Read-Encryption-Key')
+    );
+    const keys: PairVerifyKeys = {
+      phoneWriteKey,
+      phoneReadKey,
+      sharedSecret,
+      receiverId: decodeUtf8(receiverIdentifierBytes)
+    };
+    this.log('pair-verify receiver signature verified; control keys derived');
+    return keys;
+  }
+
+  private async exchange(path: string, items: Tlv8Item[]): Promise<Uint8Array> {
+    const response = await this.client.request(
+      'POST',
+      path,
+      encodeTlv8(items),
+      { contentType: 'application/pairing+tlv8', appleHkp: true, applePd: true }
+    );
+    if (response.statusCode !== 200) {
+      throw new AirPlayRtspStatusError(response);
+    }
+    return response.body;
+  }
+}
+
+async function withPairSetupStage<T>(stage: string, operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    const details = error as PairSetupErrorDetails;
+    const parts: string[] = [];
+    if (details.name) {
+      parts.push(details.name);
+    }
+    if (details.code !== undefined) {
+      parts.push(`code=${details.code}`);
+    }
+    if (details.message) {
+      parts.push(details.message);
+    }
+    const message = parts.length > 0 ? parts.join(': ') : String(error);
+    throw new Error(`${stage} failed: ${message}`);
+  }
+}
+
+function required(values: Map<number, Uint8Array>, type: number, field: string): Uint8Array {
+  const value = values.get(type);
+  if (!value) {
+    throw new Error(`Missing ${field}`);
+  }
+  return value;
+}
+
+function requireState(values: Map<number, Uint8Array>, expected: number, field: string): void {
+  const state = values.get(Tlv8Type.STATE);
+  if (!state || state.length !== 1 || state[0] !== expected) {
+    const error = values.get(Tlv8Type.ERROR);
+    const errorCode = error && error.length > 0 ? error[0].toString() : 'unknown';
+    throw new Error(`${field} returned unexpected state; error=${errorCode}`);
+  }
+}
+
+function nonceLabel(label: string): Uint8Array {
+  const nonce = new Uint8Array(12);
+  const bytes = encodeUtf8(label);
+  nonce.set(bytes.slice(0, 8), 4);
+  return nonce;
+}
+
+function constantTimeEqual(left: Uint8Array, right: Uint8Array): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  let difference = 0;
+  for (let index = 0; index < left.length; index++) {
+    difference |= left[index] ^ right[index];
+  }
+  return difference === 0;
+}

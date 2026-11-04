@@ -217,12 +217,13 @@ export default function localUnitTest() {
       )).assertEqual('identifier-match');
     });
 
-    it('waits for endpoint resolution after an incomplete authenticated start endpoint', 0, () => {
-      expect(isAirPlayStartReady(true, true)).assertTrue();
+    it('allows a discovered AirPlay service to release the invite wait', 0, () => {
+      expect(isAirPlayStartReady(true, true, false, true)).assertTrue();
       expect(isAirPlayStartReady(true, false, true)).assertTrue();
       expect(isAirPlayStartReady(true, false, false, true)).assertTrue();
-      expect(isAirPlayStartReady(true, false, false, false)).assertFalse();
-      expect(isAirPlayStartReady(false, true)).assertFalse();
+      expect(isAirPlayStartReady(true, true, false, false, true)).assertTrue();
+      expect(isAirPlayStartReady(true, false, false, false, true)).assertFalse();
+      expect(isAirPlayStartReady(false, true, true, true)).assertFalse();
     });
 
     it('accepts only the advertised two-slot touch HID report', 0, () => {
@@ -793,8 +794,9 @@ export default function localUnitTest() {
       expect(shouldProbeLegacyWifi(undefined, undefined)).assertTrue();
       expect(shouldProbeLegacyWifi([0x4301, 0x6800], [0x4300, 0x4e09, 0x4e0a, 0x4e0b, 0x4e0c]))
         .assertTrue();
-      expect(shouldProbeLegacyWifi([], [])).assertFalse();
+      expect(shouldProbeLegacyWifi([], [])).assertTrue();
       expect(shouldProbeLegacyWifi([1, 2, 3, 4, 5], [6, 7, 8, 9, 10])).assertFalse();
+      expect(shouldProbeLegacyWifi(Array(10).fill(0x4301), undefined)).assertFalse();
       expect(shouldProbeLegacyWifi([0x5703], [])).assertTrue();
     });
 

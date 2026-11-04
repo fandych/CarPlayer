@@ -416,7 +416,7 @@ function isPairingPath(path: string): boolean {
 }
 
 function isSensitiveRtspPath(path: string): boolean {
-  return isPairingPath(path) || path === '/setup' || path.endsWith('/auth-setup');
+  return isPairingPath(path) || path === '/setup' || path === '/info' || path.endsWith('/auth-setup');
 }
 
 function formatRtspBodySummary(path: string, contentType: string | undefined, body: Uint8Array): string {
@@ -438,7 +438,7 @@ function formatRtspBodySummary(path: string, contentType: string | undefined, bo
 
 function formatRawWireBytes(direction: string, bytes: Uint8Array, redact: boolean): string {
   if (redact) {
-    return `RAW ${direction} RTSP bytes=${bytes.length} payload=[REDACTED:pairing data]`;
+    return `RAW ${direction} RTSP bytes=${bytes.length} payload=[REDACTED:sensitive RTSP data]`;
   }
   const count = Math.min(bytes.length, MAX_RAW_LOG_BYTES);
   const hex: string[] = [];

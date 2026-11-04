@@ -2,6 +2,8 @@ import wifiManager from '@ohos.wifiManager';
 import { WifiCredentials } from '../session/Iap2SenderSession';
 import { formatProtocolEvent } from '../session/ProtocolLogger';
 
+const WIFI_JOIN_TIMEOUT_MS: number = 25_000;
+
 export interface WifiConnectionResult {
   ssid: string;
   ipAddress: string;
@@ -95,7 +97,7 @@ export class WifiCarPlayConnector {
       if (generation !== this.requestGeneration) {
         throw new Error('CarPlay 连接已取消');
       }
-      const deadline = Date.now() + 20000;
+      const deadline = Date.now() + WIFI_JOIN_TIMEOUT_MS;
       let pollCount = 0;
       while (Date.now() < deadline) {
         if (generation !== this.requestGeneration) {
@@ -144,10 +146,10 @@ export class WifiCarPlayConnector {
       log(formatProtocolEvent('wifi.link.timeout',
         'requestedSsid', credentials.ssid,
         'currentSsid', actualSsid,
-        'timeoutMs', 20000,
+        'timeoutMs', WIFI_JOIN_TIMEOUT_MS,
         'elapsedMs', Date.now() - startedAt
       ));
-      throw new Error(`20 秒内未确认加入车机热点；当前网络为 ${actualSsid}`);
+      throw new Error(`25 秒内未确认加入车机热点；当前网络为 ${actualSsid}`);
     } catch (error) {
       const message = formatWifiApiError(error);
       log(formatProtocolEvent('wifi.join.failed',

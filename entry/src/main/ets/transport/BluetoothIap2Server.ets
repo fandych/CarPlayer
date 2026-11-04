@@ -3,6 +3,12 @@ import { toArrayBuffer } from '../protocol/Iap2Codec';
 
 export type ByteHandler = (bytes: Uint8Array) => void;
 
+export function isCarPlayAdapterName(name: string): boolean {
+  const normalized = name.toLowerCase();
+  return ['smart box', 'car link', 'carlinkit', 'auto kit', 'cpc200']
+    .some((token: string): boolean => normalized.includes(token));
+}
+
 export class BluetoothIap2Server {
   private serverId: number = -1;
   private clientId: number = -1;
@@ -10,11 +16,21 @@ export class BluetoothIap2Server {
   private onClientData?: ByteHandler;
   private onClientConnected?: () => void;
   private onFailure?: (message: string) => void;
+  private adapterMode: boolean = false;
+  private adapterHandoffCompleted: boolean = false;
+  private readonly heldClientIds: number[] = [];
 
-  async start(onConnected: () => void, onData: ByteHandler, onError: (message: string) => void): Promise<void> {
+  async start(
+    onConnected: () => void,
+    onData: ByteHandler,
+    onError: (message: string) => void,
+    adapterMode: boolean = false
+  ): Promise<void> {
     if (this.serverId >= 0) {
       throw new Error('Bluetooth listener is already running');
     }
+    this.adapterMode = adapterMode;
+    this.adapterHandoffCompleted = false;
     this.onClientConnected = onConnected;
     this.onClientData = onData;
     this.onFailure = onError;
@@ -25,7 +41,7 @@ export class BluetoothIap2Server {
         type: bluetoothSocket.SppType.SPP_RFCOMM
       };
       try {
-        bluetoothSocket.sppListen('CarPlay Sender', options, (error, serverId) => {
+        bluetoothSocket.sppListen(adapterMode ? 'Wireless iAP' : 'iAP2', options, (error, serverId) => {
           if (error) {
             reject(new Error(`Bluetooth RFCOMM listen failed (${error.code}): ${error.message}`));
             return;
@@ -55,6 +71,7 @@ export class BluetoothIap2Server {
 
   stop(): void {
     this.disconnectClient();
+    this.closeHeldClients();
     if (this.serverId >= 0) {
       try {
         bluetoothSocket.sppCloseServerSocket(this.serverId);
@@ -67,6 +84,18 @@ export class BluetoothIap2Server {
     this.onClientData = undefined;
     this.onClientConnected = undefined;
     this.onFailure = undefined;
+    this.adapterMode = false;
+    this.adapterHandoffCompleted = false;
+  }
+
+  setAdapterHandoffCompleted(completed: boolean): void {
+    if (!this.adapterMode) {
+      return;
+    }
+    this.adapterHandoffCompleted = completed;
+    if (!completed) {
+      this.closeHeldClients();
+    }
   }
 
   disconnectClient(): void {
@@ -84,6 +113,11 @@ export class BluetoothIap2Server {
             this.onFailure?.(`Bluetooth accept failed (${error.code}): ${error.message}`);
             setTimeout((): void => this.acceptNext(), 500);
           }
+          return;
+        }
+        if (this.adapterMode && this.adapterHandoffCompleted && this.clientId >= 0) {
+          this.heldClientIds.push(clientId);
+          this.acceptNext();
           return;
         }
         try {
@@ -133,6 +167,17 @@ export class BluetoothIap2Server {
     }
     this.clientId = -1;
     this.readHandler = undefined;
+  }
+
+  private closeHeldClients(): void {
+    for (const clientId of this.heldClientIds) {
+      try {
+        bluetoothSocket.sppCloseClientSocket(clientId);
+      } catch (error) {
+        this.onFailure?.(`Bluetooth held client cleanup failed: ${this.errorMessage(error)}`);
+      }
+    }
+    this.heldClientIds.length = 0;
   }
 
   private errorMessage(error: Error | string): string {

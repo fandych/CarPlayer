@@ -1,4 +1,5 @@
 import { MediaPacketCipher } from '../crypto/MediaPacketCipher';
+import cryptoFramework from '@ohos.security.cryptoFramework';
 import { concatBytes } from '../protocol/Iap2Codec';
 import { formatProtocolEvent } from '../session/ProtocolLogger';
 import { splitH264NalUnits as splitNativeH264NalUnits } from '../video/NativeH264Data';
@@ -19,6 +20,11 @@ export interface EncodedH264Event {
   timestampUs: number;
   flags: number;
   message?: string;
+}
+
+export enum AirPlayVideoEncryptionMode {
+  CHACHA20_POLY1305 = 0,
+  AES_128_CTR = 1
 }
 
 export function splitH264NalUnits(data: Uint8Array): Uint8Array[] {
@@ -117,7 +123,11 @@ export function buildVideoFrameNonce(counter: bigint): Uint8Array {
 }
 
 export class AirPlayVideoStreamSender {
-  private readonly cipher: MediaPacketCipher;
+  private readonly cipher?: MediaPacketCipher;
+  private readonly encryption: AirPlayVideoEncryptionMode;
+  private readonly streamKey: Uint8Array;
+  private readonly streamIv?: Uint8Array;
+  private legacyCipher?: cryptoFramework.Cipher;
   private readonly width: number;
   private readonly height: number;
   private readonly sendBytes: (data: Uint8Array) => Promise<void>;
@@ -142,18 +152,56 @@ export class AirPlayVideoStreamSender {
     height: number,
     sendBytes: (data: Uint8Array) => Promise<void>,
     log: (message: string) => void,
-    requestKeyFrame: () => void = (): void => {}
+    requestKeyFrame: () => void = (): void => {},
+    encryption: AirPlayVideoEncryptionMode = AirPlayVideoEncryptionMode.CHACHA20_POLY1305,
+    streamIv?: Uint8Array
   ) {
     validateVideoShape(width, height);
-    if (streamKey.length !== 32) {
-      throw new Error('AirPlay screen-stream key must be 32 bytes');
+    if (encryption === AirPlayVideoEncryptionMode.CHACHA20_POLY1305 && streamKey.length !== 32) {
+      throw new Error('AirPlay ChaCha20-Poly1305 screen-stream key must be 32 bytes');
     }
-    this.cipher = new MediaPacketCipher(streamKey, true, log);
+    if (encryption === AirPlayVideoEncryptionMode.AES_128_CTR &&
+      (streamKey.length !== 16 || streamIv?.length !== 16)) {
+      throw new Error('AirPlay AES-128-CTR screen stream requires a 16-byte key and IV');
+    }
+    this.encryption = encryption;
+    this.streamKey = streamKey.slice();
+    this.streamIv = streamIv?.slice();
+    if (encryption === AirPlayVideoEncryptionMode.CHACHA20_POLY1305) {
+      this.cipher = new MediaPacketCipher(streamKey, true, log);
+    }
     this.width = width;
     this.height = height;
     this.sendBytes = sendBytes;
     this.log = log;
     this.requestKeyFrame = requestKeyFrame;
+  }
+
+  async initialize(): Promise<void> {
+    if (this.encryption !== AirPlayVideoEncryptionMode.AES_128_CTR) {
+      return;
+    }
+    const iv = this.streamIv;
+    if (!iv) {
+      throw new Error('AirPlay AES-128-CTR IV is missing');
+    }
+    const keyGenerator = cryptoFramework.createSymKeyGenerator('AES128');
+    const key = await keyGenerator.convertKey({ data: this.streamKey });
+    const cipher = cryptoFramework.createCipher('AES128|CTR|NoPadding');
+    const params: cryptoFramework.IvParamsSpec = {
+      algName: 'IvParamsSpec',
+      iv: { data: iv }
+    };
+    await cipher.init(cryptoFramework.CryptoMode.ENCRYPT_MODE, key, params);
+    this.legacyCipher = cipher;
+  }
+
+  async finish(): Promise<void> {
+    const cipher = this.legacyCipher;
+    this.legacyCipher = undefined;
+    if (cipher) {
+      await cipher.doFinal(null);
+    }
   }
 
   handleEncoderEvent(event: EncodedH264Event): Promise<void> {
@@ -329,18 +377,26 @@ export class AirPlayVideoStreamSender {
     const plain = packH264Nals(filtered);
     const plainLength = plain.length;
     const timestampMs = Date.now();
-    const header = buildAirPlayVideoFrameHeader(plainLength + CHACHA_TAG_SIZE, timestampMs);
+    const encryptedLength = this.encryption === AirPlayVideoEncryptionMode.CHACHA20_POLY1305
+      ? plainLength + CHACHA_TAG_SIZE
+      : plainLength;
+    const header = buildAirPlayVideoFrameHeader(encryptedLength, timestampMs);
     const frameCounter = this.frameCounter;
     const frameNumber = this.framesSent + 1;
     const nalTypes = filtered.map((unit: Uint8Array): string => String(unit[0] & 0x1f));
     const hasIdr = containsH264Idr(filtered);
     const nonce = buildVideoFrameNonce(frameCounter);
     this.frameCounter++;
-    const encrypted = await this.cipher.seal(
-      nonce,
-      plain,
-      header
-    );
+    let encrypted: Uint8Array;
+    if (this.encryption === AirPlayVideoEncryptionMode.CHACHA20_POLY1305) {
+      const cipher = this.cipher;
+      if (!cipher) {
+        throw new Error('AirPlay ChaCha20-Poly1305 stream cipher is not initialized');
+      }
+      encrypted = await cipher.seal(nonce, plain, header);
+    } else {
+      encrypted = await this.encryptLegacyFrame(plain);
+    }
     await this.sendBytes(concatBytes(header, encrypted));
     this.framesSent = frameNumber;
     this.log(formatProtocolEvent('airplay.video.frame.tx',
@@ -359,6 +415,18 @@ export class AirPlayVideoStreamSender {
       'transport', 'AirPlay video/TCP',
       'meaning', `发送 H.264 ${hasIdr ? '关键帧' : '视频帧'}；NAL 类型和帧计数用于诊断解码/丢帧，载荷未写入日志`
     ));
+  }
+
+  private async encryptLegacyFrame(plain: Uint8Array): Promise<Uint8Array> {
+    const cipher = this.legacyCipher;
+    if (!cipher) {
+      throw new Error('AirPlay AES-128-CTR stream cipher is not initialized');
+    }
+    const encrypted = (await cipher.update({ data: plain })).data;
+    if (encrypted.length !== plain.length) {
+      throw new Error('AirPlay AES-128-CTR changed the screen-frame length');
+    }
+    return encrypted;
   }
 }
 
