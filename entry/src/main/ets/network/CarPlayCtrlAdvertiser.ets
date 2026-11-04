@@ -65,11 +65,11 @@ export class CarPlayCtrlAdvertiser {
       this.service = await mdns.addLocalService(this.context, serviceInfo);
       this.onLog(`已广播 _carplay-ctrl._tcp，端口 ${port}；TXT id=${this.deviceAddress}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = describeSocketError(error);
       try {
         await this.stop();
       } catch (cleanupError) {
-        const cleanupMessage = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+        const cleanupMessage = describeSocketError(cleanupError);
         throw new Error(`启动 CarPlay 控制广播失败：${message}；清理也失败：${cleanupMessage}`);
       }
       throw new Error(`启动 CarPlay 控制广播失败：${message}`);
@@ -84,7 +84,7 @@ export class CarPlayCtrlAdvertiser {
       try {
         await mdns.removeLocalService(this.context, service);
       } catch (error) {
-        failures.push(`mDNS 注销失败：${error instanceof Error ? error.message : String(error)}`);
+        failures.push(`mDNS 注销失败：${describeSocketError(error)}`);
       }
     }
     const server = this.server;

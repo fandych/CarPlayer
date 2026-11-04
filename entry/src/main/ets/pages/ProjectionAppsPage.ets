@@ -1,4 +1,25 @@
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ProjectionApp, isProjectionAppLaunchable } from './ProjectionAppCatalog';
+
+export function projectionAppIconResource(appId: string): Resource | undefined {
+  switch (appId) {
+    case 'shell-home': return $r('app.media.ic_car_front');
+    case 'shell-settings': return $r('app.media.ic_settings');
+    case 'shell-themes': return $r('app.media.ic_palette');
+    case 'shell-split': return $r('app.media.ic_layout_grid');
+    case 'amap': return $r('app.media.app_amap');
+    case 'baidu-map': return $r('app.media.app_baidu');
+    case 'petal-maps': return $r('app.media.ic_navigation');
+    case 'tencent-map': return $r('app.media.app_tencent_map');
+    case 'huawei-music': return $r('app.media.app_huawei_music');
+    case 'qq-music': return $r('app.media.app_qqmusic');
+    case 'netease-music': return $r('app.media.app_netease');
+    case 'kugou-music': return $r('app.media.app_kugou');
+    case 'tangshui-music':
+    case 'kuwo-music': return $r('app.media.ic_music');
+    default: return undefined;
+  }
+}
 
 @Component
 export struct ProjectionAppIcon {
@@ -13,16 +34,22 @@ export struct ProjectionAppIcon {
   };
   @Prop iconSize: number = 36;
   @Prop accent: string = '#0A84FF';
+  @State private failedAppId: string = '';
 
   build() {
-    if (this.app.icon) {
-      Image($r(this.app.icon))
+    if (projectionAppIconResource(this.app.appId) && this.failedAppId !== this.app.appId) {
+      Image(projectionAppIconResource(this.app.appId))
         .width(this.iconSize)
         .height(this.iconSize)
         .objectFit(ImageFit.Contain)
         .borderRadius(8)
-    } else if (this.app.symbol) {
-      SymbolGlyph($r(this.app.symbol))
+        .onError((error) => {
+          this.failedAppId = this.app.appId;
+          hilog.error(0xCA22, 'CarPlayerProjection', '应用图标加载失败：%{public}s, %{public}s',
+            this.app.appId, error?.message ?? 'unknown image error');
+        })
+    } else if (this.app.category === 'map') {
+      SymbolGlyph($r('sys.symbol.arrow_up_right'))
         .fontSize(this.iconSize - 4)
         .fontColor([this.accent])
         .width(this.iconSize)

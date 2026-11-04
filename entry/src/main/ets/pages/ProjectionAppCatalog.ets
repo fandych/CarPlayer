@@ -1,4 +1,4 @@
-export type ProjectionAppCategory = 'map' | 'music' | 'video' | 'finance' | 'home' | 'vehicle';
+export type ProjectionAppCategory = 'map' | 'music' | 'home' | 'vehicle';
 export type ProjectionLaunchState = 'VERIFIED' | 'UNVERIFIED';
 
 export interface ProjectionApp {
@@ -128,43 +128,6 @@ export const PROJECTION_APP_CANDIDATES: ProjectionApp[] = [
     launchTarget: { kind: 'appLink', uri: 'kwapp://' },
     unavailableReason: '当前设备未解析到酷我音乐的 kwapp:// 入口',
     label: '酷我音乐', mark: '酷', color: '#6E8FB4', category: 'music', icon: 'app.media.ic_music'
-  },
-  {
-    appId: 'douyin', uri: 'carplay-client://v1/apps/douyin/launch',
-    bundleName: 'com.ss.hm.ugc.aweme', abilityName: 'MainAbility', launchState: 'UNVERIFIED',
-    launchTarget: {
-      kind: 'ability', bundleName: 'com.ss.hm.ugc.aweme', abilityName: 'MainAbility', probeUri: 'snssdk1128://'
-    },
-    unavailableReason: '当前设备尚未核验抖音的 bundle/Ability 入口',
-    label: '抖音', mark: 'D', color: '#313941', category: 'video', icon: 'app.media.app_douyin'
-  },
-  {
-    appId: 'kuaishou', uri: 'carplay-client://v1/apps/kuaishou/launch',
-    bundleName: 'com.kuaishou.hmapp', abilityName: 'EntryAbility', launchState: 'UNVERIFIED',
-    launchTarget: {
-      kind: 'ability', bundleName: 'com.kuaishou.hmapp', abilityName: 'EntryAbility', probeUri: 'kwai://'
-    },
-    unavailableReason: '当前设备尚未核验快手的 bundle/Ability 入口',
-    label: '快手', mark: 'K', color: '#DC7136', category: 'video', icon: 'app.media.app_kuaishou'
-  },
-  {
-    appId: 'eastmoney', uri: 'carplay-client://v1/apps/eastmoney/launch',
-    bundleName: 'com.eastmoney.hmn.berlin', abilityName: 'EntryAbility', launchState: 'UNVERIFIED',
-    launchTarget: {
-      kind: 'ability', bundleName: 'com.eastmoney.hmn.berlin', abilityName: 'EntryAbility',
-      probeUri: 'emoh://eastmoney.com'
-    },
-    unavailableReason: '当前设备尚未核验东方财富的 bundle/Ability 入口',
-    label: '东方财富', mark: '财', color: '#C84D44', category: 'finance', icon: 'app.media.app_eastmoney'
-  },
-  {
-    appId: 'tencent-video', uri: 'carplay-client://v1/apps/tencent-video/launch',
-    bundleName: 'com.tencent.videohm', abilityName: 'AppAbility', launchState: 'UNVERIFIED',
-    launchTarget: {
-      kind: 'ability', bundleName: 'com.tencent.videohm', abilityName: 'AppAbility', probeUri: 'tenvideo2://'
-    },
-    unavailableReason: '当前设备尚未核验腾讯视频的 bundle/Ability 入口',
-    label: '腾讯视频', mark: '▶', color: '#327A99', category: 'video', icon: 'app.media.app_tencent_video'
   }
 ];
 

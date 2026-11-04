@@ -20,11 +20,7 @@
       "orpheus",
       "kugou",
       "sweetmusic",
-      "kwapp",
-      "snssdk1128",
-      "kwai",
-      "emoh",
-      "tenvideo2"
+      "kwapp"
     ],
     "requestPermissions": [
       {

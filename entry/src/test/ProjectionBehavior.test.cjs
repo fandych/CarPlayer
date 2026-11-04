@@ -112,6 +112,12 @@ test('projection settings match the reference glass palette and two-pane layout'
   assert.ok(displaySource.includes('Slider({ value: this.displayBrightness'));
   assert.ok(contentSource.includes('.layoutWeight(this.splitMapRatio)'));
   assert.ok(contentSource.includes('.layoutWeight(this.splitMusicRatio)'));
+  const mainPanelStart = contentSource.indexOf('private MainPanel()');
+  const mainPanelEnd = contentSource.indexOf('\n  build()', mainPanelStart);
+  const mainPanelSource = contentSource.slice(mainPanelStart, mainPanelEnd);
+  assert.match(mainPanelSource, /\.width\('100%'\)\.height\('100%'\)/);
+  assert.doesNotMatch(mainPanelSource, /\.width\(this\.verticalDock \? '0%'/);
+  assert.match(shellSource, /private Content\(\)[\s\S]*?\.layoutWeight\(1\)/);
   assert.match(displaySource, /this\.SplitRatioControl\('map'\)/);
   assert.match(displaySource, /this\.SplitRatioControl\('music'\)/);
   assert.match(displaySource, /\.type\(InputType\.Number\)/);
@@ -856,9 +862,10 @@ test('vehicle Bluetooth audio touch area is active only on the settings page', (
 test('third-party launch targets come from the reference and URI probes control availability', async () => {
   const { PROJECTION_APP_CANDIDATES, PROJECTION_VEHICLE_APPS, resolveProjectionApps } =
     loadEts('pages/ProjectionAppCatalog.ets');
-  assert.equal(PROJECTION_APP_CANDIDATES.length, 14);
+  assert.equal(PROJECTION_APP_CANDIDATES.length, 10);
   for (const app of PROJECTION_APP_CANDIDATES) {
     assert.ok(app.icon, app.label);
+    assert.ok(app.category === 'map' || app.category === 'music');
     assert.match(app.uri, /^carplay-client:\/\/v1\/apps\//);
     assert.equal(app.launchState, 'UNVERIFIED');
   }
@@ -888,8 +895,6 @@ test('third-party launch targets come from the reference and URI probes control 
   assert.equal(kuwo.launchTarget.uri, 'kwapp://');
   assert.equal(PROJECTION_APP_CANDIDATES.find(app => app.appId === 'kugou-music').launchTarget.uri,
     'kugou://m.kugou.com');
-  assert.equal(PROJECTION_APP_CANDIDATES.find(app => app.appId === 'eastmoney').launchTarget.probeUri,
-    'emoh://eastmoney.com');
   assert.deepEqual(PROJECTION_VEHICLE_APPS.map(app => app.view), ['receiver', 'settings', 'themes', 'split']);
   const probedLinks = [];
   const resolved = await resolveProjectionApps(uri => {
@@ -904,16 +909,12 @@ test('third-party launch targets come from the reference and URI probes control 
       'orpheus://',
       'kugou://m.kugou.com',
       'sweetmusic://',
-      'kwapp://',
-      'snssdk1128://',
-      'kwai://',
-      'emoh://eastmoney.com',
-      'tenvideo2://'
+      'kwapp://'
     ].includes(uri);
   });
   assert.deepEqual(resolved.filter(app => app.launchState === 'VERIFIED').map(app => app.appId),
     ['amap', 'baidu-map', 'petal-maps', 'tencent-map', 'huawei-music', 'qq-music', 'netease-music',
-      'kugou-music', 'tangshui-music', 'kuwo-music', 'douyin', 'kuaishou', 'eastmoney', 'tencent-video']);
+      'kugou-music', 'tangshui-music', 'kuwo-music']);
   assert.ok(probedLinks.includes('amapuri://'));
   assert.ok(probedLinks.includes('baidumap://map'));
   assert.ok(probedLinks.includes('petalmaps://'));
@@ -924,18 +925,18 @@ test('third-party launch targets come from the reference and URI probes control 
   assert.ok(probedLinks.includes('kugou://m.kugou.com'));
   assert.ok(probedLinks.includes('sweetmusic://'));
   assert.ok(probedLinks.includes('kwapp://'));
-  assert.ok(probedLinks.includes('snssdk1128://'));
-  assert.ok(probedLinks.includes('kwai://'));
-  assert.ok(probedLinks.includes('emoh://eastmoney.com'));
-  assert.ok(probedLinks.includes('tenvideo2://'));
+  for (const uri of ['snssdk1128://', 'kwai://', 'emoh://eastmoney.com', 'tenvideo2://']) {
+    assert.equal(probedLinks.includes(uri), false);
+  }
   const moduleManifest = fs.readFileSync(path.join(sourceRoot, '../module.json5'), 'utf8');
   for (const scheme of [
     'amapuri', 'baidumap', 'petalmaps', 'hwmusic', 'qqmap', 'qqmusic', 'orpheus', 'kugou', 'sweetmusic',
-    'kwapp', 'snssdk1128', 'kwai', 'emoh', 'tenvideo2'
+    'kwapp'
   ]) {
     assert.match(moduleManifest, new RegExp(`"${scheme}"`), `querySchemes must include ${scheme}`);
   }
   assert.doesNotMatch(moduleManifest, /ohos\.permission\.GET_BUNDLE_INFO/);
+  assert.doesNotMatch(moduleManifest, /"snssdk1128"|"kwai"|"emoh"|"tenvideo2"/);
 });
 
 test('project branding and legacy app icons use the provided resources', () => {
@@ -955,11 +956,7 @@ test('project branding and legacy app icons use the provided resources', () => {
     'huawei-music': 'app_huawei_music',
     'qq-music': 'app_qqmusic',
     'netease-music': 'app_netease',
-    'kugou-music': 'app_kugou',
-    douyin: 'app_douyin',
-    kuaishou: 'app_kuaishou',
-    eastmoney: 'app_eastmoney',
-    'tencent-video': 'app_tencent_video'
+    'kugou-music': 'app_kugou'
   };
   const media = path.join(sourceRoot, '../resources/base/media');
   for (const [appId, iconName] of Object.entries(legacyIcons)) {
@@ -967,6 +964,101 @@ test('project branding and legacy app icons use the provided resources', () => {
     assert.equal(app.icon, `app.media.${iconName}`);
     assert.ok(fs.existsSync(path.join(media, `${iconName}.png`)), `missing icon for ${appId}`);
   }
+});
+
+test('all supported app icons resolve static resources and failed images have a visible fallback', () => {
+  const { PROJECTION_APP_CANDIDATES, PROJECTION_VEHICLE_APPS } = loadEts('pages/ProjectionAppCatalog.ets');
+  const previousResource = global.$r;
+  global.$r = name => ({ name });
+  try {
+    const { projectionAppIconResource } = loadEts(
+      'pages/ProjectionAppsPage.ets', {}, 'projectionAppIconResource'
+    );
+    for (const app of [...PROJECTION_APP_CANDIDATES, ...PROJECTION_VEHICLE_APPS]) {
+      assert.deepEqual(projectionAppIconResource(app.appId), { name: app.icon });
+    }
+    assert.equal(projectionAppIconResource('unknown-player'), undefined);
+  } finally {
+    global.$r = previousResource;
+  }
+  const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionAppsPage.ets'), 'utf8');
+  assert.doesNotMatch(source, /\$r\(this\.app\./);
+  assert.match(source, /failedAppId !== this\.app\.appId/);
+  assert.match(source, /\.onError\([\s\S]*this\.failedAppId = this\.app\.appId/);
+  assert.match(source, /sys\.symbol\.speaker_wave_2/);
+});
+
+test('map surfaces stay landscape inside portrait receivers without stretching music or touch bounds', () => {
+  const { projectionSurfaceSize } = loadEts('pages/ProjectionSurface.ets');
+  const { projectionContentDisplayConfig } = loadEts('video/CarPlayVirtualDisplay.ets', {
+    '@ohos.display': {},
+    './ProjectionSettings': loadEts('video/ProjectionSettings.ets')
+  });
+  for (const [width, height] of [[418, 1872], [366, 1820], [800, 800], [1200, 700]]) {
+    const size = projectionSurfaceSize(width, height, true);
+    assert.ok(size.width > size.height);
+    assert.ok(size.width <= width && size.height <= height);
+    const pixels = { width: Math.round(size.width), height: Math.round(size.height) };
+    const render = projectionContentDisplayConfig(pixels.width, pixels.height, 2);
+    assert.ok(render.width > render.height);
+    assert.ok(Math.abs(render.width / render.height - pixels.width / pixels.height) < 0.02);
+    assert.deepEqual(projectionSurfaceSize(width, height, false), { width, height });
+  }
+  assert.throws(() => projectionSurfaceSize(0, 10, true), /Invalid projection surface/);
+  const content = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboardContent.ets'), 'utf8');
+  assert.match(content, /surfaceName: 'projectionSplitMapSurface',\s*landscape: true/);
+  assert.match(content, /surfaceName: 'projectionAppSurface',\s*landscape: this\.isActiveMap\(\)/);
+  assert.match(content, /this\.viewportWidth > 0 && this\.viewportHeight > 0/);
+  assert.match(content, /onSurfaceChange\(this\.surfaceId, newArea, true\)/);
+});
+
+test('log export menu sits above the page sheet and success waits for file close', async () => {
+  const source = fs.readFileSync(path.join(sourceRoot, 'pages/Index.ets'), 'utf8');
+  assert.ok(source.indexOf('this.PageSheet()') < source.indexOf('IndexMenuOverlay({'));
+  const sheetStart = source.indexOf('  PageSheet()');
+  const sheetEnd = source.indexOf('\n  statusLabel()', sheetStart);
+  const sheet = source.slice(sheetStart, sheetEnd);
+  assert.match(sheet, /this\.page === 'logs'[\s\S]*accessibilityText\('日志操作'\)/);
+  assert.match(sheet, /this\.showMenu = !this\.showMenu/);
+  const events = [];
+  let selectedUris = ['file://logs.log'];
+  let writeError;
+  const Target = loadMethods('pages/Index.ets', 'Index', ['exportLogs'], {
+    Error,
+    picker: { DocumentViewPicker: class {
+      constructor(context) { assert.equal(context, 'ability-context'); }
+      async save() { events.push('picker'); return selectedUris; }
+    } },
+    formatLocalTimestamp: () => '2026-11-04T19:00:00.000+08:00',
+    fileFs: {
+      OpenMode: { WRITE_ONLY: 1, CREATE: 2, TRUNC: 4 },
+      async open(uri) { events.push(['open', uri]); return { fd: 3 }; },
+      async write(fd, text) {
+        if (writeError) throw writeError;
+        events.push(['write', fd, text]);
+      },
+      async close(file) { events.push(['close', file.fd]); }
+    },
+    diagnosticLogArchive: { readAllText: () => '完整日志' },
+    promptAction: { async showToast() { events.push('success'); } }
+  });
+  const target = new Target();
+  target.getAppContext = () => 'ability-context';
+  target.showError = error => events.push(['error', error.message]);
+  target.logs = [];
+  await target.exportLogs();
+  assert.deepEqual(events, [
+    'picker', ['open', 'file://logs.log'], ['write', 3, '完整日志\n'], ['close', 3], 'success'
+  ]);
+  events.length = 0;
+  selectedUris = [];
+  await target.exportLogs();
+  assert.deepEqual(events, ['picker']);
+  events.length = 0;
+  selectedUris = ['file://logs.log'];
+  writeError = new Error('write denied');
+  await target.exportLogs();
+  assert.deepEqual(events, ['picker', ['open', 'file://logs.log'], ['error', 'write denied'], ['close', 3]]);
 });
 
 test('restricted permissions are declared but never treated as approved or third-party input capability', () => {
@@ -2288,6 +2380,70 @@ test('CarPlay control service publishes before the Bluetooth listener starts', a
   assert.deepEqual(actions, ['ctrl-advertisement', 'bluetooth-listener']);
 });
 
+test('control advertisement survives the WLAN handoff and ignores invites after stop', async () => {
+  let created = 0;
+  let published = 0;
+  let removed = 0;
+  let invite;
+  const Target = loadMethods('session/SessionController.ets', 'SessionController',
+    ['startControlAdvertisement'], {
+      CarPlayCtrlAdvertiser: class {
+        constructor(_context, _address, onInvite) { created++; invite = onInvite; }
+        async start() { if (!this.started) { published++; this.started = true; } }
+        async stop() { removed++; }
+      }
+    });
+  const target = new Target();
+  target.running = true;
+  target.hasValidDeviceAddress = () => true;
+  target.events = { onLog() {}, onStatus() {} };
+  target.startAirPlayPrerequisiteWait = () => {};
+  target.clearAirPlayInviteWaitTimer = () => {};
+  target.startAirPlayEndpointResolutionWait = () => {};
+  await target.startControlAdvertisement();
+  const advertiser = target.ctrlAdvertiser;
+  target.vehicleWifiConnected = true;
+  await target.startControlAdvertisement();
+  assert.equal(target.ctrlAdvertiser, advertiser);
+  assert.deepEqual([created, published, removed], [1, 1, 0]);
+  invite();
+  assert.equal(target.inviteReceived, true);
+  target.inviteReceived = false;
+  target.running = false;
+  invite();
+  assert.equal(target.inviteReceived, false);
+});
+
+test('control advertisement failures clear ownership for retries and retain native error details', async () => {
+  const { describeSocketError } = loadEts('network/CarPlayCtrlAdvertiser.ets', {}, 'describeSocketError');
+  const error = { code: 2204004, message: 'service already registered' };
+  const PublishTarget = loadMethods('network/CarPlayCtrlAdvertiser.ets', 'CarPlayCtrlAdvertiser',
+    ['start'], {
+      netSocket: { constructTCPSocketServerInstance: () => ({
+        async listen() {}, async getLocalAddress() { return { port: 1234 }; }, on() {}
+      }) },
+      encodeUtf8: () => new Uint8Array(),
+      CARPLAY_SENDER_SOURCE_VERSION: 'test',
+      mdns: { async addLocalService() { throw error; } },
+      describeSocketError
+    });
+  const publisher = new PublishTarget();
+  publisher.toNumberArray = () => [];
+  publisher.stop = async () => {};
+  await assert.rejects(publisher.start(), /code=2204004 service already registered/);
+  const Target = loadMethods('session/SessionController.ets', 'SessionController',
+    ['startControlAdvertisement'], {
+      CarPlayCtrlAdvertiser: class {
+        async start() { throw new Error('registration failed'); }
+      }
+    });
+  const target = new Target();
+  target.running = true;
+  target.hasValidDeviceAddress = () => true;
+  await assert.rejects(target.startControlAdvertisement(), /registration failed/);
+  assert.equal(target.ctrlAdvertiser, undefined);
+});
+
 test('wireless startup keeps address candidates without treating UUID identities as public keys', () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'session/iap2/WirelessSessionParser.ets'), 'utf8');
   const parsed = ts.createSourceFile('WirelessSessionParser.ts', source, ts.ScriptTarget.Latest, true);
@@ -3117,11 +3273,20 @@ test('wireless discovery and ctrl advertisement start only after network selecti
   assert.equal(target.vehicleWifiConnected, true);
   assert.deepEqual(actions, ['iap2', 'network', 'refresh', 'discovery', 'advertise', 'pair']);
   assert.equal(actions.at(-1), 'pair');
+  const diagnostics = [];
+  target.vehicleWifiConnected = false;
+  target.events.onLog = message => diagnostics.push(message);
+  target.startControlAdvertisement = async () => { throw new Error('mDNS registration failed'); };
+  target.wifiNetworkLease.acquire = async () => ({ netId: 3 });
+  await target.joinVehicleWifi();
+  assert.equal(target.vehicleWifiConnected, true);
+  assert.equal(actions.filter(action => action === 'pair').length, 2);
+  assert.ok(diagnostics.some(message => /WARN:.*控制广播不可用.*mDNS registration failed/.test(message)));
   target.vehicleWifiConnected = false;
   target.wifiNetworkLease.acquire = async () => { throw new Error('no matching WLAN'); };
   await assert.rejects(target.joinVehicleWifi(), /无法确认 WLAN 选路/);
   assert.equal(target.vehicleWifiConnected, false);
-  assert.equal(actions.filter(action => action === 'pair').length, 1);
+  assert.equal(actions.filter(action => action === 'pair').length, 2);
 });
 
 test('selected WLAN loss cleans up AirPlay and schedules a bounded Wi-Fi rejoin', async () => {
@@ -3273,7 +3438,7 @@ test('navigation preview and full view share the running app without returning i
   assert.equal(stored.get('carplayNavigationPreview'), true);
   target.setNavigationPreview(false);
   assert.equal(stored.get('carplayNavigationPreview'), false);
-  assert.equal((contentSource.match(/id: 'projectionAppSurface'/g) || []).length, 1);
+  assert.equal((contentSource.match(/surfaceName: 'projectionAppSurface'/g) || []).length, 1);
 });
 
 test('home selects a map preview and shows HTML-style music and weather cards', async () => {
@@ -4144,6 +4309,42 @@ test('Dock selection follows the active app and current dashboard view', () => {
   assert.equal(target.isDockItemSelected('music'), false);
 });
 
+test('active projection apps are observable and both Dock layouts invalidate selected item nodes', () => {
+  const homeSource = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionHome.ets'), 'utf8');
+  assert.match(homeSource, /@State private activeApp: ProjectionApp \| undefined = undefined/);
+  assert.match(homeSource, /@State private mapApp: ProjectionApp \| undefined = undefined/);
+  assert.match(homeSource, /activeAppUri: this\.activeApp\?\.uri \?\? ''/);
+  assert.match(homeSource, /mapAppUri: this\.mapApp\?\.uri \?\? ''/);
+  const dockSource = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDock.ets'), 'utf8');
+  const parsed = ts.createSourceFile('Dock.ts', dockSource, ts.ScriptTarget.Latest, true);
+  const keys = [];
+  function visit(node) {
+    if (ts.isCallExpression(node) && node.expression.getText(parsed) === 'ForEach') {
+      keys.push(node.arguments[2].getText(parsed));
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(parsed);
+  assert.equal(keys.length, 2);
+  for (const keySource of keys) {
+    const javascript = ts.transpileModule(`const key = ${keySource}; key;`, {
+      compilerOptions: { target: ts.ScriptTarget.ES2020 }
+    }).outputText;
+    const key = vm.runInNewContext(javascript);
+    for (const id of ['home', 'map', 'music', 'apps', 'split', 'settings']) {
+      assert.notEqual(key({ id, selected: true }), key({ id, selected: false }));
+      assert.equal(key({ id, selected: true }), key({ id, selected: true }));
+    }
+  }
+  const Target = loadMethods('pages/ProjectionDashboardContent.ets', 'ProjectionDashboardContent', ['isActiveMap']);
+  const target = new Target();
+  target.apps = [{ uri: 'amap', category: 'map' }, { uri: 'music', category: 'music' }];
+  for (const [uri, expected] of [['', false], ['amap', true], ['music', false], ['amap', true]]) {
+    target.activeAppUri = uri;
+    assert.equal(target.isActiveMap(), expected);
+  }
+});
+
 test('Apps grid includes only launchable third-party apps and adapts from three to six columns', () => {
   const vehicleApps = [{ appId: 'shell-settings', uri: 'settings', category: 'vehicle' }];
   const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', [
@@ -4184,13 +4385,13 @@ test('split dashboard exposes ratio controls and requires an opened music app', 
   const splitSource = contentSource.slice(splitStart, splitEnd);
   assert.match(splitSource, /\.layoutWeight\(this\.splitMapRatio\)\s*\.height\('100%'\)/);
   assert.match(splitSource, /\.layoutWeight\(this\.splitMusicRatio\)\s*\.height\('100%'\)/);
-  assert.match(splitSource, /id: 'projectionSplitMapSurface'[\s\S]*?\.width\('100%'\)\s*\.height\('100%'\)/);
-  assert.doesNotMatch(splitSource, /id: 'projectionSplitMapSurface'[\s\S]*?\.aspectRatio\(/);
+  assert.match(splitSource, /surfaceName: 'projectionSplitMapSurface'[\s\S]*?\.width\('100%'\)\s*\.height\('100%'\)/);
+  assert.doesNotMatch(splitSource, /surfaceName: 'projectionSplitMapSurface'[\s\S]*?\.aspectRatio\(/);
   const mainPanelStart = contentSource.indexOf('private MainPanel()');
   const mainPanelEnd = contentSource.indexOf('build()', mainPanelStart);
   const mainPanelSource = contentSource.slice(mainPanelStart, mainPanelEnd);
-  assert.match(mainPanelSource, /id: 'projectionAppSurface'[\s\S]*?\.width\('100%'\)\s*\.height\('100%'\)/);
-  assert.doesNotMatch(mainPanelSource, /id: 'projectionAppSurface'[\s\S]*?\.aspectRatio\(/);
+  assert.match(mainPanelSource, /surfaceName: 'projectionAppSurface'[\s\S]*?\.width\('100%'\)\s*\.height\('100%'\)/);
+  assert.doesNotMatch(mainPanelSource, /surfaceName: 'projectionAppSurface'[\s\S]*?\.aspectRatio\(/);
   assert.doesNotMatch(source, /\b[345] : 1\b/);
   assert.match(source, /if \(view === 'split' && !this\.activeMusicApp\(\)\)/);
   const Target = loadMethods('pages/ProjectionDashboard.ets', 'ProjectionDashboard', ['showDashboardView'], {
@@ -4777,8 +4978,8 @@ test('split dashboard has independent navigation and app surfaces', () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboard.ets'), 'utf8');
   const contentSource = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboardContent.ets'), 'utf8');
   const shellSource = fs.readFileSync(path.join(sourceRoot, 'pages/ProjectionDashboardShell.ets'), 'utf8');
-  assert.match(contentSource, /id: 'projectionSplitMapSurface'/);
-  assert.match(contentSource, /id: 'projectionSplitMusicSurface'/);
+  assert.match(contentSource, /surfaceName: 'projectionSplitMapSurface'/);
+  assert.match(contentSource, /surfaceName: 'projectionSplitMusicSurface'/);
   assert.doesNotMatch(contentSource, /Text\('导航 APP'\)|Text\('音乐 APP'\)/);
   assert.match(contentSource, /this\.dashboardView === 'split'/);
   assert.match(contentSource, /this\.hasActiveMusicApp\(\)/);

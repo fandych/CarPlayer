@@ -95,6 +95,9 @@ struct Index {
       .height('100%')
       .backgroundColor(Color.Transparent)
 
+      if (this.page !== 'home') {
+        this.PageSheet()
+      }
       if (this.showMenu) {
         IndexMenuOverlay({
           logsPage: this.page === 'logs',
@@ -119,9 +122,6 @@ struct Index {
             void this.clearLogs();
           }
         })
-      }
-      if (this.page !== 'home') {
-        this.PageSheet()
       }
       if (this.showWelcome) {
         IndexWelcomeOverlay({
@@ -227,6 +227,18 @@ struct Index {
             .fontWeight(FontWeight.Bold)
             .fontColor('#FFFFFF')
           Blank()
+          if (this.page === 'logs') {
+            Button('⋯')
+              .width(42)
+              .height(34)
+              .fontSize(21)
+              .fontColor('#FFFFFF')
+              .backgroundColor('#FFFFFF20')
+              .borderRadius(17)
+              .margin({ right: 8 })
+              .accessibilityText('日志操作')
+              .onClick((): void => { this.showMenu = !this.showMenu; })
+          }
           Button({ type: ButtonType.Circle }) {
             SymbolGlyph($r('sys.symbol.xmark')).fontSize(16).fontColor(['#FFFFFF'])
           }
@@ -825,7 +837,7 @@ struct Index {
     try {
       const result = await promptAction.showDialog({
         title: '清空日志？',
-        message: '将删除本机最近 10 天的日志文件。此操作不可撤销。',
+        message: '将删除本次运行的日志文件。此操作不可撤销。',
         buttons: [
           { text: '取消', color: '#68736D' },
           { text: '清空', color: '#A14D34' }
@@ -862,7 +874,9 @@ struct Index {
       );
       const contents = diagnosticLogArchive.readAllText() || this.logs.slice().reverse().join('\n');
       await fileFs.write(openedFile.fd, `${contents}\n`);
-      await promptAction.showToast({ message: '最近 10 天日志已导出' });
+      await fileFs.close(openedFile);
+      openedFile = undefined;
+      await promptAction.showToast({ message: '本次运行日志已导出' });
     } catch (error) {
       this.showError(error instanceof Error ? error : new Error(String(error)));
     } finally {

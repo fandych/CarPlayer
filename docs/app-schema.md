@@ -2,7 +2,9 @@
 
 ## 查询范围与结论边界
 
-本记录基于 2026-11-03 通过 HDC 查询的当前连接 HarmonyOS 设备，应用范围取自 [ProjectionAppCatalog.ets](../entry/src/main/ets/pages/ProjectionAppCatalog.ets) 中的 14 个第三方应用候选。设备序列号不记录在文档中。14 个候选包在本次查询时均已安装；版本、模块和 Ability 名称只代表本次设备快照。
+本记录基于 2026-11-03 通过 HDC 查询的当前连接 HarmonyOS 设备，应用范围取自当时的 14 个第三方应用候选。设备序列号不记录在文档中。14 个候选包在本次查询时均已安装；版本、模块和 Ability 名称只代表本次设备快照。
+
+当前 [ProjectionAppCatalog.ets](../entry/src/main/ets/pages/ProjectionAppCatalog.ets) 仅保留 10 个导航和音乐候选；抖音、快手、腾讯视频及东方财富已移出投影应用列表，对应的 `querySchemes` 也已移除。下方非导航/音乐条目仅保留为历史查询记录，不代表当前支持范围。
 
 `bm dump` 中的 `hapModuleInfos[].abilityInfos[].skills[].uris[]` 描述 Ability 注册的 URI 匹配规则（scheme、host、path 等），不是完整的业务深链协议。它不会说明应用期望的 query 参数、Want parameters 或参数值含义。下表中的“用途”仅按已登记的 action、host 和 path 名称归类；未执行 `aa start`，不代表这些入口已实测成功，也不保证启动后显示在投影屏。
 

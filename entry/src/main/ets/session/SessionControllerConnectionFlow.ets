@@ -427,13 +427,13 @@ export abstract class SessionControllerConnectionFlow {
       this.events.onLog('真实蓝牙 MAC 未配置；跳过 CarPlay 控制广播');
       return;
     }
-    if (this.ctrlAdvertiser) {
-      await this.ctrlAdvertiser.stop();
-    }
-    const advertiser = new CarPlayCtrlAdvertiser(
+    const advertiser = this.ctrlAdvertiser ?? new CarPlayCtrlAdvertiser(
       this.context,
       this.deviceAddress,
       (): void => {
+        if (!this.running || this.ctrlAdvertiser !== advertiser) {
+          return;
+        }
         this.inviteReceived = true;
         this.clearAirPlayInviteWaitTimer();
         this.events.onStatus('收到车机邀请，等待 AirPlay 接收端');
@@ -445,7 +445,18 @@ export abstract class SessionControllerConnectionFlow {
       (message: string): void => this.events.onLog(message)
     );
     this.ctrlAdvertiser = advertiser;
-    await advertiser.start();
+    try {
+      await advertiser.start();
+    } catch (error) {
+      if (this.ctrlAdvertiser === advertiser) {
+        this.ctrlAdvertiser = undefined;
+      }
+      throw error instanceof Error ? error : new Error(String(error));
+    }
+    if (!this.running || this.ctrlAdvertiser !== advertiser) {
+      await advertiser.stop();
+      return;
+    }
     this.startAirPlayPrerequisiteWait();
     if (this.inviteReceived && this.discoveredAirPlay) {
       void this.connectAirPlay().catch((error: Error): void => this.reportError(error));

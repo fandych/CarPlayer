@@ -51,6 +51,19 @@
 
 这些项目是整体目标的前置条件，不以“只显示画面”或“只控制本应用”代替完成。若跨 APP 输入与连续迁移没有合法可用路径，完整目标应判定为阻塞，而不是宣称产品已实现。
 
+### 1.5 与 Android CarDeck 的平台能力差异
+
+本节比较的是 CarDeck 公开仓库说明的产品能力与本项目在 HarmonyOS Phone 上使用公开 API 的边界；Android 与 HarmonyOS 的权限模型、虚拟屏及窗口实现不同，不能按 API 名称一对一移植。
+
+| 能力 | Android CarDeck 公开说明 | 本项目当前边界 |
+|---|---|---|
+| 第三方应用输入 | CarDeck README 声明使用已启动并授权的 Shizuku 服务处理虚拟屏和触摸注入。该能力依赖 Android 系统服务授权，不是普通应用 API 本身提供的能力。 | AirPlay/HID 输入可用于 CarPlayer 自身界面，但 Phone 上没有已验证的公开通用 API 将 down/move/up、多点触控或按键注入到第三方 UIAbility 的指定虚拟屏。第三方内容因此不能承诺可交互，也不会回退注入手机主屏。 |
+| 虚拟屏方向 | CarDeck README 标注“应用横屏”功能依赖 Android 14+；其虚拟屏和窗口状态能力依赖 Shizuku。此项目说明不等于证明每个第三方应用都会正确读取横屏方向。 | `createVirtualScreen` 的宽高决定显示区域的横竖几何形态，但不能由 CarPlayer 将 `Display.orientation` 属性写成横屏；该值可为未知（4）。`setPreferredOrientation` 作用于调用者自己的主窗口，不提供设置第三方应用主窗口方向的跨应用接口。应用可以使用窗口尺寸自行布局，但目标应用是否这样做取决于应用自身。 |
+| 第三方窗口与任务 | CarDeck README 声明可通过 Shizuku 读取窗口状态。 | `startAbility` 的 `displayId` 指定启动目标屏幕，不代表目标窗口一定显示、获得预期焦点或可无缝迁移已有单例任务；当前没有可用的跨应用窗口状态/方向控制接口。 |
+| 应用范围 | CarDeck 定位为虚拟屏应用启动器。具体可用应用仍受 Android、Shizuku 授权与目标应用兼容性影响。 | 本项目应用目录有意限制为导航和音乐类；每个入口还需核验 bundle/Ability 或 URI。此项是产品范围限制，不应与 Phone 系统输入/窗口 API 限制混为一谈。 |
+
+据 CarDeck 仓库 README 的功能说明，其 Android 方案需要用户先启动 Shizuku，并要求 Android 14+ 才支持其“应用横屏”功能。这里记录的是 CarDeck 自述的依赖和能力范围，不代表其对任意应用、任意 Android 版本或所有方向状态均有保证，也不能据此推断 HarmonyOS DDK 外设驱动可替代 Shizuku。若要在 HarmonyOS 达到同等的第三方输入与窗口控制，需要经设备/API 实测可用的系统授权接口、厂商支持或系统级集成；单纯改用 C/C++、创建更宽的虚拟屏或接收 HID 报告都不足以实现。
+
 ## 2. 功能与实现路径
 
 | 用户功能 | 设计路径 | 能力与边界 |
@@ -455,6 +468,7 @@ NormalizedEvent
 | Wi-Fi加入 | WLAN候选配置与用户确认连接 | 实际关联结果；不默认无提示切网 |
 | 独立虚拟屏 | ArkTS `@kit.ArkUI` 屏幕管理 API：Phone API 16+ 的 `createVirtualScreen` / `makeUnique` / `setVirtualScreenSurface` / `destroyVirtualScreen`；`ACCESS_VIRTUAL_SCREEN` | system_basic 受限公开权限，需正规 ACL 审批；虚拟屏生命周期需由 Stage `PlatformBridge.ets` 调用。Phone NDK `OH_DisplayManager` 文档不提供这些生命周期接口；系统能力及目标 Phone 的 Screen/Display 映射也须满足 |
 | 指定屏幕打开APP | `startAbility` / `StartOptions.displayId`；Phone 标注 12+ | 前台规则、exported 入口、单例/焦点/目标屏行为；displayId 指定启动屏幕，不保证迁移既有实例。API 26 的 `splitRatio` 是窗口比例偏好，官方窗口分屏约束标注为 2in1/平板，不证明 Phone 第三方 APP 可在 CarPlay 合成画布内分屏 |
+| 第三方窗口方向 | 无通用的跨应用方向设置接口；`setPreferredOrientation` 设置调用者主窗口的方向策略 | 虚拟屏宽高仅决定目标显示区域形态；目标 APP 是否采用横屏 UI 由其自身方向声明、窗口策略及布局实现决定。不能通过写入只读的 `Display.orientation` 强制第三方窗口旋转 |
 | 显示采集/编码 | AVScreenCapture、C/C++ `OH_AVScreenCapture`、API 24+ `OH_MultiDisplayCapability`、AVCodec 编码器 | 运行时查询设备是否支持所选多屏联合录制及联合尺寸；联合录制是合成录制能力信息，不等于提供每个显示器独立采样源。用户已验证虚拟屏可录制，仍须记录设备/API/授权并接通目标 Surface 到编码器 |
 | 第三方音乐控制 | Phone API 23+ 的 AVSession controller；`MANAGE_MEDIA_RESOURCES_FOR_PUBLIC` | system_basic 受限公开权限需审批；目标必须发布符合条件的会话并支持对应动作 |
 | 系统内录 | API 26.0.0+ ArkTS `AudioCapturer` 或 C/C++ `OH_AudioCapturer` | 需系统授权且等待异步结果；官方资料没有按第三方 APP/虚拟屏隔离的保证，媒体类别、隐私过滤及实际混音行为需实测 |

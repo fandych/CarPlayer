@@ -40,7 +40,7 @@ struct ProjectionHome {
   @StorageLink('carplayTheme') theme: string = 'aurora';
   @StorageLink('carplayDayNightMode') dayNightMode: string = 'NIGHT';
   @StorageLink('carplayNightMode') nightMode: boolean = true;
-  private activeApp?: ProjectionApp;
+  @State private activeApp: ProjectionApp | undefined = undefined;
   private appDisplayId: number = -1;
   private appContentWidth: number = 0;
   private appContentHeight: number = 0;
@@ -60,7 +60,7 @@ struct ProjectionHome {
   };
   private readonly lastLayoutSizes: Map<string, string> = new Map();
   private mapDisplayId: number = -1;
-  private mapApp?: ProjectionApp;
+  @State private mapApp: ProjectionApp | undefined = undefined;
   private mapDisplayGeneration: number = 0;
   private activeMapSurface: ProjectionMapSurface | undefined = undefined;
   @State private mapOnPhone: boolean = false;

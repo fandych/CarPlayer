@@ -147,7 +147,8 @@ export struct ProjectionDock {
           .height(32)
           .justifyContent(FlexAlign.Center)
           .padding({ left: 2, right: 2 })
-          ForEach(this.items, (item: ProjectionDockItem) => this.DockItem(item, true), (item: ProjectionDockItem) => item.id)
+          ForEach(this.items, (item: ProjectionDockItem) => this.DockItem(item, true),
+            (item: ProjectionDockItem) => `${item.id}:${item.selected}`)
         }
         .width('100%')
         .height('100%')
@@ -182,7 +183,8 @@ export struct ProjectionDock {
           .width(36)
           .height('100%')
           .justifyContent(FlexAlign.Center)
-          ForEach(this.items, (item: ProjectionDockItem) => this.DockItem(item, false), (item: ProjectionDockItem) => item.id)
+          ForEach(this.items, (item: ProjectionDockItem) => this.DockItem(item, false),
+            (item: ProjectionDockItem) => `${item.id}:${item.selected}`)
         }
         .width('100%').height('100%').constraintSize({ minWidth: 396 })
         .padding({ left: 8, right: 8, top: 4, bottom: 4 })

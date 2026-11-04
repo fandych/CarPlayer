@@ -366,7 +366,6 @@ export struct ProjectionDashboardShell {
         cardStrokeColor: this.cardStrokeColor,
         theme: this.theme,
         lightAppearance: this.lightAppearance,
-        verticalDock: this.verticalDock,
         wallpaperResource: (themeId: string): Resource => this.wallpaperResource(themeId),
         mapPreviewResource: (): Resource => this.mapPreviewResource(),
         onAppSurfaceChange: (surfaceId: string, area: Area | undefined, attached: boolean): void =>

@@ -1,6 +1,53 @@
 import { ProjectionApp, activeProjectionMusicApp } from './ProjectionAppCatalog';
 import { ProjectionMediaCommand, ProjectionMediaSnapshot } from '../session/MediaSessionBridge';
 import { ProjectionMediaSidebar } from './ProjectionMediaSidebar';
+import { projectionSurfaceSize, ProjectionSurfaceSize } from './ProjectionSurface';
+
+@Component
+struct ProjectionContentSurface {
+  @Prop surfaceName: string = '';
+  @Prop landscape: boolean = false;
+  onSurfaceChange: (surfaceId: string, area: Area | undefined, attached: boolean) => void =
+    (_surfaceId: string, _area: Area | undefined, _attached: boolean): void => {};
+  @State private viewportWidth: number = 0;
+  @State private viewportHeight: number = 0;
+  private readonly controller: XComponentController = new XComponentController();
+  private surfaceId: string = '';
+  private surfaceArea?: Area;
+
+  private surfaceSize(): ProjectionSurfaceSize {
+    return projectionSurfaceSize(this.viewportWidth, this.viewportHeight, this.landscape);
+  }
+
+  build() {
+    Stack({ alignContent: Alignment.Center }) {
+      if (this.viewportWidth > 0 && this.viewportHeight > 0) {
+        XComponent({ id: this.surfaceName, type: XComponentType.SURFACE, controller: this.controller })
+          .width(this.surfaceSize().width)
+          .height(this.surfaceSize().height)
+          .onLoad((): void => {
+            this.surfaceId = this.controller.getXComponentSurfaceId();
+            this.onSurfaceChange(this.surfaceId, this.surfaceArea, true);
+          })
+          .onDestroy((): void => {
+            this.surfaceId = '';
+            this.surfaceArea = undefined;
+            this.onSurfaceChange('', undefined, false);
+          })
+          .onAreaChange((_oldArea, newArea) => {
+            this.surfaceArea = newArea;
+            this.onSurfaceChange(this.surfaceId, newArea, true);
+          })
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .onAreaChange((_oldArea, newArea) => {
+      this.viewportWidth = Number.parseFloat(`${newArea.width}`);
+      this.viewportHeight = Number.parseFloat(`${newArea.height}`);
+    })
+  }
+}
 
 @Component
 export struct ProjectionDashboardContent {
@@ -40,7 +87,6 @@ export struct ProjectionDashboardContent {
   @Prop cardStrokeColor: string = '#20FFFFFF';
   @Prop theme: string = 'aurora';
   @Prop lightAppearance: boolean = false;
-  @Prop verticalDock: boolean = false;
   wallpaperResource: (themeId: string) => Resource = (_themeId: string): Resource =>
     $r('app.media.projection_aurora');
   mapPreviewResource: () => Resource = (): Resource => $r('app.media.projection_map_preview');
@@ -61,13 +107,6 @@ export struct ProjectionDashboardContent {
   onOpenMapApp: () => void = (): void => {};
   onSendMediaCommand: (command: ProjectionMediaCommand) => void = (_command: ProjectionMediaCommand): void => {};
 
-  private readonly mapXComponentController: XComponentController = new XComponentController();
-  private readonly appXComponentController: XComponentController = new XComponentController();
-  private appSurfaceId: string = '';
-  private appSurfaceArea?: Area;
-  private mapSurfaceId: string = '';
-  private mapSurfaceArea?: Area;
-
   private hasActiveMusicApp(): boolean {
     return !this.appOnPhone && !!activeProjectionMusicApp(this.apps, this.activeAppUri);
   }
@@ -81,12 +120,9 @@ export struct ProjectionDashboardContent {
       this.apps.find((app: ProjectionApp): boolean => app.category === category);
   }
 
-  private notifyAppSurface(attached: boolean = true): void {
-    this.onAppSurfaceChange(this.appSurfaceId, this.appSurfaceArea, attached);
-  }
-
-  private notifyMapSurface(attached: boolean = true): void {
-    this.onMapSurfaceChange(this.mapSurfaceId, this.mapSurfaceArea, attached);
+  private isActiveMap(): boolean {
+    return this.apps.some((app: ProjectionApp): boolean =>
+      app.uri === this.activeAppUri && app.category === 'map');
   }
 
   @Builder
@@ -94,26 +130,14 @@ export struct ProjectionDashboardContent {
     Row({ space: 8 }) {
       Column({ space: 6 }) {
         Stack({ alignContent: Alignment.BottomStart }) {
-          XComponent({
-            id: 'projectionSplitMapSurface',
-            type: XComponentType.SURFACE,
-            controller: this.mapXComponentController
+          ProjectionContentSurface({
+            surfaceName: 'projectionSplitMapSurface',
+            landscape: true,
+            onSurfaceChange: (surfaceId: string, area: Area | undefined, attached: boolean): void =>
+              this.onMapSurfaceChange(surfaceId, area, attached)
           })
             .width('100%')
             .height('100%')
-            .onLoad((): void => {
-              this.mapSurfaceId = this.mapXComponentController.getXComponentSurfaceId();
-              this.notifyMapSurface();
-            })
-            .onDestroy((): void => {
-              this.mapSurfaceId = '';
-              this.mapSurfaceArea = undefined;
-              this.notifyMapSurface(false);
-            })
-            .onAreaChange((_oldArea, newArea) => {
-              this.mapSurfaceArea = newArea;
-              this.notifyMapSurface();
-            })
           if (this.mapMessage.length > 0) {
             Text(this.mapMessage).fontSize(11).fontColor(this.secondaryTextColor)
               .textAlign(TextAlign.Center).padding(12)
@@ -134,26 +158,13 @@ export struct ProjectionDashboardContent {
       Column({ space: 6 }) {
         if (this.hasActiveMusicApp()) {
           Stack({ alignContent: Alignment.Center }) {
-            XComponent({
-              id: 'projectionSplitMusicSurface',
-              type: XComponentType.SURFACE,
-              controller: this.appXComponentController
+            ProjectionContentSurface({
+              surfaceName: 'projectionSplitMusicSurface',
+              onSurfaceChange: (surfaceId: string, area: Area | undefined, attached: boolean): void =>
+                this.onAppSurfaceChange(surfaceId, area, attached)
             })
               .width('100%')
               .height('100%')
-              .onLoad((): void => {
-                this.appSurfaceId = this.appXComponentController.getXComponentSurfaceId();
-                this.notifyAppSurface();
-              })
-              .onDestroy((): void => {
-                this.appSurfaceId = '';
-                this.appSurfaceArea = undefined;
-                this.notifyAppSurface(false);
-              })
-              .onAreaChange((_oldArea, newArea) => {
-                this.appSurfaceArea = newArea;
-                this.notifyAppSurface();
-              })
             if (this.launchMessage.length > 0) {
               Text(this.launchMessage).fontSize(11).fontColor(this.secondaryTextColor)
                 .textAlign(TextAlign.Center).padding(12)
@@ -212,26 +223,14 @@ export struct ProjectionDashboardContent {
       } else if (this.activeAppLabel.length > 0) {
         Row({ space: 8 }) {
           Stack({ alignContent: Alignment.BottomStart }) {
-            XComponent({
-              id: 'projectionAppSurface',
-              type: XComponentType.SURFACE,
-              controller: this.appXComponentController
+            ProjectionContentSurface({
+              surfaceName: 'projectionAppSurface',
+              landscape: this.isActiveMap(),
+              onSurfaceChange: (surfaceId: string, area: Area | undefined, attached: boolean): void =>
+                this.onAppSurfaceChange(surfaceId, area, attached)
             })
               .width('100%')
               .height('100%')
-              .onLoad((): void => {
-                this.appSurfaceId = this.appXComponentController.getXComponentSurfaceId();
-                this.notifyAppSurface();
-              })
-              .onDestroy((): void => {
-                this.appSurfaceId = '';
-                this.appSurfaceArea = undefined;
-                this.notifyAppSurface(false);
-              })
-              .onAreaChange((_oldArea, newArea) => {
-                this.appSurfaceArea = newArea;
-                this.notifyAppSurface();
-              })
             if (this.launchMessage.length > 0) {
               Text(this.launchMessage)
                 .fontSize(12)
@@ -328,9 +327,8 @@ export struct ProjectionDashboardContent {
         }
       }
     }
-    .layoutWeight(1)
-    .width(this.verticalDock ? '0%' : '100%')
-    .height(this.verticalDock ? '100%' : '0%')
+    .width('100%')
+    .height('100%')
   }
 
   build() {
