@@ -1,28 +1,28 @@
 import netSocket from '@ohos.net.socket';
-import { hkdfSha512, sha512 } from './AirPlayCrypto';
-import { AirPlayEventChannel, AirPlayEventRequest } from './AirPlayEventChannel';
-import { AirPlayRtspClient, AirPlayRtspResponse } from './AirPlayRtspClient';
-import { BinaryPlist, PlistNode } from './BinaryPlist';
+import { hkdfSha512, sha512 } from '../AirPlayCrypto';
+import { AirPlayEventChannel, AirPlayEventRequest } from '../AirPlayEventChannel';
+import { AirPlayRtspClient, AirPlayRtspResponse } from '../AirPlayRtspClient';
+import { BinaryPlist, PlistNode } from '../BinaryPlist';
 import {
   AirPlayVideoEncryptionMode,
   AirPlayVideoStreamSender,
   EncodedH264Event
-} from './AirPlayVideoStream';
-import { settleSocketWithin } from '../network/SocketDeadline';
+} from '../AirPlayVideoStream';
+import { settleSocketWithin } from '../../network/SocketDeadline';
 import {
   DEFAULT_TOUCH_HID_UUID,
   extractCarPlayTouchReport,
   findTouchHidDevice,
   scaleCarPlayTouchReport,
   TouchHidDevice
-} from './CarPlayTouchReport';
-import { encodeUtf8, toArrayBuffer } from '../protocol/Iap2Codec';
-import { CARPLAY_SENDER_OS_BUILD_VERSION, CARPLAY_SENDER_SOURCE_VERSION } from '../protocol/CarPlaySenderCompatibility';
-import { AudioRtpSession, SAMPLES_PER_PACKET } from '../audio/AudioRtpSender';
-import { getSocketAddressFamily, WifiNetworkLease } from '../network/WifiNetworkLease';
-import { formatProtocolEvent, formatRawBytesDiagnostic } from '../session/ProtocolLogger';
-import { ProjectionDisplayMode } from '../video/ProjectionSettings';
-import { Iap2SenderSession } from '../session/Iap2SenderSession';
+} from '../CarPlayTouchReport';
+import { encodeUtf8, toArrayBuffer } from '../../protocol/Iap2Codec';
+import { CARPLAY_SENDER_OS_BUILD_VERSION, CARPLAY_SENDER_SOURCE_VERSION } from '../../protocol/CarPlaySenderCompatibility';
+import { AudioRtpSession, SAMPLES_PER_PACKET } from '../../audio/AudioRtpSender';
+import { getSocketAddressFamily, WifiNetworkLease } from '../../network/WifiNetworkLease';
+import { formatProtocolEvent, formatRawBytesDiagnostic } from '../../session/ProtocolLogger';
+import { ProjectionDisplayMode } from '../../video/ProjectionSettings';
+import { Iap2SenderSession } from '../../session/Iap2SenderSession';
 import type { AirPlayModes } from '../AirPlayMediaSession';
 import {
   AirPlayMediaSessionStatusError,
@@ -41,7 +41,7 @@ import {
   requireDictionary,
   requireSuccess,
   selectPcmAudioFormat
-} from './media/AirPlayMediaHelpers';
+} from './AirPlayMediaHelpers';
 
 export abstract class AirPlayMediaSessionTransport {
   protected readonly client: AirPlayRtspClient;
@@ -61,7 +61,16 @@ export abstract class AirPlayMediaSessionTransport {
   protected touchReportHandler?: (report: Uint8Array) => void;
   protected nightModeHandler?: (night: boolean) => void;
   protected nightMode: boolean = false;
-  protected modes: AirPlayModes = createDefaultModes();
+  protected modes: AirPlayModes = {
+    screenEntity: 1,
+    screenPermanentEntity: 1,
+    audioEntity: 1,
+    audioPermanentEntity: 1,
+    speechEntity: 0,
+    speechMode: -1,
+    phoneCallEntity: 0,
+    turnByTurnEntity: 0
+  };
   protected touchHid?: TouchHidDevice;
   protected videoWidth: number = 0;
   protected videoHeight: number = 0;

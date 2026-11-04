@@ -1218,13 +1218,13 @@ test('MIB3 virtual iAP2 accepts event-channel bytes and reaches identification o
   const sessionFlow = loadEts('session/iap2/Iap2SenderSessionFlow.ets', {
     '@ohos.app.ability.common': {},
     '@ohos.data.preferences': {},
-    '../protocol/Iap2Codec': codec,
+    '../../protocol/Iap2Codec': codec,
     '@ohos.security.cryptoFramework': {},
-    '../iap2/MfiVerifier': { MfiVerifier: class {} },
-    './ProtocolLogger': { formatProtocolEvent: () => '', formatRawBytesDiagnostic: () => '' },
-    './iap2/Iap2SessionProtocol': sessionProtocol,
-    './iap2/WirelessSessionParser': {},
-    './iap2/Iap2LinkLayer': linkLayer
+    '../../iap2/MfiVerifier': { MfiVerifier: class {} },
+    '../ProtocolLogger': { formatProtocolEvent: () => '', formatRawBytesDiagnostic: () => '' },
+    './Iap2SessionProtocol': sessionProtocol,
+    './WirelessSessionParser': {},
+    './Iap2LinkLayer': linkLayer
   });
   const { Iap2SenderSession } = loadEts('session/Iap2SenderSession.ets', {
     '@ohos.app.ability.common': {},

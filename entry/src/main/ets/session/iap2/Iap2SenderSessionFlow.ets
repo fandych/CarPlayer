@@ -13,10 +13,10 @@ import {
   Iap2LinkFrame,
   numberParameter,
   stringParameter
-} from '../protocol/Iap2Codec';
+} from '../../protocol/Iap2Codec';
 import cryptoFramework from '@ohos.security.cryptoFramework';
-import { MfiTrustPromptInfo, MfiVerifier, ValidatedMfiCertificate } from '../iap2/MfiVerifier';
-import { formatProtocolEvent, formatRawBytesDiagnostic } from './ProtocolLogger';
+import { MfiTrustPromptInfo, MfiVerifier, ValidatedMfiCertificate } from '../../iap2/MfiVerifier';
+import { formatProtocolEvent, formatRawBytesDiagnostic } from '../ProtocolLogger';
 import {
   currentDeviceLanguage,
   EaProtocol,
@@ -34,16 +34,16 @@ import {
   readMessageIds,
   shouldProbeLegacyWifi,
   WIFI_CONFIGURATION_WINDOW_MS
-} from './iap2/Iap2SessionProtocol';
+} from './Iap2SessionProtocol';
 import {
   parseWirelessSessionCredentials,
   parseWirelessSessionEndpoint,
   WifiCredentials,
   WirelessAirPlayEndpoint
-} from './iap2/WirelessSessionParser';
-import { Iap2LinkLayer } from './iap2/Iap2LinkLayer';
+} from './WirelessSessionParser';
+import { Iap2LinkLayer } from './Iap2LinkLayer';
 
-export class Iap2SenderSessionFlow extends Iap2LinkLayer {
+export abstract class Iap2SenderSessionFlow extends Iap2LinkLayer {
   protected readonly onWifi: (credentials: WifiCredentials) => void;
   protected readonly onEndpoint: (endpoint: WirelessAirPlayEndpoint | undefined) => void;
   protected readonly onEndpointPending: () => void;
@@ -97,6 +97,8 @@ export class Iap2SenderSessionFlow extends Iap2LinkLayer {
   protected buickStartSessionWaitTimer?: number;
   protected buickAvailabilitySentAt: number = 0;
   protected buickAvailabilityFrameDigest: string = '';
+
+  protected abstract receiveControlMessage(messageId: number, body: Uint8Array): Promise<void>;
 
   constructor(
     sendBytes: (bytes: Uint8Array) => Promise<void>,

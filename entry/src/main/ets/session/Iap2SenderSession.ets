@@ -323,7 +323,7 @@ export class Iap2SenderSession extends Iap2SenderSessionFlow {
       this.clearBuickStartSessionTimer();
   }
 
-  private async receiveControlMessage(messageId: number, body: Uint8Array): Promise<void> {
+  protected async receiveControlMessage(messageId: number, body: Uint8Array): Promise<void> {
     this.log(formatIap2MessageDiagnostic('RX', messageId, body));
     if (this.mfiOnlyVirtualLink && this.authenticated) {
       if (this.mfiVerified) {

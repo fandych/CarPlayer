@@ -1,6 +1,5 @@
 import abilityAccessCtrl from '@ohos.abilityAccessCtrl';
 import { SessionControllerConnectionFlow } from './SessionControllerConnectionFlow';
-export { SessionEvents } from './SessionControllerConnectionFlow';
 import common from '@ohos.app.ability.common';
 import bluetoothConnection from '@ohos.bluetooth.connection';
 import window from '@ohos.window';
@@ -38,6 +37,7 @@ import {
   WifiCredentials,
   WirelessAirPlayEndpoint
 } from './Iap2SenderSession';
+export { SessionEvents } from './SessionControllerConnectionFlow';
 export {
   isAirPlayStartReady,
   makeAirPlayServiceFromEndpoint,
@@ -518,7 +518,7 @@ export class SessionController extends SessionControllerConnectionFlow {
     await this.connectAirPlay();
   }
 
-  private async startProjection(
+  protected async startProjection(
     media: AirPlayMediaSessionInfo,
     pairing: AirPlayPairingClient,
     generation: number
@@ -682,7 +682,7 @@ export class SessionController extends SessionControllerConnectionFlow {
     }
   }
 
-  private async stopProjection(): Promise<void> {
+  protected async stopProjection(): Promise<void> {
     const displayId = this.projectionDisplay.id;
     const failures: string[] = [];
     if (displayId >= 0 && this.events.onProjectionStopping) {
@@ -738,7 +738,7 @@ export class SessionController extends SessionControllerConnectionFlow {
     }
   }
 
-  private async startAudio(media: AirPlayMediaSessionInfo, generation: number): Promise<void> {
+  protected async startAudio(media: AirPlayMediaSessionInfo, generation: number): Promise<void> {
     if (!this.running || generation !== this.airPlayGeneration) {
       return;
     }
@@ -805,7 +805,7 @@ export class SessionController extends SessionControllerConnectionFlow {
     }
   }
 
-  private reportError(error: Error | string): void {
+  protected reportError(error: Error | string): void {
     const message = error instanceof Error ? error.message : error;
     const stack = error instanceof Error && error.stack && error.stack !== message
       ? `\n${error.stack}`

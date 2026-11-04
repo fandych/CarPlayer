@@ -55,7 +55,17 @@ const AIRPLAY_ENDPOINT_RESOLVE_WAIT_MS: number = 3000;
 const AIRPLAY_PAIRING_WINDOW_MS: number = 120000;
 
 
-export class SessionControllerConnectionFlow {
+export abstract class SessionControllerConnectionFlow {
+  abstract stop(): Promise<void>;
+  protected abstract startProjection(
+    media: AirPlayMediaSessionInfo,
+    pairing: AirPlayPairingClient,
+    generation: number
+  ): Promise<void>;
+  protected abstract stopProjection(): Promise<void>;
+  protected abstract startAudio(media: AirPlayMediaSessionInfo, generation: number): Promise<void>;
+  protected abstract reportError(error: Error | string): void;
+
   protected readonly context: common.UIAbilityContext;
   protected readonly events: SessionEvents;
   protected readonly bluetooth: BluetoothIap2Server = new BluetoothIap2Server();
