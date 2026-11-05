@@ -14,7 +14,7 @@ function encryptVideoPacket(
 
 export class MediaPacketCipher {
   private readonly key: Uint8Array;
-  private background: boolean;
+  private readonly background: boolean;
   private readonly log: (message: string) => void;
   private completed: number = 0;
 
@@ -37,14 +37,14 @@ export class MediaPacketCipher {
         }
         this.completed++;
         if (this.completed === 1 || this.completed % 120 === 0) {
-          this.log(`AirPlay video background encryption ready: frames=${this.completed}, ` +
+          this.log(`AirPlay background media encryption ready: packets=${this.completed}, ` +
             `bytes=${plaintext.length}, elapsedMs=${Date.now() - startedAt}`);
         }
         return encrypted;
       } catch (error) {
-        this.background = false;
-        this.log(`WARN: AirPlay video background encryption disabled; using direct encryption: ` +
-          `${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(
+          `AirPlay background media encryption failed: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
     return chachaSeal(this.key, nonce, plaintext, associatedData);

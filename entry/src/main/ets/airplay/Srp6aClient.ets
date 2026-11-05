@@ -1,4 +1,5 @@
 import cryptoFramework from '@ohos.security.cryptoFramework';
+import taskpool from '@ohos.taskpool';
 import { concatBytes } from '../protocol/Iap2Codec';
 import { sha512 } from './AirPlayCrypto';
 
@@ -24,6 +25,66 @@ const USERNAME: Uint8Array = new Uint8Array([
 ]);
 const SETUP_PASSWORD: Uint8Array = new Uint8Array([0x33, 0x39, 0x33, 0x39]);
 const COLON: Uint8Array = new Uint8Array([0x3a]);
+
+@Concurrent
+function calculateModPow(
+  baseBytes: Uint8Array,
+  exponentBytes: Uint8Array,
+  modulusBytes: Uint8Array
+): Uint8Array {
+  let base = BigInt(0);
+  for (const byte of baseBytes) {
+    base = (base << BigInt(8)) | BigInt(byte);
+  }
+  let exponent = BigInt(0);
+  for (const byte of exponentBytes) {
+    exponent = (exponent << BigInt(8)) | BigInt(byte);
+  }
+  let modulus = BigInt(0);
+  for (const byte of modulusBytes) {
+    modulus = (modulus << BigInt(8)) | BigInt(byte);
+  }
+  if (modulus <= BigInt(0)) {
+    throw new Error('Invalid modular exponentiation modulus');
+  }
+  base %= modulus;
+  if (exponent < BigInt(0)) {
+    throw new Error('Invalid modular exponentiation exponent');
+  }
+  let result = BigInt(1);
+  while (exponent > BigInt(0)) {
+    if (exponent % BigInt(2) === BigInt(1)) {
+      result = (result * base) % modulus;
+    }
+    exponent = exponent / BigInt(2);
+    base = (base * base) % modulus;
+  }
+  const output = new Uint8Array(modulusBytes.length);
+  for (let index = output.length - 1; index >= 0; index--) {
+    output[index] = Number(result & BigInt(0xff));
+    result >>= BigInt(8);
+  }
+  if (result !== BigInt(0)) {
+    throw new Error('Modular exponentiation result exceeds modulus width');
+  }
+  return output;
+}
+
+async function modPowInTaskPool(base: bigint, exponent: bigint): Promise<bigint> {
+  const modulusBytes = padSrpInteger(SRP3072_MODULUS);
+  const task = new taskpool.Task(
+    calculateModPow,
+    srpBigIntToBytes(base),
+    srpBigIntToBytes(exponent),
+    modulusBytes
+  );
+  task.setTransferList([]);
+  const result = await taskpool.execute(task, taskpool.Priority.MEDIUM) as Uint8Array;
+  if (!(result instanceof Uint8Array) || result.length !== modulusBytes.length) {
+    throw new Error('SRP background modular exponentiation returned an invalid result');
+  }
+  return srpBytesToBigInt(result);
+}
 
 export class Srp6aSession {
   readonly publicKeyA: Uint8Array;
@@ -54,7 +115,7 @@ export class Srp6aSession {
     if (privateExponent === BigInt(0)) {
       privateExponent = BigInt(1);
     }
-    const publicKeyA = padSrpInteger(modPow(SRP_GENERATOR, privateExponent, SRP3072_MODULUS));
+    const publicKeyA = padSrpInteger(await modPowInTaskPool(SRP_GENERATOR, privateExponent));
     return new Srp6aSession(publicKeyA, privateExponent, salt, publicKeyB);
   }
 
@@ -70,13 +131,13 @@ export class Srp6aSession {
     const userPasswordHash = await sha512(concatBytes(USERNAME, COLON, SETUP_PASSWORD));
     const privatePassword = srpBytesToBigInt(await sha512(this.salt, userPasswordHash));
     const scrambling = srpBytesToBigInt(await sha512(this.publicKeyA, padSrpInteger(bigB)));
-    const verifier = modPow(SRP_GENERATOR, privatePassword, SRP3072_MODULUS);
+    const verifier = await modPowInTaskPool(SRP_GENERATOR, privatePassword);
     const base = modulo(bigB - multiplier * verifier, SRP3072_MODULUS);
     if (base === BigInt(0)) {
       throw new Error('SRP client public key is invalid');
     }
 
-    const sharedSecret = modPow(base, this.privateExponent + scrambling * privatePassword, SRP3072_MODULUS);
+    const sharedSecret = await modPowInTaskPool(base, this.privateExponent + scrambling * privatePassword);
     const key = await sha512(srpBigIntToBytes(sharedSecret));
     const hashN = await sha512(srpBigIntToBytes(SRP3072_MODULUS));
     const hashG = await sha512(srpBigIntToBytes(SRP_GENERATOR));

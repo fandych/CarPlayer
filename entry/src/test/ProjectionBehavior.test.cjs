@@ -1532,6 +1532,59 @@ test('AirPlay feature bit selects pairing only when advertised', () => {
   assert.equal(supportsAirPlayPairingAndEncryption(undefined), undefined);
 });
 
+test('AirPlay SRP-6a modular exponentiation runs in TaskPool with byte-array inputs', async () => {
+  const tasks = [];
+  const taskpool = {
+    Priority: { MEDIUM: 1 },
+    Task: class {
+      constructor(operation, ...args) { this.operation = operation; this.args = args; }
+      setTransferList(list) { this.transfers = list; }
+    },
+    async execute(task, priority) {
+      tasks.push({ task, priority });
+      return task.operation(...task.args);
+    }
+  };
+  const { Srp6aSession, SRP_GENERATOR, SRP3072_MODULUS, modPow, srpBigIntToBytes,
+    srpBytesToBigInt } = loadEts('airplay/Srp6aClient.ets', {
+    '@ohos.security.cryptoFramework': {
+      createRandom: () => ({ async generateRandom(length) {
+        return { data: new Uint8Array(length).fill(2) };
+      } })
+    },
+    '@ohos.taskpool': taskpool,
+    '../protocol/Iap2Codec': {
+      concatBytes: (...parts) => {
+        const output = new Uint8Array(parts.reduce((length, part) => length + part.length, 0));
+        let offset = 0;
+        for (const part of parts) {
+          output.set(part, offset);
+          offset += part.length;
+        }
+        return output;
+      }
+    },
+    './AirPlayCrypto': {
+      async sha512() { return new Uint8Array(64).fill(1); }
+    }
+  });
+  const randomBytes = new Uint8Array(32).fill(2);
+  const serverPublic = new Uint8Array(384);
+  serverPublic[383] = 7;
+  const session = await Srp6aSession.start(new Uint8Array([1]), serverPublic);
+  const expectedPublic = srpBigIntToBytes(modPow(SRP_GENERATOR, srpBytesToBigInt(randomBytes), SRP3072_MODULUS));
+  const expectedPaddedPublic = new Uint8Array(384);
+  expectedPaddedPublic.set(expectedPublic, expectedPaddedPublic.length - expectedPublic.length);
+  assert.deepEqual(session.publicKeyA, expectedPaddedPublic);
+  assert.equal((await session.clientProof()).length, 64);
+  assert.equal(tasks.length, 3);
+  for (const entry of tasks) {
+    assert.equal(entry.priority, 1);
+    assert.deepEqual(entry.task.transfers, []);
+    assert.ok(entry.task.args.every(argument => argument instanceof Uint8Array));
+  }
+});
+
 test('AirPlay Pair-Setup verifies the receiver key when it was not advertised in advance', async () => {
   const receiverKey = Uint8Array.from({ length: 32 }, (_, index) => index);
   const types = {
@@ -2602,10 +2655,16 @@ test('AirPlay waits 4 seconds for ctrl invite and 3 seconds for endpoint resolut
 test('CarPlay control service publishes before the Bluetooth listener starts', async () => {
   const Target = loadMethods('session/SessionController.ets', 'SessionController', ['start'], {
     advanceSessionGeneration: () => 1,
-    isCurrentSessionGeneration: () => true
+    isCurrentSessionGeneration: () => true,
+    CarPlayBackgroundTask: class {
+      constructor() {}
+      async start() { actions.push('background-task'); }
+      async stop() {}
+    }
   });
   const target = new Target();
   const actions = [];
+  target.context = {};
   target.requestPermissions = async () => {};
   target.detectAdapterMode = () => false;
   target.hasValidDeviceAddress = () => true;
@@ -2621,7 +2680,75 @@ test('CarPlay control service publishes before the Bluetooth listener starts', a
   target.events = { onStatus() {}, onLog() {} };
 
   await target.start();
-  assert.deepEqual(actions, ['ctrl-advertisement', 'bluetooth-listener']);
+  assert.deepEqual(actions, ['background-task', 'ctrl-advertisement', 'bluetooth-listener']);
+});
+
+test('CarPlay background task starts for multi-device connection and releases on stop', async () => {
+  const callbacks = {};
+  const calls = [];
+  const context = {};
+  const wantAgentValue = { id: 'foreground-entry' };
+  const { CarPlayBackgroundTask } = loadEts('session/CarPlayBackgroundTask.ets', {
+    '@ohos.app.ability.common': {},
+    '@ohos.resourceschedule.backgroundTaskManager': {
+      BackgroundMode: { MULTI_DEVICE_CONNECTION: 6 },
+      on(type, callback) { callbacks[type] = callback; calls.push(['on', type]); },
+      off(type, callback) {
+        assert.equal(callbacks[type], callback);
+        delete callbacks[type];
+        calls.push(['off', type]);
+      },
+      async startBackgroundRunning(actualContext, mode, agent) {
+        calls.push(['start', actualContext, mode, agent]);
+      },
+      async stopBackgroundRunning(actualContext) { calls.push(['stop', actualContext]); }
+    },
+    '@ohos.app.ability.wantAgent': {
+      OperationType: { START_ABILITY: 1 },
+      WantAgentFlags: { UPDATE_PRESENT_FLAG: 3 },
+      async getWantAgent(info) {
+        calls.push(['wantAgent', info]);
+        return wantAgentValue;
+      }
+    }
+  });
+  const task = new CarPlayBackgroundTask(context);
+  let cancelReason = '';
+  await task.start(reason => { cancelReason = reason; });
+  assert.equal(calls.find(call => call[0] === 'start')[2], 6);
+  assert.equal(calls.find(call => call[0] === 'start')[3], wantAgentValue);
+  assert.equal(calls.find(call => call[0] === 'wantAgent')[1].wants[0].abilityName, 'EntryAbility');
+  await task.stop();
+  assert.equal(calls.at(-1)[0], 'stop');
+  assert.equal(calls.at(-1)[1], context);
+  assert.equal(cancelReason, '');
+});
+
+test('CarPlay background task cancellation is surfaced to the session owner', async () => {
+  let cancel;
+  const calls = [];
+  const { CarPlayBackgroundTask } = loadEts('session/CarPlayBackgroundTask.ets', {
+    '@ohos.app.ability.common': {},
+    '@ohos.resourceschedule.backgroundTaskManager': {
+      BackgroundMode: { MULTI_DEVICE_CONNECTION: 6 },
+      on(_type, callback) { cancel = callback; },
+      off() { calls.push('off'); },
+      async startBackgroundRunning() { calls.push('start'); },
+      async stopBackgroundRunning() { calls.push('stop'); }
+    },
+    '@ohos.app.ability.wantAgent': {
+      OperationType: { START_ABILITY: 1 },
+      WantAgentFlags: { UPDATE_PRESENT_FLAG: 3 },
+      async getWantAgent() { return {}; }
+    }
+  });
+  const task = new CarPlayBackgroundTask({});
+  const reasons = [];
+  await task.start(reason => reasons.push(reason));
+  cancel({ reason: 7 });
+  assert.deepEqual(reasons, ['7']);
+  await task.stop();
+  assert.deepEqual(calls, ['start', 'off']);
 });
 
 test('control advertisement survives the WLAN handoff and ignores invites after stop', async () => {
@@ -4228,7 +4355,7 @@ test('media encryption uses the original direct path without transferring buffer
   assert.equal(plaintext.byteLength, 1408);
 });
 
-test('video worker uses cloned buffers and falls back once without losing the frame or key', async () => {
+test('background media encryption stays on TaskPool and surfaces worker failures', async () => {
   const calls = [];
   let executions = 0;
   let failed = false;
@@ -4261,15 +4388,17 @@ test('video worker uses cloned buffers and falls back once without losing the fr
   assert.equal((await cipher.seal(nonce, data, aad)).length, 4112);
   assert.deepEqual(tasks[0].transfers, []);
   failed = true;
-  assert.equal((await cipher.seal(nonce, data, aad)).length, 4112);
-  assert.equal(calls[0][1], nonce);
-  assert.equal(calls[0][2], data);
-  await cipher.seal(nonce, data, aad);
+  await assert.rejects(() => cipher.seal(nonce, data, aad), /background media encryption failed/);
   assert.equal(executions, 2);
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 0);
   assert.equal(key.byteLength, 32);
   assert.equal(data.byteLength, 4096);
   assert.equal(aad.byteLength, 128);
+});
+
+test('Audio RTP selects TaskPool encryption for its per-packet synchronous ChaCha work', () => {
+  const source = fs.readFileSync(path.join(sourceRoot, 'audio/AudioRtpSender.ets'), 'utf8');
+  assert.match(source, /new MediaPacketCipher\(session\.streamKey,\s*true,\s*this\.log\)/);
 });
 
 function videoSenderFixture(send, split = data => [data]) {

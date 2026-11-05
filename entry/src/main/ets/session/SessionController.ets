@@ -27,6 +27,7 @@ import { CarPlayTouchInput, CARPLAY_RECEIVER_HOME_EVENT } from '../video/CarPlay
 import { NativeH264ScreenCapture } from '../video/NativeH264ScreenCapture';
 import { NativeH264VideoEncoder } from '../video/NativeH264VideoEncoder';
 import { advanceSessionGeneration, isCurrentSessionGeneration } from './NativeSessionLifecycle';
+import { CarPlayBackgroundTask } from './CarPlayBackgroundTask';
 import {
   isAirPlayStartReady,
   makeAirPlayServiceFromEndpoint,
@@ -45,6 +46,8 @@ export {
 } from './airplay/AirPlayEndpointFactory';
 
 export class SessionController extends SessionControllerConnectionFlow {
+  private backgroundTask?: CarPlayBackgroundTask;
+
   async start(): Promise<void> {
     if (this.running) {
       return;
@@ -75,6 +78,20 @@ export class SessionController extends SessionControllerConnectionFlow {
     this.clearAirPlayWaitTimers();
     this.clearPendingStartSessionTimer();
     try {
+      const backgroundTask = new CarPlayBackgroundTask(this.context);
+      this.backgroundTask = backgroundTask;
+      await backgroundTask.start((reason: string): void => {
+        if (!this.running) {
+          return;
+        }
+        this.events.onLog(`系统取消了 CarPlay 后台长时任务：reason=${reason}`);
+        this.events.onStatus('后台连接任务已被系统取消，正在停止 CarPlay');
+        void this.stop().catch((error: Error): void => this.reportError(error));
+      });
+      if (!this.running || !isCurrentSessionGeneration(generation)) {
+        await this.releaseBackgroundTask();
+        return;
+      }
       if (this.hasValidDeviceAddress()) {
         try {
           await this.startControlAdvertisement();
@@ -108,7 +125,15 @@ export class SessionController extends SessionControllerConnectionFlow {
       this.events.onLog('CarPlay 已开启：等待蓝牙 RFCOMM / iAP2 连接');
     } catch (error) {
       if (!isCurrentSessionGeneration(generation)) {
+        this.running = false;
         this.bluetooth.stop();
+        try {
+          await this.releaseBackgroundTask();
+        } catch (cleanupError) {
+          this.events.onLog(
+            `过期启动清理后台长时任务失败：${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`
+          );
+        }
         return;
       }
       this.running = false;
@@ -125,7 +150,24 @@ export class SessionController extends SessionControllerConnectionFlow {
           );
         }
       }
+      try {
+        await this.releaseBackgroundTask();
+      } catch (cleanupError) {
+        this.events.onLog(
+          `启动失败后的后台长时任务清理失败：${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`
+        );
+      }
       throw error instanceof Error ? error : new Error(String(error));
+    }
+  }
+
+  private async releaseBackgroundTask(): Promise<void> {
+    const task = this.backgroundTask;
+    if (task) {
+      await task.stop();
+      if (this.backgroundTask === task) {
+        this.backgroundTask = undefined;
+      }
     }
   }
 
@@ -203,7 +245,16 @@ export class SessionController extends SessionControllerConnectionFlow {
     this.airPlayStartSessionReceived = false;
     this.airPlayInviteWaitElapsed = false;
     this.airPlayEndpointResolveElapsed = false;
-    await this.setKeepScreenOn(false);
+    try {
+      await this.setKeepScreenOn(false);
+    } catch (error) {
+      failures.push(`恢复屏幕常亮设置失败：${error instanceof Error ? error.message : String(error)}`);
+    }
+    try {
+      await this.releaseBackgroundTask();
+    } catch (error) {
+      failures.push(`后台长时任务清理失败：${error instanceof Error ? error.message : String(error)}`);
+    }
     this.events.onStatus(failures.length > 0 ? '已停止，但部分资源清理失败' : '已停止');
     this.events.onLog(failures.length > 0 ? `会话停止时出现错误：${failures.join('；')}` : '会话已停止');
     if (failures.length > 0) {
@@ -769,12 +820,28 @@ export class SessionController extends SessionControllerConnectionFlow {
       return;
     }
     this.events.onLog('音频方式：CarPlay RTP；准备启动播放音频内录及推流');
+    let capture: PlaybackAudioCapture | undefined;
     const sender = new AudioRtpSender(
       (message: string): void => this.events.onLog(message),
-      (message: string): void => this.events.onLog(message),
+      (message: string): void => {
+        this.events.onLog(message);
+        if (this.audioRtpSender !== sender) {
+          return;
+        }
+        this.audioRtpSender = undefined;
+        const activeCapture = this.playbackAudioCapture;
+        this.playbackAudioCapture = undefined;
+        if (activeCapture) {
+          void activeCapture.stop().catch((error: Error): void => {
+            this.events.onLog(`音频发送失败后的采集停止失败：${error.message}`);
+          });
+        }
+        void sender.stop().catch((error: Error): void => {
+          this.events.onLog(`音频发送失败后的 socket 清理失败：${error.message}`);
+        });
+      },
       this.wifiNetworkLease
     );
-    let capture: PlaybackAudioCapture | undefined;
     try {
       await sender.start(audioSession);
       if (!this.running || generation !== this.airPlayGeneration) {

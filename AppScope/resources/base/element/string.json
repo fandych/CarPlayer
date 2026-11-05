@@ -3,6 +3,10 @@
     {
       "name": "app_name",
       "value": "CarPlayer"
+    },
+    {
+      "name": "permission_background_running",
+      "value": "保持 CarPlay 车机连接和实时投屏在后台运行"
     }
   ]
 }

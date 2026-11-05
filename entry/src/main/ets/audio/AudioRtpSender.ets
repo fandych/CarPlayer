@@ -77,6 +77,7 @@ export class AudioRtpSender {
   private droppedPackets: number = 0;
   private pendingSkippedPackets: number = 0;
   private running: boolean = false;
+  private failed: boolean = false;
   private hasStarted: boolean = false;
   private syncTimer: number = -1;
   private syncPending: boolean = false;
@@ -118,7 +119,7 @@ export class AudioRtpSender {
     }
     this.socket = socket;
     this.session = session;
-    this.cipher = new MediaPacketCipher(session.streamKey);
+    this.cipher = new MediaPacketCipher(session.streamKey, true, this.log);
     this.queuePacketLimit = MAX_QUEUED_PACKETS;
     this.running = true;
     this.syncTimer = setInterval((): void => {
@@ -129,6 +130,9 @@ export class AudioRtpSender {
 
   pushPcm(data: Uint8Array): void {
     if (!this.running) {
+      if (this.failed) {
+        return;
+      }
       throw new Error('Audio RTP sender is not running');
     }
     if (data.length + this.pendingPcm.length > 1024 * 1024) {
@@ -166,6 +170,16 @@ export class AudioRtpSender {
           return this.sendPacket(bigEndianPcm);
         })
         .catch((error: Error): void => {
+          if (this.failed) {
+            return;
+          }
+          this.failed = true;
+          this.running = false;
+          this.pendingPcm = new Uint8Array(0);
+          if (this.syncTimer >= 0) {
+            clearInterval(this.syncTimer);
+            this.syncTimer = -1;
+          }
           this.onError(`AirPlay audio packet failed: ${error.message}`);
         })
         .finally((): void => {
