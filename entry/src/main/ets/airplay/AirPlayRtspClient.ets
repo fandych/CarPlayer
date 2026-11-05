@@ -5,7 +5,7 @@ import { AirPlayControlCipher } from './ControlCipher';
 import { BinaryPlist, formatPlistDiagnostic } from './BinaryPlist';
 import { CARPLAY_SENDER_SOURCE_VERSION } from '../protocol/CarPlaySenderCompatibility';
 import { formatNetworkError, getSocketAddressFamily, WifiNetworkLease } from '../network/WifiNetworkLease';
-import { formatProtocolEvent } from '../session/ProtocolLogger';
+import { formatProtocolEvent, formatRawBytesDiagnostic } from '../session/ProtocolLogger';
 
 export interface AirPlayRtspResponse {
   statusCode: number;
@@ -409,7 +409,7 @@ function parseStatusCode(statusLine: string): number {
   return statusCode;
 }
 
-const MAX_RAW_LOG_BYTES: number = 4096;
+const MAX_RAW_LOG_BYTES: number = 16 * 1024;
 
 function isPairingPath(path: string): boolean {
   return path.includes('/pair-setup') || path.includes('/pair-verify');
@@ -437,14 +437,12 @@ function formatRtspBodySummary(path: string, contentType: string | undefined, bo
 }
 
 function formatRawWireBytes(direction: string, bytes: Uint8Array, redact: boolean): string {
+  let maskedBytes: Uint8Array | undefined;
   if (redact) {
-    return `RAW ${direction} RTSP bytes=${bytes.length} payload=[REDACTED:sensitive RTSP data]`;
+    maskedBytes = new Uint8Array(bytes.length);
+    for (let index = 0; index < maskedBytes.length; index++) {
+      maskedBytes[index] = 1;
+    }
   }
-  const count = Math.min(bytes.length, MAX_RAW_LOG_BYTES);
-  const hex: string[] = [];
-  for (let index = 0; index < count; index++) {
-    hex.push((bytes[index] ?? 0).toString(16).padStart(2, '0'));
-  }
-  const truncated = count < bytes.length ? ` ... (${bytes.length - count} bytes omitted)` : '';
-  return `RAW ${direction} RTSP bytes=${bytes.length}: ${hex.join(' ')}${truncated}`;
+  return formatRawBytesDiagnostic(direction, 'AirPlay RTSP', bytes, MAX_RAW_LOG_BYTES, maskedBytes);
 }

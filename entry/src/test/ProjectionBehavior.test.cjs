@@ -1531,6 +1531,83 @@ test('AirPlay feature bit selects pairing only when advertised', () => {
   assert.equal(supportsAirPlayPairingAndEncryption(undefined), undefined);
 });
 
+test('AirPlay Pair-Setup verifies the receiver key when it was not advertised in advance', async () => {
+  const receiverKey = Uint8Array.from({ length: 32 }, (_, index) => index);
+  const types = {
+    METHOD: 0,
+    STATE: 1,
+    SALT: 2,
+    PUBLIC_KEY: 3,
+    PROOF: 4,
+    ENCRYPTED_DATA: 5,
+    IDENTIFIER: 6,
+    SIGNATURE: 7
+  };
+  const responses = [
+    new Map([[types.SALT, Uint8Array.of(1)], [types.PUBLIC_KEY, Uint8Array.of(2)]]),
+    new Map([[types.STATE, Uint8Array.of(4)], [types.PROOF, Uint8Array.of(5)]]),
+    new Map([[types.STATE, Uint8Array.of(6)], [types.ENCRYPTED_DATA, Uint8Array.of(7)]]),
+    new Map([
+      [types.IDENTIFIER, new TextEncoder().encode('buick.receiver')],
+      [types.PUBLIC_KEY, receiverKey],
+      [types.SIGNATURE, Uint8Array.of(8)]
+    ])
+  ];
+  let responseIndex = 0;
+  let verifiedKey;
+  const { PairSetupClient } = loadEts('airplay/pairing/PairingProtocol.ets', {
+    '../../protocol/Iap2Codec': {
+      concatBytes: (...parts) => Uint8Array.from(parts.flatMap(part => [...part])),
+      decodeUtf8: bytes => new TextDecoder().decode(bytes),
+      encodeUtf8: text => new TextEncoder().encode(text)
+    },
+    '../../crypto/AirPlayStreamCrypto': {
+      chachaOpen: async () => Uint8Array.of(1),
+      chachaSeal: async () => Uint8Array.of(1)
+    },
+    '../AirPlayCrypto': {
+      hkdfSha512: async () => new Uint8Array(32),
+      signEd25519: async () => new Uint8Array(64),
+      verifyEd25519: async key => { verifiedKey = key; return true; },
+      generateX25519KeyPair: async () => ({}),
+      x25519SharedSecret: async () => new Uint8Array(32)
+    },
+    '../Srp6aClient': {
+      Srp6aSession: {
+        start: async () => ({
+          publicKeyA: Uint8Array.of(3),
+          clientProof: async () => Uint8Array.of(4),
+          verifyServerProof: async () => true,
+          getSessionKey: () => Uint8Array.of(5)
+        })
+      }
+    },
+    '../Tlv8': {
+      decodeTlv8: () => responses[responseIndex++],
+      encodeTlv8: () => Uint8Array.of(0),
+      Tlv8Type: types
+    }
+  });
+  const identity = {
+    pairingId: 'controller',
+    privateKeyDer: Uint8Array.of(1),
+    publicKeyRaw: Uint8Array.of(2)
+  };
+  const client = { request: async () => ({ statusCode: 200, statusLine: 'RTSP/1.0 200 OK', body: new Uint8Array(0) }) };
+  const setup = new PairSetupClient(client, identity, () => {});
+
+  const receiver = await setup.run();
+  assert.equal(receiver.receiverId, 'buick.receiver');
+  assert.deepEqual(receiver.receiverPublicKey, receiverKey);
+  assert.deepEqual(verifiedKey, receiverKey);
+
+  responseIndex = 0;
+  await assert.rejects(
+    () => setup.run(new Uint8Array(32).fill(0xff)),
+    /does not match the advertised AirPlay identity/
+  );
+});
+
 test('binary plist diagnostics redact credentials and identifiers while explaining ordinary fields', () => {
   const { PlistNode, formatPlistDiagnostic } = loadEts('airplay/BinaryPlist.ets', {
     '@ohos.util': {},
@@ -1548,6 +1625,165 @@ test('binary plist diagnostics redact credentials and identifiers while explaini
   assert.match(summary, /"deviceID": \[REDACTED\]/);
   assert.match(summary, /"password": \[REDACTED\]/);
   assert.doesNotMatch(summary, /AA:BB:CC:DD:EE:FF|do-not-log-this/);
+});
+
+test('protocol logs are readable plain text and format RAW bytes as offset blocks', () => {
+  const rawByteFormatter = loadEts('protocol/RawByteFormatter.ets');
+  const { ProtocolLogger, formatProtocolEvent, formatRawBytesDiagnostic } = loadEts(
+    'session/ProtocolLogger.ets',
+    {
+      '@kit.PerformanceAnalysisKit': { hilog: { error() {}, warn() {}, info() {}, debug() {} } },
+      '../protocol/RawByteFormatter': rawByteFormatter,
+      './LogTimestamp': { formatLocalClock: () => '[12:00:00.000]' }
+    }
+  );
+  const event = formatProtocolEvent('iap2.transport.rx',
+    'transport', 'RFCOMM',
+    'chunkBytes', 6,
+    'challenge', 'private-challenge',
+    'challengeBytes', 32
+  );
+  assert.match(event, /iAP2 接收 RFCOMM 数据/);
+  assert.match(event, /数据块长度=6/);
+  assert.match(event, /挑战长度=32/);
+  assert.match(event, /challenge=\[已脱敏\]/);
+  assert.doesNotMatch(event, /^\s*\{/);
+  assert.doesNotMatch(event, /private-challenge/);
+
+  const bytes = Uint8Array.from({ length: 20 }, (_, index) => index);
+  const mask = new Uint8Array(bytes.length);
+  mask[1] = 1;
+  const raw = formatRawBytesDiagnostic('RX', 'RFCOMM iAP2', bytes, 20, mask);
+  assert.match(raw, /RAW RX RFCOMM iAP2 bytes=20/);
+  assert.match(raw, /0000: 00 \*\* 02/);
+  assert.match(raw, /0010: 10 11 12/);
+
+  const entries = [];
+  const logger = new ProtocolLogger(line => entries.push(line));
+  logger.setContext({ sessionId: 'run-1', attempt: 2 });
+  logger.write('mdns', 'RAW RX mDNS/DNS bytes=2\n0000: 01 02');
+  assert.match(entries[0], /会话 run-1 \/ 尝试 2/);
+  assert.match(entries[0], /\n    0000: 01 02/);
+  assert.doesNotMatch(entries[0], /^\s*\{/);
+});
+
+test('connection logs correlate RFCOMM attempts and promote timeout events to warnings', () => {
+  const writes = [];
+  class ProtocolLogger {
+    setContext(context) { this.context = context; }
+    write(stage, message, level) { writes.push({ context: this.context, stage, message, level }); }
+  }
+  const Target = loadMethods('pages/Index.ets', 'Index',
+    ['logProtocol', 'createLogSessionId', 'resolveProtocolLogLevel'], {
+      ProtocolLogger,
+      formatLocalTimestamp: () => '2026-11-05T12:00:00+08:00'
+    });
+  const target = new Target();
+  target.protocolLogger = new ProtocolLogger();
+  target.logSessionId = '20261105120000';
+  target.connectionAttempt = 0;
+
+  target.logProtocol('iap2', '已接受 RFCOMM 连接');
+  target.logProtocol('mdns', '等待 AirPlay 服务超时');
+
+  assert.equal(writes[0].context.attempt, 1);
+  assert.equal(writes[0].context.sessionId, '20261105120000');
+  assert.equal(writes[1].context.attempt, 1);
+  assert.equal(writes[1].level, 'WARN');
+});
+
+test('mDNS RAW monitor binds the vehicle network and releases multicast membership', async () => {
+  const rawByteFormatter = loadEts('protocol/RawByteFormatter.ets');
+  const { formatProtocolEvent, formatRawBytesDiagnostic } = loadEts('session/ProtocolLogger.ets', {
+    '@kit.PerformanceAnalysisKit': { hilog: { error() {}, warn() {}, info() {}, debug() {} } },
+    '../protocol/RawByteFormatter': rawByteFormatter,
+    './LogTimestamp': { formatLocalClock: () => '[12:00:00.000]' }
+  });
+  const socketEvents = [];
+  const handlers = {};
+  const socket = {
+    setReuseAddress(enabled) { socketEvents.push(`reuse:${enabled}`); },
+    on(name, handler) { handlers[name] = handler; },
+    off(name) { socketEvents.push(`off:${name}`); },
+    async bind(address) { socketEvents.push(`bind:${address.port}`); },
+    async addMembership(address) { socketEvents.push(`join:${address.address}`); },
+    async dropMembership(address) { socketEvents.push(`drop:${address.address}`); },
+    async close() { socketEvents.push('close'); }
+  };
+  const logs = [];
+  const { AirPlayMdnsRawMonitor, summarizeMdnsDnsPacket } = loadEts('network/AirPlayMdnsRawMonitor.ets', {
+    '@ohos.net.socket': { constructMulticastSocketInstance: () => socket },
+    '../session/ProtocolLogger': { formatProtocolEvent, formatRawBytesDiagnostic }
+  });
+  const dnsResponse = summarizeMdnsDnsPacket(Uint8Array.from([
+    0, 1, 0x84, 0, 0, 1, 0, 2, 0, 0, 0, 0
+  ]));
+  assert.match(dnsResponse, /response/);
+  assert.match(dnsResponse, /questions=1 answers=2/);
+  assert.match(summarizeMdnsDnsPacket(new Uint8Array(8)), /malformed DNS header/);
+  const lease = {
+    async bindSocket(boundSocket, purpose, family, port) {
+      socketEvents.push(`network:${purpose}:IPv${family}`);
+      await boundSocket.bind({ address: '10.12.82.67', family, port });
+    }
+  };
+  const monitor = new AirPlayMdnsRawMonitor(lease, message => logs.push(message));
+  await monitor.start();
+
+  assert.ok(socketEvents.includes('reuse:true'));
+  assert.ok(socketEvents.includes('bind:5353'));
+  assert.ok(socketEvents.includes('join:224.0.0.251'));
+  assert.ok(socketEvents.some(event => event.includes('network:mDNS RAW UDP:IPv1')));
+  handlers.message({
+    message: Uint8Array.of(0x12, 0x34, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0).buffer,
+    remoteInfo: { address: '10.12.82.1', port: 5353 }
+  });
+  assert.ok(logs.some(message => message.includes('RAW RX mDNS/DNS')));
+  assert.ok(logs.some(message => message.includes('0000: 12 34 00 00')));
+  assert.ok(logs.some(message => message.includes('questions=0 answers=0')));
+
+  await monitor.stop();
+  assert.ok(socketEvents.includes('drop:224.0.0.251'));
+  assert.ok(socketEvents.includes('off:message'));
+  assert.ok(socketEvents.includes('off:error'));
+  assert.ok(socketEvents.includes('close'));
+});
+
+test('AirPlay mDNS discovery reports a bounded no-service timeout and keeps searching', () => {
+  const previousSetTimeout = global.setTimeout;
+  const previousClearTimeout = global.clearTimeout;
+  let scheduled;
+  global.setTimeout = (callback, delay) => { scheduled = { callback, delay }; return 41; };
+  global.clearTimeout = () => {};
+  const logs = [];
+  const discoveryService = {
+    on() {},
+    off() {},
+    startSearchingMDNS() {},
+    stopSearchingMDNS() {}
+  };
+  try {
+    const { AirPlayMdnsDiscovery } = loadEts('network/AirPlayMdnsDiscovery.ets', {
+      '@ohos.net.mdns': { createDiscoveryService: () => discoveryService },
+      '@ohos.app.ability.common': {},
+      '@ohos.util': {},
+      '../session/ProtocolLogger': {
+        formatProtocolEvent: (event, ...fields) => `【${event}】 ${fields.join(' ')}`
+      }
+    });
+    const discovery = new AirPlayMdnsDiscovery({}, () => {}, message => logs.push(message));
+    discovery.start();
+    assert.equal(scheduled.delay, 5000);
+    scheduled.callback();
+    assert.ok(logs.some(message => message.includes('mdns.discovery.timeout')));
+    assert.ok(logs.some(message => message.includes('serviceCount 0')));
+    assert.ok(discovery.discovery);
+    discovery.stop();
+    assert.ok(logs.some(message => message.includes('mdns.discovery.stopped')));
+  } finally {
+    global.setTimeout = previousSetTimeout;
+    global.clearTimeout = previousClearTimeout;
+  }
 });
 
 test('diagnostic archive batches packet log writes and flushes before export', () => {
@@ -1609,6 +1845,7 @@ test('diagnostic archive batches packet log writes and flushes before export', (
   assert.equal(contents.has(currentLog), true);
   archive.append('packet one');
   archive.append('packet two');
+  archive.append('RAW RX RFCOMM iAP2 bytes=3\n0000: aa bb cc\n    frame end');
   assert.equal(writes.length, 0);
   archive.flush();
   assert.equal(writes.length, 1);
@@ -1618,11 +1855,16 @@ test('diagnostic archive batches packet log writes and flushes before export', (
   assert.ok(contents.get(currentLog).includes('packet one'));
   const exported = archive.readAllText();
   assert.ok(exported.indexOf('packet one') < exported.indexOf('packet two'));
+  assert.match(exported, /RAW RX RFCOMM iAP2 bytes=3\n    0000: aa bb cc\n    frame end/);
   assert.ok(exported.includes('current ability event'));
   assert.doesNotMatch(exported, /previous run/);
   const recent = archive.readRecentLines().join('\n');
   assert.ok(recent.includes('current app session'));
   assert.ok(recent.includes('current ability event'));
+  const recentRawStart = recent.indexOf('RAW RX RFCOMM');
+  const recentRawBlock = recent.slice(recentRawStart);
+  assert.ok(recentRawBlock.indexOf('RAW RX RFCOMM') < recentRawBlock.indexOf('0000: aa bb cc'));
+  assert.ok(recentRawBlock.indexOf('0000: aa bb cc') < recentRawBlock.indexOf('frame end'));
   archive.start('C:\\logs');
   const restarted = archive.readAllText();
   assert.ok(restarted.includes('current app session'));
@@ -1654,9 +1896,9 @@ test('protocol logs are archived immediately and batched before updating the UI'
 
 test('audio and video packet diagnostics cover every send without logging media payloads', async () => {
   const formatEvent = (event, ...fields) => {
-    const values = {};
-    for (let index = 0; index + 1 < fields.length; index += 2) values[fields[index]] = fields[index + 1];
-    return JSON.stringify({ event, ...values });
+    const values = [];
+    for (let index = 0; index + 1 < fields.length; index += 2) values.push(`${fields[index]}=${fields[index + 1]}`);
+    return `【${event}】 ${values.join('；')}`;
   };
   const concatBytes = (...parts) => {
     const result = new Uint8Array(parts.reduce((length, part) => length + part.length, 0));
@@ -1688,7 +1930,7 @@ test('audio and video packet diagnostics cover every send without logging media 
   for (let index = 0; index < 4; index++) await audio.sendPacket(new Uint8Array([0xaa, 0xbb]));
   assert.equal(audioLogs.length, 8);
   assert.deepEqual(audioLogs.filter(line => line.includes('airplay.audio.rtp.tx'))
-    .map(line => JSON.parse(line).packet), [1, 2, 3, 4]);
+    .map(line => Number(line.match(/packet=(\d+)/)?.[1])), [1, 2, 3, 4]);
   assert.ok(audioLogs.every(line => !line.includes('aa bb')));
   assert.ok(audioLogs[1].includes('载荷未写入日志'));
 
@@ -1716,8 +1958,8 @@ test('audio and video packet diagnostics cover every send without logging media 
   for (let index = 0; index < 4; index++) await video.sendFrame([new Uint8Array([0x65, 0x80])]);
   assert.equal(videoLogs.length, 8);
   assert.deepEqual(videoLogs.filter(line => line.includes('airplay.video.frame.tx'))
-    .map(line => JSON.parse(line).frame), [1, 2, 3, 4]);
-  assert.ok(videoLogs[0].includes('"keyFrame":true'));
+    .map(line => Number(line.match(/frame=(\d+)/)?.[1])), [1, 2, 3, 4]);
+  assert.ok(videoLogs[0].includes('keyFrame=true'));
   assert.ok(videoLogs[1].includes('载荷未写入日志'));
 });
 
@@ -1814,7 +2056,8 @@ test('raw iAP2 diagnostics mask MFi and wireless secrets with and without the de
   };
   const { formatIap2RawFrameDiagnostic } = loadEts('protocol/Iap2Codec.ets', {
     '@ohos.util': util,
-    'libiap2codec.so': {}
+    'libiap2codec.so': {},
+    './RawByteFormatter': loadEts('protocol/RawByteFormatter.ets')
   });
   const concatBytes = (...parts) => {
     const result = new Uint8Array(parts.reduce((length, part) => length + part.length, 0));
@@ -2279,7 +2522,7 @@ test('all HID reports in a TCP read are dispatched before awaiting any response 
     ${result.outputText}
   })`)(exports, (...parts) => Uint8Array.from(parts.flatMap(part => [...part])),
     () => ({ requests, remaining: new Uint8Array(0) }), cseq => new Uint8Array([cseq]),
-    (event, ...fields) => JSON.stringify({ event, fields }), () => 'empty body');
+    (event, ...fields) => `${event} ${fields.join(' ')}`, () => 'empty body');
   const channel = new exports.Channel();
   channel.running = true;
   channel.receiveBuffer = new Uint8Array(0);
@@ -3071,7 +3314,7 @@ test('wireless startup never publishes an unknown identity as a pairing public k
   assert.equal(makeAirPlayServiceFromEndpoint(endpoint).txt.pk, 'a'.repeat(64));
 });
 
-test('wireless startup candidates wait for matching mDNS keys and still reject key conflicts', () => {
+test('wireless startup pairs from a complete iAP2 endpoint without an advertised key and rejects conflicts', () => {
   const { makeAirPlayServiceFromEndpoint } = loadEts('session/airplay/AirPlayEndpointFactory.ets', {},
     'makeAirPlayServiceFromEndpoint');
   const { normalizeDeviceIdentifier } = loadEts('session/airplay/AirPlayEndpointFactory.ets', {},
@@ -3086,23 +3329,79 @@ test('wireless startup candidates wait for matching mDNS keys and still reject k
   target.iap2AirPlayEndpoint = { addresses: ['fe80::1'], port: 7000,
     deviceIdentifier: 'AA:BB:CC:DD:EE:FF', publicKey: '', sourceVersion: '450.14' };
   target.refreshDiscoveredAirPlay();
-  assert.equal(target.discoveredAirPlay, undefined);
+  assert.equal(target.discoveredAirPlay.host, 'fe80::1');
+  assert.equal(target.discoveredAirPlay.port, 7000);
+  assert.equal(Object.hasOwn(target.discoveredAirPlay.txt, 'pk'), false);
   target.mdnsAirPlayService = { host: '192.168.49.1', port: 7000, name: 'receiver',
     txt: { deviceid: 'AA:BB:CC:DD:EE:FF' } };
   target.refreshDiscoveredAirPlay();
-  assert.equal(target.discoveredAirPlay, undefined);
+  assert.equal(target.discoveredAirPlay.host, '192.168.49.1');
+  assert.equal(Object.hasOwn(target.discoveredAirPlay.txt, 'pk'), false);
   target.mdnsAirPlayService.txt.pk = 'a'.repeat(64);
   target.refreshDiscoveredAirPlay();
   assert.equal(target.discoveredAirPlay.txt.pk, 'a'.repeat(64));
   target.mdnsAirPlayService.txt.deviceid = '11:22:33:44:55:66';
   target.refreshDiscoveredAirPlay();
-  assert.equal(target.discoveredAirPlay, undefined);
+  assert.equal(target.discoveredAirPlay.host, 'fe80::1');
+  assert.equal(Object.hasOwn(target.discoveredAirPlay.txt, 'pk'), false);
   target.iap2AirPlayEndpoint.publicKey = 'b'.repeat(64);
   target.mdnsAirPlayService.txt.deviceid = 'AA:BB:CC:DD:EE:FF';
   let rejected = false;
   target.rejectAirPlayIdentityConflict = () => { rejected = true; };
   target.refreshDiscoveredAirPlay();
   assert.equal(rejected, true);
+});
+
+test('iAP2 Buick EA groups ignore the short language field and parse 16-bit protocol IDs', () => {
+  const concatBytes = (...parts) => Uint8Array.from(parts.flatMap(part => [...part]));
+  const parameter = (id, value) => {
+    const length = value.length + 4;
+    return concatBytes(
+      Uint8Array.of(length >> 8, length & 0xff, id >> 8, id & 0xff),
+      value
+    );
+  };
+  const stringValue = text => new TextEncoder().encode(`${text}\0`);
+  const group = (id, protocolId, name) => parameter(id, concatBytes(
+    parameter(0, Uint8Array.of(0, protocolId)),
+    parameter(1, stringValue(name))
+  ));
+  const decodeIap2Parameters = bytes => {
+    const result = [];
+    for (let offset = 0; offset < bytes.length;) {
+      const length = (bytes[offset] << 8) | bytes[offset + 1];
+      assert.ok(length >= 4 && offset + length <= bytes.length);
+      const id = (bytes[offset + 2] << 8) | bytes[offset + 3];
+      result.push({ id, value: bytes.slice(offset + 4, offset + length) });
+      offset += length;
+    }
+    return result;
+  };
+  const { readEaProtocols } = loadEts('session/iap2/Iap2SessionProtocol.ets', {
+    '@ohos.i18n': { System: { getSystemLanguage: () => 'en' } },
+    '../../protocol/Iap2Codec': {
+      concatBytes,
+      decodeIap2Parameters,
+      decodeIap2String: bytes => new TextDecoder().decode(bytes).split('\0')[0],
+      formatIap2LinkPayloadDiagnostic: () => '',
+      groupedParameter: parameter,
+      numberParameter: parameter,
+      stringParameter: (id, value) => parameter(id, stringValue(value))
+    },
+    '../ProtocolLogger': { formatProtocolEvent: () => '' }
+  });
+  const body = concatBytes(
+    parameter(0x0c, new TextEncoder().encode('zh')),
+    group(0x11, 2, 'CinemoBTComponent'),
+    group(0x18, 3, 'CinemoWIFIComponent'),
+    group(0x12, 1, 'CinemoHIDRemote')
+  );
+
+  assert.deepEqual(readEaProtocols(body), [
+    { protocolId: 2, name: 'CinemoBTComponent' },
+    { protocolId: 3, name: 'CinemoWIFIComponent' },
+    { protocolId: 1, name: 'CinemoHIDRemote' }
+  ]);
 });
 
 test('wireless gateway fallback uses only the selected WLAN route and never invents a pairing key', () => {
@@ -3197,8 +3496,11 @@ test('wireless WLAN selection reuses the matching local network without requirin
   await lease.bindSocket({ async bind(address) {
     assert.deepEqual(address, { address: 'fe80::3', family: 2, port: 0 });
   } }, 'test IPv6 TCP', 2);
-  assert.deepEqual(socketEvents, ['socket-bind', 'network-bind', 'network-bind']);
-  assert.equal(bound, 2);
+  await lease.bindSocket({ async bind(address) {
+    assert.deepEqual(address, { address: '10.36.232.67', family: 1, port: 5353 });
+  } }, 'test mDNS multicast', 1, 5353);
+  assert.deepEqual(socketEvents, ['socket-bind', 'network-bind', 'network-bind', 'network-bind']);
+  assert.equal(bound, 3);
   handlers.netLost(vehicleWifi);
   assert.equal(lost, true);
   await assert.rejects(lease.bindSocket({}), /默认路由/);

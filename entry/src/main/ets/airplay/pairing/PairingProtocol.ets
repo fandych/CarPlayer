@@ -14,6 +14,7 @@ import { decodeTlv8, encodeTlv8, Tlv8Item, Tlv8Type } from '../Tlv8';
 
 interface PairSetupResult {
   receiverId: string;
+  receiverPublicKey: Uint8Array;
 }
 
 interface PairSetupErrorDetails {
@@ -49,7 +50,10 @@ export class PairSetupClient {
     this.log = log;
   }
 
-  async run(receiverPublicKey: Uint8Array): Promise<PairSetupResult> {
+  async run(receiverPublicKey?: Uint8Array): Promise<PairSetupResult> {
+    if (receiverPublicKey && receiverPublicKey.length !== 32) {
+      throw new Error('AirPlay receiver public key must be 32 bytes');
+    }
     const m2 = decodeTlv8(await this.exchange('/pair-setup', [
       { type: Tlv8Type.METHOD, value: new Uint8Array([0]) },
       { type: Tlv8Type.STATE, value: new Uint8Array([1]) }
@@ -112,8 +116,12 @@ export class PairSetupClient {
     const receiverIdentifierBytes = required(innerM6, Tlv8Type.IDENTIFIER, 'pair-setup receiver identifier');
     const receiverKey = required(innerM6, Tlv8Type.PUBLIC_KEY, 'pair-setup receiver public key');
     const receiverSignature = required(innerM6, Tlv8Type.SIGNATURE, 'pair-setup receiver signature');
-    if (receiverKey.length !== receiverPublicKey.length || !constantTimeEqual(receiverKey, receiverPublicKey)) {
-      throw new Error('pair-setup receiver key does not match the AirPlay mDNS identity');
+    if (receiverKey.length !== 32) {
+      throw new Error('pair-setup receiver public key must be 32 bytes');
+    }
+    if (receiverPublicKey &&
+      (receiverKey.length !== receiverPublicKey.length || !constantTimeEqual(receiverKey, receiverPublicKey))) {
+      throw new Error('pair-setup receiver key does not match the advertised AirPlay identity');
     }
     const accessorySignKey = await hkdfSha512(
       sessionKey,
@@ -125,7 +133,8 @@ export class PairSetupClient {
       throw new Error('pair-setup receiver Ed25519 signature verification failed');
     }
     const receiver: PairSetupResult = {
-      receiverId: decodeUtf8(receiverIdentifierBytes)
+      receiverId: decodeUtf8(receiverIdentifierBytes),
+      receiverPublicKey: receiverKey.slice()
     };
     this.log(`pair-setup receiver identity verified: ${receiver.receiverId}`);
     return receiver;

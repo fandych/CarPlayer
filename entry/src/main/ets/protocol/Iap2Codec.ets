@@ -1,5 +1,6 @@
 import util from '@ohos.util';
 import nativeIap2Codec from 'libiap2codec.so';
+import { formatRawByteBlock } from './RawByteFormatter';
 
 export interface NativeIap2Codec {
   encodeLink(control: number, sequence: number, acknowledgement: number, session: number,
@@ -45,6 +46,7 @@ export interface Iap2Parameter {
 }
 
 const MAX_DIAGNOSTIC_BYTES: number = 2048;
+const MAX_RAW_FRAME_DIAGNOSTIC_BYTES: number = 16 * 1024;
 
 export function formatIap2MessageDiagnostic(direction: string, messageId: number, body: Uint8Array): string {
   const prefix = `iAP2 ${direction} CSM id=0x${messageId.toString(16).padStart(4, '0')} body=${body.length}B`;
@@ -170,14 +172,13 @@ export function formatIap2RawFrameDiagnostic(
     }
     offset += messageLength;
   }
-  const displayedLength = Math.min(raw.length, MAX_DIAGNOSTIC_BYTES);
-  const hex: string[] = [];
-  for (let index = 0; index < displayedLength; index++) {
-    hex.push(masked.has(index) ? '**' : (raw[index] ?? 0).toString(16).padStart(2, '0'));
+  const maskedBytes = new Uint8Array(raw.length);
+  for (const index of masked) {
+    if (index >= 0 && index < maskedBytes.length) {
+      maskedBytes[index] = 1;
+    }
   }
-  const redaction = masked.size > 0 ? ' sensitive-bytes-masked=true' : '';
-  const truncated = displayedLength < raw.length ? ` ... (${raw.length - displayedLength} bytes omitted)` : '';
-  return `RAW ${direction} iAP2 bytes=${raw.length}${redaction}: ${hex.join(' ')}${truncated}`;
+  return formatRawByteBlock(direction, 'iAP2', raw, MAX_RAW_FRAME_DIAGNOSTIC_BYTES, maskedBytes);
 }
 
 function addSensitiveParameterRanges(

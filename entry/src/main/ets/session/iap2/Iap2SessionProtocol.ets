@@ -157,19 +157,28 @@ export interface EaProtocol {
 export function readEaProtocols(body: Uint8Array): EaProtocol[] {
   const parameters = decodeIap2Parameters(body);
   const protocols: EaProtocol[] = [];
-  for (const groupId of [10, 11, 12]) {
-    const group = parameters.find((parameter) => parameter.id === groupId);
-    if (!group) {
+  const groupIds = new Set<number>([10, 11, 12, 0x11, 0x12, 0x18]);
+  for (const group of parameters) {
+    if (!groupIds.has(group.id) || group.value.length < 4) {
       continue;
     }
     const children = decodeIap2Parameters(group.value);
-    const protocolId = children.find((parameter) => parameter.id === 0)?.value[0];
-    if (protocolId === undefined) {
+    const protocolIdValue = children.find((parameter) => parameter.id === 0)?.value;
+    if (!protocolIdValue || (protocolIdValue.length !== 1 && protocolIdValue.length !== 2)) {
+      continue;
+    }
+    const protocolId = protocolIdValue.length === 1
+      ? protocolIdValue[0]
+      : (protocolIdValue[0] << 8) | protocolIdValue[1];
+    if (protocolId > 0xff) {
       continue;
     }
     const name = decodeIap2String(
       children.find((parameter) => parameter.id === 1)?.value ?? new Uint8Array(0)
     );
+    if (!name) {
+      continue;
+    }
     protocols.push({ protocolId, name });
   }
   return protocols;
@@ -265,4 +274,3 @@ export function parseMfiCertificatePayload(body: Uint8Array): Uint8Array {
   }
   return certificate;
 }
-

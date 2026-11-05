@@ -1,0 +1,278 @@
+[08:14:57.668] INFO diagnostics: Log archive initialized for current app session
+[08:14:57.669] INFO runtime: EntryAbility onCreate
+[08:14:57.687] INFO runtime: EntryAbility onWindowStageCreate
+[08:14:57.700] INFO runtime: EntryAbility onForeground
+[08:14:57.748] INFO runtime: Loaded pages/Index
+[08:14:57.793] INFO session: CarPlayer 手机端初始化
+[08:14:57.821] INFO settings: 本地设置读取完成
+[08:15:01.505] INFO bluetooth: 启动 RFCOMM/iAP2 监听，发送端 MAC 已配置
+[08:15:01.582] INFO session: 已广播 _carplay-ctrl._tcp，端口 45695；TXT id=40:06:34:E5:ED:EA
+[08:15:01.586] INFO iap2: 未检测到已配对 CarPlay 无线适配器；使用标准 iAP2 SDP
+[08:15:01.592] INFO iap2: 状态：等待车机 iAP2 握手
+[08:15:01.592] INFO iap2: CarPlay 已开启：等待蓝牙 RFCOMM / iAP2 连接
+[08:15:05.428] INFO iap2: 状态：车机已连接，正在协商 iAP2
+[08:15:05.428] INFO iap2: 已接受 RFCOMM 连接
+[08:15:05.430] INFO iap2: RAW TX RFCOMM iAP2 marker bytes=6: ff 55 02 00 ee 10
+[08:15:05.432] INFO iap2: 已发送 iAP2 检测标记，等待车机发起链路同步
+[08:15:05.782] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":6}
+[08:15:05.784] INFO iap2: RAW RX RFCOMM iAP2 marker bytes=6: ff 55 02 00 ee 10
+[08:15:05.784] INFO session: 准备检测确认，等待车机发送 SYN
+[08:15:05.785] INFO iap2: RAW TX RFCOMM iAP2 marker bytes=6: ff 55 02 00 ee 10
+[08:15:05.789] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":26}
+[08:15:05.790] INFO iap2: RAW RX iAP2 bytes=26: ff 5a 00 1a 80 0b 00 00 02 01 05 08 00 05 dc 00 49 1e 03 01 00 02 02 01 02 9f
+[08:15:05.792] INFO iap2: {"event":"iap2.link.rx","control":"0x80","sequence":11,"acknowledgement":0,"sessionId":0,"payloadBytes":16,"payloadSummary":"non-CSM payload omitted (16B)","meaning":"链路同步帧，声明会话和传输参数"}
+[08:15:05.792] INFO iap2: iAP2 链路参数：maxOutstanding=5, maxPacket=2048, retransmitMs=1500, maxRetransmissions=30
+[08:15:05.793] INFO iap2: RAW TX iAP2 bytes=26: ff 5a 00 1a c0 63 0b 00 5f 01 05 08 00 05 dc 00 49 1e 03 01 00 02 02 01 02 9f
+[08:15:05.793] INFO iap2: {"event":"iap2.link.tx","control":"0xc0","sequence":99,"acknowledgement":11,"sessionId":0,"payloadBytes":16,"payloadSummary":"non-CSM payload omitted (16B)","meaning":"链路同步帧，声明会话和传输参数"}
+[08:15:05.794] INFO iap2: 收到 iAP2 同步包，控制会话 1
+[08:15:05.794] INFO iap2: iAP2 TX CSM id=0x1d00 body=0B hex=empty
+[08:15:05.794] INFO iap2: RAW TX iAP2 bytes=16: ff 5a 00 10 40 64 0b 01 e7 40 40 00 06 1d 00 5d
+[08:15:05.795] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":100,"acknowledgement":11,"sessionId":1,"payloadBytes":6,"payloadSummary":"iAP2 TX CSM id=0x1d00 body=0B hex=empty","meaning":"链路承载控制消息或分片"}
+[08:15:05.796] INFO iap2: 已发送 iAP2 IDENTIFICATION_START，等待车机识别信息
+[08:15:05.871] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":9}
+[08:15:05.873] INFO iap2: RAW RX iAP2 bytes=9: ff 5a 00 09 40 0b 63 00 f0
+[08:15:05.874] INFO iap2: {"event":"iap2.link.rx","control":"0x40","sequence":11,"acknowledgement":99,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:15:05.877] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":545}
+[08:15:05.879] INFO iap2: RAW RX iAP2 bytes=545: ff 5a 02 21 40 0c 64 01 d3 40 40 02 17 1d 01 00 0f 00 00 42 55 49 43 4b 5f 37 38 34 31 00 00 09 00 01 45 32 4c 42 00 00 18 00 02 53 61 69 63 20 47 65 6e 65 72 61 6c 20 4d 6f 74 6f 72 73 00 00 0d 00 03 61 31 35 39 31 37 30 66 00 00 2f 00 04 61 65 67 65 61 6e 5f 6e 2d 75 73 65 72 20 31 32 20 53 51 42 50 35 2d 33 30 20 33 30 36 20 72 65 6c 65 61 73 65 2d 6b 65 79 73 00 00 0f 00 05 53 41 38 31 35 35 2d 31 2e 30 00 00 15 00 22 65 66 64 61 61 35 30 66 62 32 62 61 34 31 31 66 00 00 1a 00 06 aa 06 68 00 68 02 68 03 4c 00 4c 02 4c 03 4c 05 50 00 50 02 43 01 00 16 00 07 68 01 4c 01 4c 04 50 01 4e 09 4e 0a 4e 0b 4e 0c 43 00 00 05 00 08 00 00 06 00 09 00 00 00 07 00 0c 7a 68 00 00 07 00 0d 65 6e 00 00 07 00 0d 66 72 00 00 07 00 0d 65 73 00 00 07 00 0d 64 65 00 00 07 00 0d 69 74 00 00 07 00 0d 7a 68 00 00 07 00 0d 72 75 00 00 07 00 0d 6e 6c 00 00 07 00 0d 74 72 00 00 07 00 0d 70 6c 00 00 07 00 0d 70 6b 00 00 07 00 0d 6b 6f 00 00 07 00 0d 61 72 00 00 07 00 0d 65 6c 00 00 07 00 0d 73 76 00 00 07 00 0d 68 75 00 00 07 00 0d 64 61 00 00 07 00 0d 72 6f 00 00 07 00 0d 6e 62 00 00 07 00 0d 66 69 00 00 07 00 0d 68 72 00 00 07 00 0d 73 6c 00 00 07 00 0d 63 73 00 00 07 00 0d 73 6b 00 00 07 00 0d 62 67 00 00 07 00 0d 75 6b 00 00 07 00 0d 73 72 00 00 07 00 0d 6a 61 00 00 2e 00 11 00 06 00 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 0a 00 03 34 30 3a 30 36 00 00 2a 00 18 00 06 00 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 04 00 04 00 23 00 12 00 06 00 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00 00 05 00 02 01 59
+[08:15:05.881] INFO iap2: {"event":"iap2.link.rx","control":"0x40","sequence":12,"acknowledgement":100,"sessionId":1,"payloadBytes":535,"payloadSummary":"iAP2 RX CSM id=0x1d01 body=529B hex=00 0f 00 00 42 55 49 43 4b 5f 37 38 34 31 00 00 09 00 01 45 32 4c 42 00 00 18 00 02 53 61 69 63 20 47 65 6e 65 72 61 6c 20 4d 6f 74 6f 72 73 00 00 0d 00 03 61 31 35 39 31 37 30 66 00 00 2f 00 04 61 65 67 65 61 6e 5f 6e 2d 75 73 65 72 20 31 32 20 53 51 42 50 35 2d 33 30 20 33 30 36 20 72 65 6c 65 61 73 65 2d 6b 65 79 73 00 00 0f 00 05 53 41 38 31 35 35 2d 31 2e 30 00 00 15 00 22 65 66 64 61 61 35 30 66 62 32 62 61 34 31 31 66 00 00 1a 00 06 aa 06 68 00 68 02 68 03 4c 00 4c 02 4c 03 4c 05 50 00 50 02 43 01 00 16 00 07 68 01 4c 01 4c 04 50 01 4e 09 4e 0a 4e 0b 4e 0c 43 00 00 05 00 08 00 00 06 00 09 00 00 00 07 00 0c 7a 68 00 00 07 00 0d 65 6e 00 00 07 00 0d 66 72 00 00 07 00 0d 65 73 00 00 07 00 0d 64 65 00 00 07 00 0d 69 74 00 00 07 00 0d 7a 68 00 00 07 00 0d 72 75 00 00 07 00 0d 6e 6c 00 00 07 00 0d 74 72 00 00 07 00 0d 70 6c 00 00 07 00 0d 70 6b 00 00 07 00 0d 6b 6f 00 00 07 00 0d 61 72 00 00 07 00 0d 65 6c 00 00 07 00 0d 73 76 00 00 07 00 0d 68 75 00 00 07 00 0d 64 61 00 00 07 00 0d 72 6f 00 00 07 00 0d 6e 62 00 00 07 00 0d 66 69 00 00 07 00 0d 68 72 00 00 07 00 0d 73 6c 00 00 07 00 0d 63 73 00 00 07 00 0d 73 6b 00 00 07 00 0d 62 67 00 00 07 00 0d 75 6b 00 00 07 00 0d 73 72 00 00 07 00 0d 6a 61 00 00 2e 00 11 00 06 00 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 0a 00 03 34 30 3a 30 36 00 00 2a 00 18 00 06 00 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 04 00 04 00 23 00 12 00 06 00 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00 00 05 00 02 01","meaning":"链路承载控制消息或分片"}
+[08:15:05.882] INFO iap2: RAW TX iAP2 bytes=9: ff 5a 00 09 40 64 0c 00 ee
+[08:15:05.882] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":100,"acknowledgement":12,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:15:05.883] INFO iap2: iAP2 RX CSM id=0x1d01 body=529B hex=00 0f 00 00 42 55 49 43 4b 5f 37 38 34 31 00 00 09 00 01 45 32 4c 42 00 00 18 00 02 53 61 69 63 20 47 65 6e 65 72 61 6c 20 4d 6f 74 6f 72 73 00 00 0d 00 03 61 31 35 39 31 37 30 66 00 00 2f 00 04 61 65 67 65 61 6e 5f 6e 2d 75 73 65 72 20 31 32 20 53 51 42 50 35 2d 33 30 20 33 30 36 20 72 65 6c 65 61 73 65 2d 6b 65 79 73 00 00 0f 00 05 53 41 38 31 35 35 2d 31 2e 30 00 00 15 00 22 65 66 64 61 61 35 30 66 62 32 62 61 34 31 31 66 00 00 1a 00 06 aa 06 68 00 68 02 68 03 4c 00 4c 02 4c 03 4c 05 50 00 50 02 43 01 00 16 00 07 68 01 4c 01 4c 04 50 01 4e 09 4e 0a 4e 0b 4e 0c 43 00 00 05 00 08 00 00 06 00 09 00 00 00 07 00 0c 7a 68 00 00 07 00 0d 65 6e 00 00 07 00 0d 66 72 00 00 07 00 0d 65 73 00 00 07 00 0d 64 65 00 00 07 00 0d 69 74 00 00 07 00 0d 7a 68 00 00 07 00 0d 72 75 00 00 07 00 0d 6e 6c 00 00 07 00 0d 74 72 00 00 07 00 0d 70 6c 00 00 07 00 0d 70 6b 00 00 07 00 0d 6b 6f 00 00 07 00 0d 61 72 00 00 07 00 0d 65 6c 00 00 07 00 0d 73 76 00 00 07 00 0d 68 75 00 00 07 00 0d 64 61 00 00 07 00 0d 72 6f 00 00 07 00 0d 6e 62 00 00 07 00 0d 66 69 00 00 07 00 0d 68 72 00 00 07 00 0d 73 6c 00 00 07 00 0d 63 73 00 00 07 00 0d 73 6b 00 00 07 00 0d 62 67 00 00 07 00 0d 75 6b 00 00 07 00 0d 73 72 00 00 07 00 0d 6a 61 00 00 2e 00 11 00 06 00 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 0a 00 03 34 30 3a 30 36 00 00 2a 00 18 00 06 00 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 04 00 04 00 23 00 12 00 06 00 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00 00 05 00 02 01
+[08:15:05.886] INFO mfi: 车机身份已读取，首选 MFi challenge 32B
+[08:15:05.887] INFO mfi: 车机 MFi 能力声明：可发 AA01=false, 可发 AA03=false, 可收 AA00=false, 可发 AA06=true
+[08:15:05.887] INFO mfi: iAP2 Authentication 消息不要求列入 1D01 收发清单；按标准执行证书交换
+[08:15:05.889] INFO iap2: 解析 iAP2 ExternalAccessoryProtocol 失败：Malformed iAP2 parameter length or trailing bytes |     at decodeIap2Parameters entry (entry/src/main/ets/protocol/Iap2Codec.ets:322:31) |     at readEaProtocols entry (entry/src/main/ets/session/iap2/Iap2SessionProtocol.ets:165:22) |     at receiveControlMessage entry (entry/src/main/ets/session/Iap2SenderSession.ets:382:37) |     at onControlMessageReceived entry (entry/src/main/ets/session/Iap2SenderSession.ets:72:16) |     at acceptDataFrame entry (entry/src/main/ets/session/iap2/Iap2LinkLayer.ets:193:18) | 
+[08:15:05.889] INFO iap2: iAP2 TX CSM id=0x1d02 body=0B hex=empty
+[08:15:05.889] INFO iap2: RAW TX iAP2 bytes=16: ff 5a 00 10 40 65 0c 01 e5 40 40 00 06 1d 02 5b
+[08:15:05.890] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":101,"acknowledgement":12,"sessionId":1,"payloadBytes":6,"payloadSummary":"iAP2 TX CSM id=0x1d02 body=0B hex=empty","meaning":"链路承载控制消息或分片"}
+[08:15:05.891] INFO mfi: 认证消息属于 iAP2 清单例外；即使 1D01 未列出 AA00/AA01，也按标准发起证书请求
+[08:15:05.891] INFO mfi: iAP2 TX CSM id=0xaa00 body=0B params=[none] data=[REDACTED:MFi]
+[08:15:05.891] INFO iap2: RAW TX iAP2 bytes=16: ff 5a 00 10 40 66 0c 01 e4 40 40 00 06 aa 00 d0
+[08:15:05.891] INFO mfi: {"event":"iap2.link.tx","control":"0x40","sequence":102,"acknowledgement":12,"sessionId":1,"payloadBytes":6,"payloadSummary":"iAP2 TX CSM id=0xaa00 body=0B params=[none] data=[REDACTED:MFi]","meaning":"链路承载控制消息或分片"}
+[08:15:06.112] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":628}
+[08:15:06.116] INFO iap2: RAW RX iAP2 bytes=628 sensitive-bytes-masked=true: ff 5a 02 74 40 0d 66 01 7d 40 40 02 6a aa 01 ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** 30
+[08:15:06.120] INFO mfi: {"event":"iap2.link.rx","control":"0x40","sequence":13,"acknowledgement":102,"sessionId":1,"payloadBytes":618,"payloadSummary":"iAP2 RX CSM id=0xaa01 body=612B params=[0:608B] data=[REDACTED:MFi]","meaning":"链路承载控制消息或分片"}
+[08:15:06.121] INFO iap2: RAW TX iAP2 bytes=9: ff 5a 00 09 40 66 0d 00 eb
+[08:15:06.121] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":102,"acknowledgement":13,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:15:06.124] INFO mfi: iAP2 RX CSM id=0xaa01 body=612B params=[0:608B] data=[REDACTED:MFi]
+[08:15:06.124] INFO mfi: 收到 MFi AA01 证书消息：body=612B, certificateChain=608B
+[08:15:06.125] INFO mfi: 开始解析 MFi 证书链并执行系统 PKIX/本地 pin 校验
+[08:15:06.125] INFO mfi: MFi certificate validation started: payloadBytes=608, container=PKCS#7 SignedData
+[08:15:06.126] INFO mfi: MFi AA01 parameter 0 received: bytes=608
+[08:15:06.147] INFO session: CMS getCerts(SIGNER_CERTS) failed: Cms get certs fail.
+[08:15:06.152] INFO mfi: MFi certificate payload parsed: format=PKCS#7 SignedData, bytes=608, certificates=1, sha256=4717198bfa37174d72ba2977868488b40a6a4e3b72b196c1623b531b3243a9c4
+[08:15:06.152] INFO mfi: MFi PKIX uses system CA; AIA intermediate download disabled
+[08:15:06.153] INFO mfi: MFi PKIX validation started: candidates=1, untrustedCertificates=1, validationTime=261105001506Z
+[08:15:06.154] INFO mfi: MFi PKIX candidate 0: subject=C=US,O=Apple Inc.,OU=Apple Accessories,CN=IPA_47EF66AE86499201F61A2EC73313F3E1; issuer=C=US,O=Apple Inc.,OU=Apple Certification Authority,CN=Apple Accessories Certification Authority - 00000002
+[08:15:06.157] INFO mfi: MFi PKIX candidate 0 rejected: unable to get local issuer certificate | current cert subject name: C=US,O=Apple Inc.,OU=Apple Accessories,CN=IPA_47EF66AE86499201F61A2EC73313F3E
+[08:15:06.158] INFO mfi: MFi PKIX trust decision: candidate=0, decision=already-pinned, fingerprint=b5e9596be126e3b8f0ed9df83c38349103a8e521606c4ff67a6f86aaacd7ed7d
+[08:15:06.158] INFO mfi: MFi certificate accepted by exact user-pinned SHA-256 fingerprint b5e9596be126e3b8f0ed9df83c38349103a8e521606c4ff67a6f86aaacd7ed7d
+[08:15:06.159] INFO mfi: MFi 证书校验完成：format=PKCS#7 SignedData, certificates=1, candidates=1
+[08:15:06.161] INFO mfi: 按车机身份记忆优先使用 MFi challenge 32B
+[08:15:06.162] INFO mfi: 开始生成 MFi challenge：length=32B, attempt=1/3
+[08:15:06.167] INFO mfi: iAP2 TX CSM id=0xaa02 body=36B params=[0:32B] data=[REDACTED:MFi]
+[08:15:06.168] INFO iap2: RAW TX iAP2 bytes=52 sensitive-bytes-masked=true: ff 5a 00 34 40 67 0d 01 be 40 40 00 2a aa 02 ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** 27
+[08:15:06.168] INFO mfi: {"event":"iap2.link.tx","control":"0x40","sequence":103,"acknowledgement":13,"sessionId":1,"payloadBytes":42,"payloadSummary":"iAP2 TX CSM id=0xaa02 body=36B params=[0:32B] data=[REDACTED:MFi]","meaning":"链路承载控制消息或分片"}
+[08:15:06.169] INFO mfi: 已发送 32 字节 MFi challenge (1/3)
+[08:15:06.285] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":9}
+[08:15:06.286] INFO iap2: RAW RX iAP2 bytes=9: ff 5a 00 09 40 0d 67 00 ea
+[08:15:06.288] INFO iap2: {"event":"iap2.link.rx","control":"0x40","sequence":13,"acknowledgement":103,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:15:06.646] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":84}
+[08:15:06.648] INFO iap2: RAW RX iAP2 bytes=84 sensitive-bytes-masked=true: ff 5a 00 54 40 0e 67 01 9d 40 40 00 4a aa 03 ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** 7c
+[08:15:06.649] INFO mfi: {"event":"iap2.link.rx","control":"0x40","sequence":14,"acknowledgement":103,"sessionId":1,"payloadBytes":74,"payloadSummary":"iAP2 RX CSM id=0xaa03 body=68B params=[0:64B] data=[REDACTED:MFi]","meaning":"链路承载控制消息或分片"}
+[08:15:06.650] INFO iap2: RAW TX iAP2 bytes=9: ff 5a 00 09 40 67 0e 00 e9
+[08:15:06.651] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":103,"acknowledgement":14,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:15:06.652] INFO mfi: iAP2 RX CSM id=0xaa03 body=68B params=[0:64B] data=[REDACTED:MFi]
+[08:15:06.652] INFO mfi: 收到 MFi AA03 challenge 响应：body=68B, parameters=1, challenge=[REDACTED], signature=[REDACTED]
+[08:15:06.652] INFO mfi: 开始验证 MFi challenge 签名；暂不发送认证成功消息
+[08:15:06.652] INFO mfi: MFi challenge verification started: challengeBytes=32, signatureBytes=64, candidates=1
+[08:15:06.653] INFO mfi: WARN TEMPORARY DIAGNOSTIC BYPASS: MFi challenge signature NOT verified; continuing without authentication and without saving a fingerprint pin
+[08:15:06.654] INFO mfi: iAP2 TX CSM id=0xaa05 body=0B params=[none] data=[REDACTED:MFi]
+[08:15:06.654] INFO iap2: RAW TX iAP2 bytes=16: ff 5a 00 10 40 68 0e 01 e0 40 40 00 06 aa 05 cb
+[08:15:06.655] INFO mfi: {"event":"iap2.link.tx","control":"0x40","sequence":104,"acknowledgement":14,"sessionId":1,"payloadBytes":6,"payloadSummary":"iAP2 TX CSM id=0xaa05 body=0B params=[none] data=[REDACTED:MFi]","meaning":"链路承载控制消息或分片"}
+[08:15:06.657] INFO mfi: WARN: 诊断模式跳过 challenge 验签；已发送 AA05 继续联调，但不会记录为已验证
+[08:15:06.658] INFO iap2: iAP2 TX CSM id=0x4e0d body=5B hex=00 05 00 00 01
+[08:15:06.658] INFO iap2: RAW TX iAP2 bytes=21: ff 5a 00 15 40 69 0e 01 da 40 40 00 0b 4e 0d 00 05 00 00 01 14
+[08:15:06.659] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":105,"acknowledgement":14,"sessionId":1,"payloadBytes":11,"payloadSummary":"iAP2 TX CSM id=0x4e0d body=5B hex=00 05 00 00 01","meaning":"链路承载控制消息或分片"}
+[08:15:06.660] INFO iap2: iAP2 TX CSM id=0x4e0a body=12B hex=00 0c 00 00 7a 68 2d 48 61 6e 73 00
+[08:15:06.661] INFO iap2: RAW TX iAP2 bytes=28: ff 5a 00 1c 40 6a 0e 01 d2 40 40 00 12 4e 0a 00 0c 00 00 7a 68 2d 48 61 6e 73 00 71
+[08:15:06.661] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":106,"acknowledgement":14,"sessionId":1,"payloadBytes":18,"payloadSummary":"iAP2 TX CSM id=0x4e0a body=12B hex=00 0c 00 00 7a 68 2d 48 61 6e 73 00","meaning":"链路承载控制消息或分片"}
+[08:15:06.663] INFO iap2: iAP2 TX CSM id=0x4e09 body=22B hex=00 16 00 00 48 61 72 6d 6f 6e 79 20 43 61 72 50 6c 61 79 65 72 00
+[08:15:06.663] INFO iap2: RAW TX iAP2 bytes=38: ff 5a 00 26 40 6b 0e 01 c7 40 40 00 1c 4e 09 00 16 00 00 48 61 72 6d 6f 6e 79 20 43 61 72 50 6c 61 79 65 72 00 76
+[08:15:06.663] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":107,"acknowledgement":14,"sessionId":1,"payloadBytes":28,"payloadSummary":"iAP2 TX CSM id=0x4e09 body=22B hex=00 16 00 00 48 61 72 6d 6f 6e 79 20 43 61 72 50 6c 61 79 65 72 00","meaning":"链路承载控制消息或分片"}
+[08:15:06.664] INFO iap2: iAP2 TX CSM id=0x4e0b body=23B hex=00 0c 00 00 00 00 00 00 6a eb ca 8a 00 06 00 01 01 e0 00 05 00 02 00
+[08:15:06.664] INFO iap2: RAW TX iAP2 bytes=39: ff 5a 00 27 40 6c 0e 01 c5 40 40 00 1d 4e 0b 00 0c 00 00 00 00 00 00 6a eb ca 8a 00 06 00 01 01 e0 00 05 00 02 00 66
+[08:15:06.664] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":108,"acknowledgement":14,"sessionId":1,"payloadBytes":29,"payloadSummary":"iAP2 TX CSM id=0x4e0b body=23B hex=00 0c 00 00 00 00 00 00 6a eb ca 8a 00 06 00 01 01 e0 00 05 00 02 00","meaning":"链路承载控制消息或分片"}
+[08:15:06.665] INFO mfi: 已为当前车机记忆成功的 32B MFi challenge 长度
+[08:15:06.665] INFO iap2: iAP2 TX CSM id=0x4e0c body=29B hex=00 1d 00 00 48 4f 53 2d 31 61 31 39 62 37 38 64 66 39 39 2d 31 32 66 35 63 36 36 35 00
+[08:15:06.665] INFO iap2: iAP2 发送窗口已满（5），1 个分片等待车机 ACK
+[08:15:06.712] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":9}
+[08:15:06.713] INFO iap2: RAW RX iAP2 bytes=9: ff 5a 00 09 40 0e 6a 00 e6
+[08:15:06.714] INFO iap2: {"event":"iap2.link.rx","control":"0x40","sequence":14,"acknowledgement":106,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:15:06.717] INFO iap2: RAW TX iAP2 bytes=45: ff 5a 00 2d 40 6d 0e 01 be 40 40 00 23 4e 0c 00 1d 00 00 48 4f 53 2d 31 61 31 39 62 37 38 64 66 39 39 2d 31 32 66 35 63 36 36 35 00 97
+[08:15:06.718] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":109,"acknowledgement":14,"sessionId":1,"payloadBytes":35,"payloadSummary":"iAP2 TX CSM id=0x4e0c body=29B hex=00 1d 00 00 48 4f 53 2d 31 61 31 39 62 37 38 64 66 39 39 2d 31 32 66 35 63 36 36 35 00","meaning":"链路承载控制消息或分片"}
+[08:15:06.807] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":9}
+[08:15:06.808] INFO iap2: RAW RX iAP2 bytes=9: ff 5a 00 09 40 0e 6d 00 e3
+[08:15:06.808] INFO iap2: {"event":"iap2.link.rx","control":"0x40","sequence":14,"acknowledgement":109,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:15:08.666] INFO iap2: 等待 iAP2 StartHID 超时（2s）；继续 Wi-Fi 配置交换
+[08:15:08.667] INFO iap2: 两份完整能力清单均未声明旧式 Wi-Fi；按新协议发送 0x4300/0x4301
+[08:15:08.670] INFO iap2: iAP2 TX CSM id=0x4300 body=31B hex=00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00
+[08:15:08.672] INFO iap2: RAW TX iAP2 bytes=47: ff 5a 00 2f 40 6e 0e 01 bb 40 40 00 25 43 00 00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00 ff
+[08:15:08.674] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":110,"acknowledgement":14,"sessionId":1,"payloadBytes":37,"payloadSummary":"iAP2 TX CSM id=0x4300 body=31B hex=00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00","meaning":"链路承载控制消息或分片"}
+[08:15:08.677] INFO session: 已上报设备信息并发送 CarPlay 可用通知
+[08:15:08.678] INFO iap2: CarPlay 已声明可用，等待车机自动启动或用户选择 CarPlay；保持 iAP2 监听
+[08:15:08.778] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":9}
+[08:15:08.780] INFO iap2: RAW RX iAP2 bytes=9: ff 5a 00 09 40 0e 6e 00 e2
+[08:15:08.781] INFO iap2: {"event":"iap2.link.rx","control":"0x40","sequence":14,"acknowledgement":110,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:15:16.678] INFO iap2: 等待 iAP2 0x4301 超时（8000ms）；保留晚到消息处理
+[08:15:16.680] INFO iap2: iAP2 TX CSM id=0x4e0e body=22B hex=00 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00
+[08:15:16.681] INFO iap2: RAW TX iAP2 bytes=38: ff 5a 00 26 40 6f 0e 01 c3 40 40 00 1c 4e 0e 00 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00 16
+[08:15:16.682] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":111,"acknowledgement":14,"sessionId":1,"payloadBytes":28,"payloadSummary":"iAP2 TX CSM id=0x4e0e body=22B hex=00 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00","meaning":"链路承载控制消息或分片"}
+[08:15:16.683] INFO iap2: 状态：等待车机发送无线 CarPlay 端点（0x4301）
+[08:15:16.684] INFO iap2: 未收到 Wi-Fi 凭据；按 Cardeck 流程保活等待晚到 0x4301，最长 5 分钟
+[08:15:17.276] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":9}
+[08:15:17.277] INFO iap2: RAW RX iAP2 bytes=9: ff 5a 00 09 40 0e 6f 00 e1
+[08:15:17.278] INFO iap2: {"event":"iap2.link.rx","control":"0x40","sequence":14,"acknowledgement":111,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:16:05.983] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":178}
+[08:16:05.986] INFO iap2: RAW RX iAP2 bytes=178 sensitive-bytes-masked=true: ff 5a 00 b2 40 0f 6f 01 36 40 40 00 a8 43 01 00 50 00 01 00 0f 00 00 42 55 49 43 4b 5f 37 38 34 31 00 00 15 00 01 ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** 00 05 00 02 95 00 1e 00 03 66 65 38 30 3a 3a 31 38 39 39 3a 37 62 66 66 3a 66 65 33 39 3a 65 31 36 35 00 00 05 00 04 03 00 08 00 02 00 00 1b 58 00 16 00 03 45 43 3a 44 39 3a 30 39 3a 34 30 3a 37 41 3a 34 39 00 00 29 00 04 32 34 65 33 30 38 39 61 2d 62 39 63 38 2d 34 39 39 38 2d 62 65 62 32 2d 61 65 39 31 32 30 62 34 34 30 35 33 00 00 0b 00 05 34 35 30 2e 31 34 00 af
+[08:16:05.989] INFO iap2: {"event":"iap2.link.rx","control":"0x40","sequence":15,"acknowledgement":111,"sessionId":1,"payloadBytes":168,"payloadSummary":"iAP2 RX CSM id=0x4301 body=162B params=[group1=[p0:11B=42 55 49 43 4b 5f 37 38 34 31 00; p1:17B=[REDACTED:Wi-Fi passphrase]; p2:1B=95; p3:26B=66 65 38 30 3a 3a 31 38 39 39 3a 37 62 66 66 3a 66 65 33 39 3a 65 31 36 35 00; p4:1B=03]; p2:4B=00 00 1b 58; p3:18B=45 43 3a 44 39 3a 30 39 3a 34 30 3a 37 41 3a 34 39 00; p4:37B=32 34 65 33 30 38 39 61 2d 62 39 63 38 2d 34 39 39 38 2d 62 65 62 32 2d 61 65 39 31 32 30 62 34 34 30 35 33 00; p5:7B=34 35 30 2e 31 34 00]","meaning":"链路承载控制消息或分片"}
+[08:16:05.991] INFO iap2: RAW TX iAP2 bytes=9: ff 5a 00 09 40 6f 0f 00 e0
+[08:16:05.991] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":111,"acknowledgement":15,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:16:05.994] INFO iap2: iAP2 RX CSM id=0x4301 body=162B params=[group1=[p0:11B=42 55 49 43 4b 5f 37 38 34 31 00; p1:17B=[REDACTED:Wi-Fi passphrase]; p2:1B=95; p3:26B=66 65 38 30 3a 3a 31 38 39 39 3a 37 62 66 66 3a 66 65 33 39 3a 65 31 36 35 00; p4:1B=03]; p2:4B=00 00 1b 58; p3:18B=45 43 3a 44 39 3a 30 39 3a 34 30 3a 37 41 3a 34 39 00; p4:37B=32 34 65 33 30 38 39 61 2d 62 39 63 38 2d 34 39 39 38 2d 62 65 62 32 2d 61 65 39 31 32 30 62 34 34 30 35 33 00; p5:7B=34 35 30 2e 31 34 00]
+[08:16:05.995] INFO iap2: 从 0x4301 wireless group 解析网络：SSID=BUICK_7841，security=3，channel=149，密码已隐藏
+[08:16:05.996] INFO wifi: 收到车机热点配置：SSID=BUICK_7841，安全类型=3，密码已隐藏
+[08:16:05.997] INFO iap2: 状态：iAP2 已收到热点 BUICK_7841，正在自动连接
+[08:16:05.997] INFO iap2: 已从 iAP2 0x4301 获得 AirPlay 地址候选：1 个地址，port=7000
+[08:16:05.998] INFO iap2: 0x4301 未携带可识别的公钥；仅保留地址候选，身份仍须通过配对验证
+[08:16:06.006] INFO wifi: 状态：正在自动连接车机 Wi-Fi：BUICK_7841
+[08:16:06.046] INFO wifi: {"event":"wifi.candidate.added","ssid":"BUICK_7841","securityType":3,"channel":149,"networkId":41}
+[08:16:06.079] INFO wifi: {"event":"wifi.candidate.connect.requested","ssid":"BUICK_7841","networkId":41,"withUserAction":false,"addNetworkToSystem":false}
+[08:16:06.084] INFO wifi: {"event":"wifi.link.poll","elapsedMs":78,"requestedSsid":"BUICK_7841","currentSsid":null,"ssidMatched":false,"hasIpAddress":false}
+[08:16:09.097] INFO wifi: {"event":"wifi.link.connected","ssid":"BUICK_7841","localIp":"10.12.82.67","networkId":41,"elapsedMs":3090}
+[08:16:09.097] INFO wifi: {"event":"wifi.candidate.retained","networkId":41,"reason":"allow-auto-reconnect"}
+[08:16:09.097] INFO session: 正在请求指定 WLAN 网络：BUICK_7841
+[08:16:09.108] INFO session: 已匹配车机 WLAN：netId=127，localIp=10.12.82.67
+[08:16:09.108] INFO wifi: 指定车机 Wi-Fi 网络可用：netId=127
+[08:16:09.109] INFO wifi: 状态：已连接车机 Wi-Fi：BUICK_7841
+[08:16:09.109] INFO wifi: 车机 Wi-Fi 已连接，本机地址 10.12.82.67
+[08:16:09.110] INFO mdns: {"event":"mdns.discovery.started","serviceType":"_airplay._tcp"}
+[08:16:09.110] INFO airplay: 正在发现 _airplay._tcp 服务
+[08:17:41.242] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":6}
+[08:17:41.244] INFO iap2: RAW RX RFCOMM iAP2 marker bytes=6: ff 55 02 00 ee 10
+[08:17:41.244] INFO iap2: 车机重新发送 iAP2 检测标记；清除旧认证状态并重新协商链路
+[08:17:41.245] INFO iap2: RAW TX RFCOMM iAP2 marker bytes=6: ff 55 02 00 ee 10
+[08:17:41.247] INFO iap2: 已发送 iAP2 检测标记，等待车机发起链路同步
+[08:17:41.289] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":26}
+[08:17:41.291] INFO iap2: RAW RX iAP2 bytes=26: ff 5a 00 1a 80 67 00 00 a6 01 05 08 00 05 dc 00 49 1e 03 01 00 02 02 01 02 9f
+[08:17:41.291] INFO iap2: {"event":"iap2.link.rx","control":"0x80","sequence":103,"acknowledgement":0,"sessionId":0,"payloadBytes":16,"payloadSummary":"non-CSM payload omitted (16B)","meaning":"链路同步帧，声明会话和传输参数"}
+[08:17:41.293] INFO iap2: iAP2 链路参数：maxOutstanding=5, maxPacket=2048, retransmitMs=1500, maxRetransmissions=30
+[08:17:41.294] INFO iap2: RAW TX iAP2 bytes=26: ff 5a 00 1a c0 63 67 00 03 01 05 08 00 05 dc 00 49 1e 03 01 00 02 02 01 02 9f
+[08:17:41.294] INFO iap2: {"event":"iap2.link.tx","control":"0xc0","sequence":99,"acknowledgement":103,"sessionId":0,"payloadBytes":16,"payloadSummary":"non-CSM payload omitted (16B)","meaning":"链路同步帧，声明会话和传输参数"}
+[08:17:41.295] INFO iap2: 收到 iAP2 同步包，控制会话 1
+[08:17:41.295] INFO iap2: iAP2 TX CSM id=0x1d00 body=0B hex=empty
+[08:17:41.295] INFO iap2: RAW TX iAP2 bytes=16: ff 5a 00 10 40 64 67 01 8b 40 40 00 06 1d 00 5d
+[08:17:41.295] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":100,"acknowledgement":103,"sessionId":1,"payloadBytes":6,"payloadSummary":"iAP2 TX CSM id=0x1d00 body=0B hex=empty","meaning":"链路承载控制消息或分片"}
+[08:17:41.296] INFO iap2: 已发送 iAP2 IDENTIFICATION_START，等待车机识别信息
+[08:17:41.358] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":9}
+[08:17:41.359] INFO iap2: RAW RX iAP2 bytes=9: ff 5a 00 09 40 67 63 00 94
+[08:17:41.360] INFO iap2: {"event":"iap2.link.rx","control":"0x40","sequence":103,"acknowledgement":99,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:17:41.386] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":545}
+[08:17:41.389] INFO iap2: RAW RX iAP2 bytes=545: ff 5a 02 21 40 68 64 01 77 40 40 02 17 1d 01 00 0f 00 00 42 55 49 43 4b 5f 37 38 34 31 00 00 09 00 01 45 32 4c 42 00 00 18 00 02 53 61 69 63 20 47 65 6e 65 72 61 6c 20 4d 6f 74 6f 72 73 00 00 0d 00 03 61 31 35 39 31 37 30 66 00 00 2f 00 04 61 65 67 65 61 6e 5f 6e 2d 75 73 65 72 20 31 32 20 53 51 42 50 35 2d 33 30 20 33 30 36 20 72 65 6c 65 61 73 65 2d 6b 65 79 73 00 00 0f 00 05 53 41 38 31 35 35 2d 31 2e 30 00 00 15 00 22 65 66 64 61 61 35 30 66 62 32 62 61 34 31 31 66 00 00 1a 00 06 aa 06 68 00 68 02 68 03 4c 00 4c 02 4c 03 4c 05 50 00 50 02 43 01 00 16 00 07 68 01 4c 01 4c 04 50 01 4e 09 4e 0a 4e 0b 4e 0c 43 00 00 05 00 08 00 00 06 00 09 00 00 00 07 00 0c 7a 68 00 00 07 00 0d 65 6e 00 00 07 00 0d 66 72 00 00 07 00 0d 65 73 00 00 07 00 0d 64 65 00 00 07 00 0d 69 74 00 00 07 00 0d 7a 68 00 00 07 00 0d 72 75 00 00 07 00 0d 6e 6c 00 00 07 00 0d 74 72 00 00 07 00 0d 70 6c 00 00 07 00 0d 70 6b 00 00 07 00 0d 6b 6f 00 00 07 00 0d 61 72 00 00 07 00 0d 65 6c 00 00 07 00 0d 73 76 00 00 07 00 0d 68 75 00 00 07 00 0d 64 61 00 00 07 00 0d 72 6f 00 00 07 00 0d 6e 62 00 00 07 00 0d 66 69 00 00 07 00 0d 68 72 00 00 07 00 0d 73 6c 00 00 07 00 0d 63 73 00 00 07 00 0d 73 6b 00 00 07 00 0d 62 67 00 00 07 00 0d 75 6b 00 00 07 00 0d 73 72 00 00 07 00 0d 6a 61 00 00 2e 00 11 00 06 00 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 0a 00 03 34 30 3a 30 36 00 00 2a 00 18 00 06 00 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 04 00 04 00 23 00 12 00 06 00 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00 00 05 00 02 01 59
+[08:17:41.393] INFO iap2: {"event":"iap2.link.rx","control":"0x40","sequence":104,"acknowledgement":100,"sessionId":1,"payloadBytes":535,"payloadSummary":"iAP2 RX CSM id=0x1d01 body=529B hex=00 0f 00 00 42 55 49 43 4b 5f 37 38 34 31 00 00 09 00 01 45 32 4c 42 00 00 18 00 02 53 61 69 63 20 47 65 6e 65 72 61 6c 20 4d 6f 74 6f 72 73 00 00 0d 00 03 61 31 35 39 31 37 30 66 00 00 2f 00 04 61 65 67 65 61 6e 5f 6e 2d 75 73 65 72 20 31 32 20 53 51 42 50 35 2d 33 30 20 33 30 36 20 72 65 6c 65 61 73 65 2d 6b 65 79 73 00 00 0f 00 05 53 41 38 31 35 35 2d 31 2e 30 00 00 15 00 22 65 66 64 61 61 35 30 66 62 32 62 61 34 31 31 66 00 00 1a 00 06 aa 06 68 00 68 02 68 03 4c 00 4c 02 4c 03 4c 05 50 00 50 02 43 01 00 16 00 07 68 01 4c 01 4c 04 50 01 4e 09 4e 0a 4e 0b 4e 0c 43 00 00 05 00 08 00 00 06 00 09 00 00 00 07 00 0c 7a 68 00 00 07 00 0d 65 6e 00 00 07 00 0d 66 72 00 00 07 00 0d 65 73 00 00 07 00 0d 64 65 00 00 07 00 0d 69 74 00 00 07 00 0d 7a 68 00 00 07 00 0d 72 75 00 00 07 00 0d 6e 6c 00 00 07 00 0d 74 72 00 00 07 00 0d 70 6c 00 00 07 00 0d 70 6b 00 00 07 00 0d 6b 6f 00 00 07 00 0d 61 72 00 00 07 00 0d 65 6c 00 00 07 00 0d 73 76 00 00 07 00 0d 68 75 00 00 07 00 0d 64 61 00 00 07 00 0d 72 6f 00 00 07 00 0d 6e 62 00 00 07 00 0d 66 69 00 00 07 00 0d 68 72 00 00 07 00 0d 73 6c 00 00 07 00 0d 63 73 00 00 07 00 0d 73 6b 00 00 07 00 0d 62 67 00 00 07 00 0d 75 6b 00 00 07 00 0d 73 72 00 00 07 00 0d 6a 61 00 00 2e 00 11 00 06 00 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 0a 00 03 34 30 3a 30 36 00 00 2a 00 18 00 06 00 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 04 00 04 00 23 00 12 00 06 00 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00 00 05 00 02 01","meaning":"链路承载控制消息或分片"}
+[08:17:41.394] INFO iap2: RAW TX iAP2 bytes=9: ff 5a 00 09 40 64 68 00 92
+[08:17:41.394] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":100,"acknowledgement":104,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:17:41.396] INFO iap2: iAP2 RX CSM id=0x1d01 body=529B hex=00 0f 00 00 42 55 49 43 4b 5f 37 38 34 31 00 00 09 00 01 45 32 4c 42 00 00 18 00 02 53 61 69 63 20 47 65 6e 65 72 61 6c 20 4d 6f 74 6f 72 73 00 00 0d 00 03 61 31 35 39 31 37 30 66 00 00 2f 00 04 61 65 67 65 61 6e 5f 6e 2d 75 73 65 72 20 31 32 20 53 51 42 50 35 2d 33 30 20 33 30 36 20 72 65 6c 65 61 73 65 2d 6b 65 79 73 00 00 0f 00 05 53 41 38 31 35 35 2d 31 2e 30 00 00 15 00 22 65 66 64 61 61 35 30 66 62 32 62 61 34 31 31 66 00 00 1a 00 06 aa 06 68 00 68 02 68 03 4c 00 4c 02 4c 03 4c 05 50 00 50 02 43 01 00 16 00 07 68 01 4c 01 4c 04 50 01 4e 09 4e 0a 4e 0b 4e 0c 43 00 00 05 00 08 00 00 06 00 09 00 00 00 07 00 0c 7a 68 00 00 07 00 0d 65 6e 00 00 07 00 0d 66 72 00 00 07 00 0d 65 73 00 00 07 00 0d 64 65 00 00 07 00 0d 69 74 00 00 07 00 0d 7a 68 00 00 07 00 0d 72 75 00 00 07 00 0d 6e 6c 00 00 07 00 0d 74 72 00 00 07 00 0d 70 6c 00 00 07 00 0d 70 6b 00 00 07 00 0d 6b 6f 00 00 07 00 0d 61 72 00 00 07 00 0d 65 6c 00 00 07 00 0d 73 76 00 00 07 00 0d 68 75 00 00 07 00 0d 64 61 00 00 07 00 0d 72 6f 00 00 07 00 0d 6e 62 00 00 07 00 0d 66 69 00 00 07 00 0d 68 72 00 00 07 00 0d 73 6c 00 00 07 00 0d 63 73 00 00 07 00 0d 73 6b 00 00 07 00 0d 62 67 00 00 07 00 0d 75 6b 00 00 07 00 0d 73 72 00 00 07 00 0d 6a 61 00 00 2e 00 11 00 06 00 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 0a 00 03 34 30 3a 30 36 00 00 2a 00 18 00 06 00 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 04 00 04 00 23 00 12 00 06 00 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00 00 05 00 02 01
+[08:17:41.397] INFO mfi: 车机身份已读取，首选 MFi challenge 32B
+[08:17:41.397] INFO mfi: 车机 MFi 能力声明：可发 AA01=false, 可发 AA03=false, 可收 AA00=false, 可发 AA06=true
+[08:17:41.398] INFO mfi: iAP2 Authentication 消息不要求列入 1D01 收发清单；按标准执行证书交换
+[08:17:41.398] INFO iap2: 解析 iAP2 ExternalAccessoryProtocol 失败：Malformed iAP2 parameter length or trailing bytes |     at decodeIap2Parameters entry (entry/src/main/ets/protocol/Iap2Codec.ets:322:31) |     at readEaProtocols entry (entry/src/main/ets/session/iap2/Iap2SessionProtocol.ets:165:22) |     at receiveControlMessage entry (entry/src/main/ets/session/Iap2SenderSession.ets:382:37) |     at onControlMessageReceived entry (entry/src/main/ets/session/Iap2SenderSession.ets:72:16) |     at acceptDataFrame entry (entry/src/main/ets/session/iap2/Iap2LinkLayer.ets:193:18) | 
+[08:17:41.398] INFO iap2: iAP2 TX CSM id=0x1d02 body=0B hex=empty
+[08:17:41.399] INFO iap2: RAW TX iAP2 bytes=16: ff 5a 00 10 40 65 68 01 89 40 40 00 06 1d 02 5b
+[08:17:41.399] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":101,"acknowledgement":104,"sessionId":1,"payloadBytes":6,"payloadSummary":"iAP2 TX CSM id=0x1d02 body=0B hex=empty","meaning":"链路承载控制消息或分片"}
+[08:17:41.400] INFO mfi: 认证消息属于 iAP2 清单例外；即使 1D01 未列出 AA00/AA01，也按标准发起证书请求
+[08:17:41.400] INFO mfi: iAP2 TX CSM id=0xaa00 body=0B params=[none] data=[REDACTED:MFi]
+[08:17:41.400] INFO iap2: RAW TX iAP2 bytes=16: ff 5a 00 10 40 66 68 01 88 40 40 00 06 aa 00 d0
+[08:17:41.400] INFO mfi: {"event":"iap2.link.tx","control":"0x40","sequence":102,"acknowledgement":104,"sessionId":1,"payloadBytes":6,"payloadSummary":"iAP2 TX CSM id=0xaa00 body=0B params=[none] data=[REDACTED:MFi]","meaning":"链路承载控制消息或分片"}
+[08:17:41.458] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":628}
+[08:17:41.461] INFO iap2: RAW RX iAP2 bytes=628 sensitive-bytes-masked=true: ff 5a 02 74 40 69 66 01 21 40 40 02 6a aa 01 ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** 30
+[08:17:41.462] INFO mfi: {"event":"iap2.link.rx","control":"0x40","sequence":105,"acknowledgement":102,"sessionId":1,"payloadBytes":618,"payloadSummary":"iAP2 RX CSM id=0xaa01 body=612B params=[0:608B] data=[REDACTED:MFi]","meaning":"链路承载控制消息或分片"}
+[08:17:41.462] INFO iap2: RAW TX iAP2 bytes=9: ff 5a 00 09 40 66 69 00 8f
+[08:17:41.462] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":102,"acknowledgement":105,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:17:41.463] INFO mfi: iAP2 RX CSM id=0xaa01 body=612B params=[0:608B] data=[REDACTED:MFi]
+[08:17:41.463] INFO mfi: 收到 MFi AA01 证书消息：body=612B, certificateChain=608B
+[08:17:41.463] INFO mfi: 开始解析 MFi 证书链并执行系统 PKIX/本地 pin 校验
+[08:17:41.463] INFO mfi: MFi certificate validation started: payloadBytes=608, container=PKCS#7 SignedData
+[08:17:41.463] INFO mfi: MFi AA01 parameter 0 received: bytes=608
+[08:17:41.469] INFO session: CMS getCerts(SIGNER_CERTS) failed: Cms get certs fail.
+[08:17:41.469] INFO mfi: MFi certificate payload parsed: format=PKCS#7 SignedData, bytes=608, certificates=1, sha256=4717198bfa37174d72ba2977868488b40a6a4e3b72b196c1623b531b3243a9c4
+[08:17:41.469] INFO mfi: MFi PKIX uses system CA; AIA intermediate download disabled
+[08:17:41.470] INFO mfi: MFi PKIX validation started: candidates=1, untrustedCertificates=1, validationTime=261105001741Z
+[08:17:41.470] INFO mfi: MFi PKIX candidate 0: subject=C=US,O=Apple Inc.,OU=Apple Accessories,CN=IPA_47EF66AE86499201F61A2EC73313F3E1; issuer=C=US,O=Apple Inc.,OU=Apple Certification Authority,CN=Apple Accessories Certification Authority - 00000002
+[08:17:41.471] INFO mfi: MFi PKIX candidate 0 rejected: unable to get local issuer certificate | current cert subject name: C=US,O=Apple Inc.,OU=Apple Accessories,CN=IPA_47EF66AE86499201F61A2EC73313F3E
+[08:17:41.472] INFO mfi: MFi PKIX trust decision: candidate=0, decision=already-pinned, fingerprint=b5e9596be126e3b8f0ed9df83c38349103a8e521606c4ff67a6f86aaacd7ed7d
+[08:17:41.472] INFO mfi: MFi certificate accepted by exact user-pinned SHA-256 fingerprint b5e9596be126e3b8f0ed9df83c38349103a8e521606c4ff67a6f86aaacd7ed7d
+[08:17:41.472] INFO mfi: MFi 证书校验完成：format=PKCS#7 SignedData, certificates=1, candidates=1
+[08:17:41.474] INFO mfi: 按车机身份记忆优先使用 MFi challenge 32B
+[08:17:41.474] INFO mfi: 开始生成 MFi challenge：length=32B, attempt=1/3
+[08:17:41.474] INFO mfi: iAP2 TX CSM id=0xaa02 body=36B params=[0:32B] data=[REDACTED:MFi]
+[08:17:41.475] INFO iap2: RAW TX iAP2 bytes=52 sensitive-bytes-masked=true: ff 5a 00 34 40 67 69 01 62 40 40 00 2a aa 02 ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** 7e
+[08:17:41.475] INFO mfi: {"event":"iap2.link.tx","control":"0x40","sequence":103,"acknowledgement":105,"sessionId":1,"payloadBytes":42,"payloadSummary":"iAP2 TX CSM id=0xaa02 body=36B params=[0:32B] data=[REDACTED:MFi]","meaning":"链路承载控制消息或分片"}
+[08:17:41.476] INFO mfi: 已发送 32 字节 MFi challenge (1/3)
+[08:17:41.612] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":9}
+[08:17:41.613] INFO iap2: RAW RX iAP2 bytes=9: ff 5a 00 09 40 69 67 00 8e
+[08:17:41.614] INFO iap2: {"event":"iap2.link.rx","control":"0x40","sequence":105,"acknowledgement":103,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:17:41.964] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":84}
+[08:17:41.965] INFO iap2: RAW RX iAP2 bytes=84 sensitive-bytes-masked=true: ff 5a 00 54 40 6a 67 01 41 40 40 00 4a aa 03 ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** 5d
+[08:17:41.965] INFO mfi: {"event":"iap2.link.rx","control":"0x40","sequence":106,"acknowledgement":103,"sessionId":1,"payloadBytes":74,"payloadSummary":"iAP2 RX CSM id=0xaa03 body=68B params=[0:64B] data=[REDACTED:MFi]","meaning":"链路承载控制消息或分片"}
+[08:17:41.966] INFO iap2: RAW TX iAP2 bytes=9: ff 5a 00 09 40 67 6a 00 8d
+[08:17:41.966] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":103,"acknowledgement":106,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:17:41.966] INFO mfi: iAP2 RX CSM id=0xaa03 body=68B params=[0:64B] data=[REDACTED:MFi]
+[08:17:41.967] INFO mfi: 收到 MFi AA03 challenge 响应：body=68B, parameters=1, challenge=[REDACTED], signature=[REDACTED]
+[08:17:41.967] INFO mfi: 开始验证 MFi challenge 签名；暂不发送认证成功消息
+[08:17:41.967] INFO mfi: MFi challenge verification started: challengeBytes=32, signatureBytes=64, candidates=1
+[08:17:41.967] INFO mfi: WARN TEMPORARY DIAGNOSTIC BYPASS: MFi challenge signature NOT verified; continuing without authentication and without saving a fingerprint pin
+[08:17:41.967] INFO mfi: iAP2 TX CSM id=0xaa05 body=0B params=[none] data=[REDACTED:MFi]
+[08:17:41.967] INFO iap2: RAW TX iAP2 bytes=16: ff 5a 00 10 40 68 6a 01 84 40 40 00 06 aa 05 cb
+[08:17:41.968] INFO mfi: {"event":"iap2.link.tx","control":"0x40","sequence":104,"acknowledgement":106,"sessionId":1,"payloadBytes":6,"payloadSummary":"iAP2 TX CSM id=0xaa05 body=0B params=[none] data=[REDACTED:MFi]","meaning":"链路承载控制消息或分片"}
+[08:17:41.969] INFO mfi: WARN: 诊断模式跳过 challenge 验签；已发送 AA05 继续联调，但不会记录为已验证
+[08:17:41.969] INFO iap2: iAP2 TX CSM id=0x4e0d body=5B hex=00 05 00 00 01
+[08:17:41.969] INFO iap2: RAW TX iAP2 bytes=21: ff 5a 00 15 40 69 6a 01 7e 40 40 00 0b 4e 0d 00 05 00 00 01 14
+[08:17:41.969] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":105,"acknowledgement":106,"sessionId":1,"payloadBytes":11,"payloadSummary":"iAP2 TX CSM id=0x4e0d body=5B hex=00 05 00 00 01","meaning":"链路承载控制消息或分片"}
+[08:17:41.970] INFO iap2: iAP2 TX CSM id=0x4e0a body=12B hex=00 0c 00 00 7a 68 2d 48 61 6e 73 00
+[08:17:41.970] INFO iap2: RAW TX iAP2 bytes=28: ff 5a 00 1c 40 6a 6a 01 76 40 40 00 12 4e 0a 00 0c 00 00 7a 68 2d 48 61 6e 73 00 71
+[08:17:41.970] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":106,"acknowledgement":106,"sessionId":1,"payloadBytes":18,"payloadSummary":"iAP2 TX CSM id=0x4e0a body=12B hex=00 0c 00 00 7a 68 2d 48 61 6e 73 00","meaning":"链路承载控制消息或分片"}
+[08:17:41.971] INFO iap2: iAP2 TX CSM id=0x4e09 body=22B hex=00 16 00 00 48 61 72 6d 6f 6e 79 20 43 61 72 50 6c 61 79 65 72 00
+[08:17:41.971] INFO iap2: RAW TX iAP2 bytes=38: ff 5a 00 26 40 6b 6a 01 6b 40 40 00 1c 4e 09 00 16 00 00 48 61 72 6d 6f 6e 79 20 43 61 72 50 6c 61 79 65 72 00 76
+[08:17:41.972] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":107,"acknowledgement":106,"sessionId":1,"payloadBytes":28,"payloadSummary":"iAP2 TX CSM id=0x4e09 body=22B hex=00 16 00 00 48 61 72 6d 6f 6e 79 20 43 61 72 50 6c 61 79 65 72 00","meaning":"链路承载控制消息或分片"}
+[08:17:41.972] INFO mfi: 已为当前车机记忆成功的 32B MFi challenge 长度
+[08:17:41.973] INFO iap2: iAP2 TX CSM id=0x4e0b body=23B hex=00 0c 00 00 00 00 00 00 6a eb cb 25 00 06 00 01 01 e0 00 05 00 02 00
+[08:17:41.973] INFO iap2: RAW TX iAP2 bytes=39: ff 5a 00 27 40 6c 6a 01 69 40 40 00 1d 4e 0b 00 0c 00 00 00 00 00 00 6a eb cb 25 00 06 00 01 01 e0 00 05 00 02 00 ca
+[08:17:41.973] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":108,"acknowledgement":106,"sessionId":1,"payloadBytes":29,"payloadSummary":"iAP2 TX CSM id=0x4e0b body=23B hex=00 0c 00 00 00 00 00 00 6a eb cb 25 00 06 00 01 01 e0 00 05 00 02 00","meaning":"链路承载控制消息或分片"}
+[08:17:41.974] INFO iap2: iAP2 TX CSM id=0x4e0c body=29B hex=00 1d 00 00 48 4f 53 2d 31 61 31 39 62 37 38 64 66 39 39 2d 31 32 66 35 63 36 36 35 00
+[08:17:41.974] INFO iap2: iAP2 发送窗口已满（5），1 个分片等待车机 ACK
+[08:17:42.049] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":9}
+[08:17:42.050] INFO iap2: RAW RX iAP2 bytes=9: ff 5a 00 09 40 6a 6a 00 8a
+[08:17:42.052] INFO iap2: {"event":"iap2.link.rx","control":"0x40","sequence":106,"acknowledgement":106,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:17:42.053] INFO iap2: RAW TX iAP2 bytes=45: ff 5a 00 2d 40 6d 6a 01 62 40 40 00 23 4e 0c 00 1d 00 00 48 4f 53 2d 31 61 31 39 62 37 38 64 66 39 39 2d 31 32 66 35 63 36 36 35 00 97
+[08:17:42.055] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":109,"acknowledgement":106,"sessionId":1,"payloadBytes":35,"payloadSummary":"iAP2 TX CSM id=0x4e0c body=29B hex=00 1d 00 00 48 4f 53 2d 31 61 31 39 62 37 38 64 66 39 39 2d 31 32 66 35 63 36 36 35 00","meaning":"链路承载控制消息或分片"}
+[08:17:42.144] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":9}
+[08:17:42.146] INFO iap2: RAW RX iAP2 bytes=9: ff 5a 00 09 40 6a 6d 00 87
+[08:17:42.147] INFO iap2: {"event":"iap2.link.rx","control":"0x40","sequence":106,"acknowledgement":109,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:17:43.977] INFO iap2: 等待 iAP2 StartHID 超时（2s）；继续 Wi-Fi 配置交换
+[08:17:43.978] INFO iap2: 两份完整能力清单均未声明旧式 Wi-Fi；按新协议发送 0x4300/0x4301
+[08:17:43.980] INFO iap2: iAP2 TX CSM id=0x4300 body=31B hex=00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00
+[08:17:43.980] INFO iap2: RAW TX iAP2 bytes=47: ff 5a 00 2f 40 6e 6a 01 5f 40 40 00 25 43 00 00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00 ff
+[08:17:43.981] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":110,"acknowledgement":106,"sessionId":1,"payloadBytes":37,"payloadSummary":"iAP2 TX CSM id=0x4300 body=31B hex=00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00","meaning":"链路承载控制消息或分片"}
+[08:17:43.983] INFO session: 已上报设备信息并发送 CarPlay 可用通知
+[08:17:43.983] INFO iap2: CarPlay 已声明可用，等待车机自动启动或用户选择 CarPlay；保持 iAP2 监听
+[08:17:44.103] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":9}
+[08:17:44.105] INFO iap2: RAW RX iAP2 bytes=9: ff 5a 00 09 40 6a 6e 00 86
+[08:17:44.106] INFO iap2: {"event":"iap2.link.rx","control":"0x40","sequence":106,"acknowledgement":110,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+[08:17:51.984] INFO iap2: 等待 iAP2 0x4301 超时（8000ms）；保留晚到消息处理
+[08:17:51.984] INFO iap2: iAP2 TX CSM id=0x4e0e body=22B hex=00 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00
+[08:17:51.985] INFO iap2: RAW TX iAP2 bytes=38: ff 5a 00 26 40 6f 6a 01 67 40 40 00 1c 4e 0e 00 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00 16
+[08:17:51.986] INFO iap2: {"event":"iap2.link.tx","control":"0x40","sequence":111,"acknowledgement":106,"sessionId":1,"payloadBytes":28,"payloadSummary":"iAP2 TX CSM id=0x4e0e body=22B hex=00 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00","meaning":"链路承载控制消息或分片"}
+[08:17:52.323] INFO iap2: {"event":"iap2.transport.rx","transport":"RFCOMM","chunkBytes":9}
+[08:17:52.323] INFO iap2: RAW RX iAP2 bytes=9: ff 5a 00 09 40 6a 6f 00 85
+[08:17:52.324] INFO iap2: {"event":"iap2.link.rx","control":"0x40","sequence":106,"acknowledgement":111,"sessionId":0,"payloadBytes":0,"payloadSummary":"empty","meaning":"链路控制/确认帧，不包含控制消息"}
+

@@ -73,9 +73,12 @@ export class AirPlayPairingClient {
 
   async pair(context: common.UIAbilityContext, service: AirPlayService): Promise<AirPlayPairingResult> {
     const generation = this.lifecycleGeneration;
-    const receiverPublicKey = decodeHex(service.txt['pk'] ?? '');
-    if (receiverPublicKey.length !== 32) {
-      throw new Error('AirPlay mDNS TXT 没有有效的 32 字节 receiver public key；拒绝未验证的配对');
+    const advertisedReceiverKey = decodeHex(service.txt['pk'] ?? '');
+    if (advertisedReceiverKey.length !== 0 && advertisedReceiverKey.length !== 32) {
+      throw new Error('AirPlay receiver public key must be 32 bytes');
+    }
+    if (advertisedReceiverKey.length === 0) {
+      this.log('AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份');
     }
     const identity = await this.identityStore.loadOrCreate(context);
     if (generation !== this.lifecycleGeneration) {
@@ -88,13 +91,19 @@ export class AirPlayPairingClient {
         throw new Error('AirPlay pairing was cancelled');
       }
       let setupReceiverId = '';
+      let setupReceiverKey: Uint8Array | undefined;
       let usedPairVerifyFastPath = false;
       try {
-        const receiver = await new PairSetupClient(this.requireClient(), identity, this.log).run(receiverPublicKey);
+        const receiver = await new PairSetupClient(this.requireClient(), identity, this.log)
+          .run(advertisedReceiverKey.length === 32 ? advertisedReceiverKey : undefined);
         setupReceiverId = receiver.receiverId;
+        setupReceiverKey = receiver.receiverPublicKey;
       } catch (error) {
         if (!(error instanceof AirPlayRtspStatusError) || error.statusCode !== 403) {
           throw error instanceof Error ? error : new Error(String(error));
+        }
+        if (advertisedReceiverKey.length !== 32) {
+          throw new Error('Pair-Setup was rejected and no advertised receiver key is available for Pair-Verify');
         }
         this.log('Pair-Setup 被接收端以 403 拒绝；关闭当前 TCP 并按 CardDeck 已配对快路径重连 Pair-Verify');
         await this.closeResources();
@@ -108,7 +117,11 @@ export class AirPlayPairingClient {
         }
         usedPairVerifyFastPath = true;
       }
-      const keys = await new PairVerifyClient(this.requireClient(), identity, this.log).run(receiverPublicKey);
+      const receiverKey = setupReceiverKey ?? advertisedReceiverKey;
+      if (receiverKey.length !== 32) {
+        throw new Error('Pair-Setup did not provide a verifiable receiver public key');
+      }
+      const keys = await new PairVerifyClient(this.requireClient(), identity, this.log).run(receiverKey);
       if (generation !== this.lifecycleGeneration) {
         await this.closeResources();
         throw new Error('AirPlay pairing was cancelled');

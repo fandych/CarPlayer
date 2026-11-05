@@ -197,7 +197,8 @@ export class WifiNetworkLease {
   async bindSocket(
     socket: connection.TCPSocket | connection.UDPSocket,
     purpose: string,
-    requestedFamily: number = 1
+    requestedFamily: number = 1,
+    localPort: number = 0
   ): Promise<boolean> {
     const handle = this.netHandle;
     if (!handle) {
@@ -213,7 +214,7 @@ export class WifiNetworkLease {
       const bindAddress: connection.NetAddress = {
         address: localAddress,
         family: addressFamily,
-        port: 0
+        port: localPort
       };
       await socket.bind(bindAddress);
       stage = 'network-bind';

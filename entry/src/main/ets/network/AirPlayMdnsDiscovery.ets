@@ -18,6 +18,9 @@ export class AirPlayMdnsDiscovery {
   private readonly onService: (service: AirPlayService) => void;
   private readonly onError: (message: string) => void;
   private readonly resolvedNames: Set<string> = new Set<string>();
+  private discoveryStartedAt: number = 0;
+  private discoveryTimeoutTimer: number = -1;
+  private foundCount: number = 0;
 
   constructor(
     context: common.UIAbilityContext,
@@ -34,11 +37,15 @@ export class AirPlayMdnsDiscovery {
       return;
     }
     this.discovery = mdns.createDiscoveryService(this.context, '_airplay._tcp');
+    this.discoveryStartedAt = Date.now();
+    this.foundCount = 0;
     this.foundHandler = (service: mdns.LocalServiceInfo): void => {
       if (this.resolvedNames.has(service.serviceName)) {
         return;
       }
       this.resolvedNames.add(service.serviceName);
+      this.foundCount++;
+      this.clearDiscoveryTimeoutTimer();
       this.onError(formatProtocolEvent('mdns.service.found',
         'serviceName', service.serviceName,
         'serviceType', '_airplay._tcp'
@@ -85,6 +92,18 @@ export class AirPlayMdnsDiscovery {
     };
     this.discovery.on('serviceFound', this.foundHandler);
     this.discovery.startSearchingMDNS();
+    this.discoveryTimeoutTimer = setTimeout((): void => {
+      this.discoveryTimeoutTimer = -1;
+      if (!this.discovery || this.foundCount > 0) {
+        return;
+      }
+      this.onError(formatProtocolEvent('mdns.discovery.timeout',
+        'elapsedMs', Date.now() - this.discoveryStartedAt,
+        'serviceType', '_airplay._tcp',
+        'serviceCount', 0,
+        'meaning', '仍继续后台搜索；等待 0x4301 或后续 mDNS 服务'
+      ));
+    }, 5000);
     this.onError(formatProtocolEvent('mdns.discovery.started',
       'serviceType', '_airplay._tcp'
     ));
@@ -94,15 +113,27 @@ export class AirPlayMdnsDiscovery {
     if (!this.discovery) {
       return;
     }
+    const elapsedMs = Math.max(0, Date.now() - this.discoveryStartedAt);
     if (this.foundHandler) {
       this.discovery.off('serviceFound', this.foundHandler);
     }
     this.discovery.stopSearchingMDNS();
+    this.clearDiscoveryTimeoutTimer();
     this.discovery = undefined;
     this.foundHandler = undefined;
     this.resolvedNames.clear();
     this.onError(formatProtocolEvent('mdns.discovery.stopped',
-      'serviceType', '_airplay._tcp'
+      'serviceType', '_airplay._tcp',
+      'elapsedMs', elapsedMs,
+      'serviceCount', this.foundCount
     ));
+    this.foundCount = 0;
+  }
+
+  private clearDiscoveryTimeoutTimer(): void {
+    if (this.discoveryTimeoutTimer >= 0) {
+      clearTimeout(this.discoveryTimeoutTimer);
+      this.discoveryTimeoutTimer = -1;
+    }
   }
 }

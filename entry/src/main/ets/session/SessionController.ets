@@ -159,6 +159,11 @@ export class SessionController extends SessionControllerConnectionFlow {
       failures.push(`mDNS 停止失败：${error instanceof Error ? error.message : String(error)}`);
     }
     this.discovery = undefined;
+    try {
+      await this.stopAirPlayRawMonitor();
+    } catch (error) {
+      failures.push(`mDNS RAW 监听停止失败：${error instanceof Error ? error.message : String(error)}`);
+    }
     if (this.ctrlAdvertiser) {
       try {
         await this.ctrlAdvertiser.stop();
@@ -432,6 +437,11 @@ export class SessionController extends SessionControllerConnectionFlow {
         discovery?.stop();
       } catch (error) {
         this.events.onLog(`Wi-Fi 丢失后停止 mDNS 发现失败：${error instanceof Error ? error.message : String(error)}`);
+      }
+      try {
+        await this.stopAirPlayRawMonitor();
+      } catch (error) {
+        this.events.onLog(`Wi-Fi 丢失后停止 mDNS RAW 监听失败：${error instanceof Error ? error.message : String(error)}`);
       }
       try {
         await advertiser?.stop();

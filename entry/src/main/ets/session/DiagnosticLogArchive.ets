@@ -9,6 +9,40 @@ const LOG_FILE_PREFIX: string = 'CarPlayer-';
 const LOG_FILE_NAME: string = 'CarPlayer-current.log';
 const LOG_FLUSH_INTERVAL_MS: number = 500;
 const MAX_PENDING_LOG_LINES: number = 1024;
+const LOG_HEADER: RegExp = /^\[[^\]]+\](?:\s|$)/;
+
+function isLogHeader(line: string): boolean {
+  return LOG_HEADER.test(line);
+}
+
+function indentLogContinuation(line: string): string {
+  const lines = line.replace(/\r/g, '').split('\n');
+  if (lines.length < 2) {
+    return lines[0] ?? '';
+  }
+  return [lines[0], ...lines.slice(1).map((part: string): string =>
+    part.startsWith('    ') ? part : `    ${part}`
+  )].join('\n');
+}
+
+function splitLogBlocks(contents: string): string[] {
+  const blocks: string[] = [];
+  let current: string[] = [];
+  for (const line of contents.split(/\r?\n/)) {
+    if (line.length === 0) {
+      continue;
+    }
+    if (isLogHeader(line) && current.length > 0) {
+      blocks.push(current.join('\n'));
+      current = [];
+    }
+    current.push(line);
+  }
+  if (current.length > 0) {
+    blocks.push(current.join('\n'));
+  }
+  return blocks;
+}
 
 export class DiagnosticLogArchive {
   private directoryPath: string = '';
@@ -60,15 +94,17 @@ export class DiagnosticLogArchive {
       hilog.error(
         LOG_DOMAIN,
         'CarPlayerLogArchive',
-        'Log archive unavailable; line not persisted (%{public}s): %{public}s',
-        this.initializationError || 'file descriptor is closed',
-        line
+        'Log archive unavailable; entry not persisted (%{public}s)',
+        this.initializationError || 'file descriptor is closed'
       );
       return;
     }
     try {
-      const safeLine = redactProtocolText(line).replace(/\r?\n/g, ' | ');
-      const entryLine = /^\[[^\]]+\]/.test(safeLine) ? safeLine : `${formatLocalClock()} ${safeLine}`;
+      const safeLine = indentLogContinuation(redactProtocolText(line));
+      const lines = safeLine.split('\n');
+      const entryLine = isLogHeader(lines[0] ?? '')
+        ? safeLine
+        : [`${formatLocalClock()} ${lines[0] ?? ''}`, ...lines.slice(1)].join('\n');
       this.pendingEntries.push(entryLine);
       if (this.pendingEntries.length >= MAX_PENDING_LOG_LINES) {
         this.flushPendingBestEffort();
@@ -80,9 +116,8 @@ export class DiagnosticLogArchive {
       hilog.error(
         LOG_DOMAIN,
         'CarPlayerLogArchive',
-        'Log archive queue failed: %{public}s; unpersisted line: %{public}s',
-        detail,
-        line
+        'Log archive queue failed; entry not persisted: %{public}s',
+        detail
       );
     }
   }
@@ -112,8 +147,12 @@ export class DiagnosticLogArchive {
         `${directoryPath}/${LOG_FILE_NAME}`,
         fileFs.OpenMode.WRITE_ONLY | fileFs.OpenMode.CREATE | fileFs.OpenMode.APPEND
       ).fd;
-      const safeMessage = redactProtocolText(message).replace(/\r?\n/g, ' | ');
-      const entry = `${formatLocalClock()} ${level} ${stage}: ${safeMessage}\n`;
+      const safeMessage = indentLogContinuation(redactProtocolText(message));
+      const lines = safeMessage.split('\n');
+      const entry = [
+        `${formatLocalClock()} ${level} ${stage}: ${lines[0] ?? ''}`,
+        ...lines.slice(1)
+      ].join('\n') + '\n';
       fileFs.writeSync(fd, entry);
       fileFs.fsyncSync(fd);
     } catch (error) {
@@ -147,8 +186,9 @@ export class DiagnosticLogArchive {
     }
     try {
       const contents = fileFs.readTextSync(this.currentFilePath);
+      const blocks = splitLogBlocks(contents);
       lines.push('===== current app session =====');
-      lines.push(...contents.split(/\r?\n/).filter((line: string) => line.length > 0).reverse());
+      lines.push(...blocks.slice(-MAX_CONNECTION_LOG_LINES).reverse());
     } catch (error) {
       hilog.warn(
         LOG_DOMAIN,
@@ -157,7 +197,7 @@ export class DiagnosticLogArchive {
         error instanceof Error ? error.message : String(error)
       );
     }
-    return lines.slice(0, MAX_CONNECTION_LOG_LINES);
+    return lines;
   }
 
   readAllText(): string {

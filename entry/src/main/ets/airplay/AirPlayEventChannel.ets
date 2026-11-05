@@ -391,7 +391,7 @@ export class AirPlayEventChannel {
       const encrypted = cipher ? await cipher.encrypt(plaintext) : plaintext;
       if (logTraffic) {
         if (cipher) {
-          this.log(formatRawBytesDiagnostic('TX', 'AirPlay event TCP ciphertext', encrypted, 256));
+          this.log(formatRawBytesDiagnostic('TX', 'AirPlay event TCP ciphertext', encrypted));
         }
         this.log(formatProtocolEvent('airplay.event.plaintext.tx',
           'bytes', plaintext.length,

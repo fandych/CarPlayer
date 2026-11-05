@@ -15,6 +15,7 @@ import { AudioRtpSender } from '../audio/AudioRtpSender';
 import { PlaybackAudioCapture } from '../audio/PlaybackAudioCapture';
 import { MfiTrustPromptInfo } from '../iap2/MfiVerifier';
 import { AirPlayMdnsDiscovery, AirPlayService } from '../network/AirPlayMdnsDiscovery';
+import { AirPlayMdnsRawMonitor } from '../network/AirPlayMdnsRawMonitor';
 import { correlateAirPlayIdentity } from '../network/AirPlayIdentityCorrelation';
 import { CarPlayCtrlAdvertiser } from '../network/CarPlayCtrlAdvertiser';
 import { WifiCarPlayConnector } from '../network/WifiCarPlayConnector';
@@ -78,6 +79,7 @@ export abstract class SessionControllerConnectionFlow {
   protected audioRtpSender?: AudioRtpSender;
   protected playbackAudioCapture?: PlaybackAudioCapture;
   protected discovery?: AirPlayMdnsDiscovery;
+  protected mdnsRawMonitor?: AirPlayMdnsRawMonitor;
   protected ctrlAdvertiser?: CarPlayCtrlAdvertiser;
   protected activePairing?: AirPlayPairingClient;
   protected discoveredAirPlay?: AirPlayService;
@@ -257,7 +259,28 @@ export abstract class SessionControllerConnectionFlow {
       (message: string): void => this.events.onLog(message)
     );
     this.discovery.start();
+    if (!this.mdnsRawMonitor) {
+      const rawMonitor = new AirPlayMdnsRawMonitor(
+        this.wifiNetworkLease,
+        (message: string): void => this.events.onLog(message)
+      );
+      this.mdnsRawMonitor = rawMonitor;
+      void rawMonitor.start().catch((error: Error): void => {
+        if (this.mdnsRawMonitor === rawMonitor) {
+          this.mdnsRawMonitor = undefined;
+        }
+        this.events.onLog(`WARN: ${error.message}`);
+      });
+    }
     this.events.onLog('正在发现 _airplay._tcp 服务');
+  }
+
+  protected async stopAirPlayRawMonitor(): Promise<void> {
+    const monitor = this.mdnsRawMonitor;
+    this.mdnsRawMonitor = undefined;
+    if (monitor) {
+      await monitor.stop();
+    }
   }
 
   protected handleIap2AirPlayEndpoint(endpoint: WirelessAirPlayEndpoint | undefined): void {
@@ -297,7 +320,10 @@ export abstract class SessionControllerConnectionFlow {
       return;
     }
 
-    const endpointService = endpoint.publicKey ? makeAirPlayServiceFromEndpoint(endpoint) : undefined;
+    const endpointService = endpoint.port > 0 &&
+      endpoint.addresses.some((address: string): boolean => address.trim().length > 0)
+      ? makeAirPlayServiceFromEndpoint(endpoint)
+      : undefined;
     if (!mdnsService) {
       this.discoveredAirPlay = endpointService ?? this.makeAirPlayGatewayFallback(endpoint);
       return;
@@ -326,9 +352,7 @@ export abstract class SessionControllerConnectionFlow {
       return;
     }
     if (!endpoint.publicKey && !/^(?:0x)?[0-9a-fA-F]{64}$/.test(mdnsService.txt['pk'] ?? '')) {
-      this.events.onLog('AirPlay 地址已发现，但仍缺少有效的接收端公钥；继续等待 mDNS');
-      this.discoveredAirPlay = undefined;
-      return;
+      this.events.onLog('AirPlay endpoint 未预广播公钥；将通过 Pair-Setup 建立并验证接收端身份');
     }
     if (identityRelation === 'public-key-match' &&
       normalizeDeviceIdentifier(mdnsService.txt['deviceid'] ?? '') !==
@@ -620,9 +644,7 @@ export abstract class SessionControllerConnectionFlow {
     }
     const pairingRequired = supportsAirPlayPairingAndEncryption(service.txt['features']) !== false;
     if (pairingRequired && !/^(?:0x)?[0-9a-fA-F]{64}$/.test(service.txt['pk'] ?? '')) {
-      this.events.onStatus('AirPlay 接收端缺少有效公钥；为保持配对验证，不启动未认证会话');
-      this.events.onLog('AirPlay mDNS/0x4301 endpoint 没有有效公钥；等待可验证的接收端身份');
-      return;
+      this.events.onLog('AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份');
     }
     this.clearAirPlayWaitTimers();
     if (this.airPlayPairingDeadline < 0) {

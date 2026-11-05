@@ -130,7 +130,7 @@ export class CarPlayCtrlAdvertiser {
       const chunk = new Uint8Array(info.message);
       requestBytes = concatBytes(requestBytes, chunk);
       request += decodeUtf8(chunk);
-      this.onLog(formatRawBytesDiagnostic('RX', 'CarPlay control HTTP TCP chunk', chunk, 256));
+      this.onLog(formatRawBytesDiagnostic('RX', 'CarPlay control HTTP TCP chunk', chunk));
       this.onLog(formatProtocolEvent('carplay.ctrl.transport.rx',
         'chunkBytes', chunk.length,
         'bufferedBytes', requestBytes.length,
@@ -163,7 +163,7 @@ export class CarPlayCtrlAdvertiser {
       const response = encodeUtf8(
         'HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
       );
-      this.onLog(formatRawBytesDiagnostic('TX', 'CarPlay control HTTP', response, 4096));
+      this.onLog(formatRawBytesDiagnostic('TX', 'CarPlay control HTTP', response));
       this.onLog(formatProtocolEvent('carplay.ctrl.response',
         'status', 200,
         'bodyBytes', 0,

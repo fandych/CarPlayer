@@ -56,9 +56,14 @@ struct Index {
   private protocolLogger?: ProtocolLogger;
   private pendingUiLogLines: string[] = [];
   private uiLogFlushTimer: number = -1;
+  private logSessionId: string = '';
+  private connectionAttempt: number = 0;
+  private lastConnectionSummary: string = '';
 
   aboutToAppear(): void {
+    this.logSessionId = this.createLogSessionId();
     this.protocolLogger = new ProtocolLogger((line: string): void => this.addLog(line));
+    this.protocolLogger.setContext({ sessionId: this.logSessionId, attempt: this.connectionAttempt });
     this.flushPendingUiLogLines();
     this.logs = diagnosticLogArchive.readRecentLines();
     this.logProtocol('session', 'CarPlayer 手机端初始化');
@@ -203,7 +208,13 @@ struct Index {
         onRevokeFingerprint: (fingerprint: string): void => { void this.revokeMfiFingerprint(fingerprint); }
       })
     } else if (this.page === 'logs') {
-      LogsPage({ logs: this.logs })
+      LogsPage({
+        logs: this.logs,
+        statusMessage: this.statusMessage || this.statusLabel(),
+        connectionDuration: this.connectionDuration,
+        sessionId: this.logSessionId,
+        attempt: this.connectionAttempt
+      })
     } else {
       AboutPage({
         onOpenSoftware: (): void => { this.documentPage = 'software'; },
@@ -525,6 +536,10 @@ struct Index {
       return;
     }
     const address = this.bluetoothAddress.trim().toUpperCase();
+    this.logSessionId = this.createLogSessionId();
+    this.connectionAttempt = 0;
+    this.lastConnectionSummary = '';
+    this.protocolLogger?.setContext({ sessionId: this.logSessionId, attempt: this.connectionAttempt });
     this.isStarting = true;
     this.isSessionActive = true;
     this.status = 'connecting';
@@ -534,6 +549,7 @@ struct Index {
       'bluetooth',
       `启动 RFCOMM/iAP2 监听，发送端 MAC ${address.length > 0 ? '已配置' : '未配置（可稍后补充）'}`
     );
+    this.logProtocol('session', '日志会话开始，等待车机连接');
     try {
       await this.ensureController().start();
     } catch (error) {
@@ -730,6 +746,30 @@ struct Index {
         : 'waiting';
     }
     this.syncConnectionDuration();
+    this.logConnectionSummary(message);
+  }
+
+  private logConnectionSummary(message: string): void {
+    let summary = '';
+    let level: ProtocolLogLevel = 'INFO';
+    if (message === '已停止' || message.startsWith('已停止，但')) {
+      summary = '会话已停止';
+    } else if (message.includes('实时投屏已启动')) {
+      summary = `CarPlay 已连接并投屏：${message}`;
+    } else if (message.includes('AirPlay 控制已连接') && message.includes('投屏不可用')) {
+      summary = `AirPlay 控制已连接，但投屏不可用：${message}`;
+      level = 'WARN';
+    } else if (/失败|错误|异常|\b(?:failed|failure|error|exception)\b/i.test(message)) {
+      summary = `连接阶段失败：${message}`;
+      level = 'ERROR';
+    } else if (/超时|未收到|未发现|\b(?:timeout|timed out|not found)\b/i.test(message)) {
+      summary = `连接阶段等待超时：${message}`;
+      level = 'WARN';
+    }
+    if (summary && summary !== this.lastConnectionSummary) {
+      this.lastConnectionSummary = summary;
+      this.logProtocol('session', `连接结果：${summary}`, level);
+    }
   }
 
   private async confirmMfiTrust(info: MfiTrustPromptInfo): Promise<boolean> {
@@ -894,7 +934,32 @@ struct Index {
     if (!this.protocolLogger) {
       this.protocolLogger = new ProtocolLogger((line: string): void => this.addLog(line));
     }
-    this.protocolLogger.write(stage, message, level);
+    if (stage === 'iap2' && /已接受 RFCOMM 连接|重新发送 iAP2 检测标记.*重新协商链路/.test(message)) {
+      this.connectionAttempt++;
+    }
+    this.protocolLogger.setContext({
+      sessionId: this.logSessionId || this.createLogSessionId(),
+      attempt: this.connectionAttempt
+    });
+    this.protocolLogger.write(stage, message, this.resolveProtocolLogLevel(message, level));
+  }
+
+  private createLogSessionId(): string {
+    const digits = formatLocalTimestamp().replace(/\D/g, '');
+    return digits.length >= 14 ? digits.slice(0, 14) : Date.now().toString();
+  }
+
+  private resolveProtocolLogLevel(message: string, requested: ProtocolLogLevel): ProtocolLogLevel {
+    if (requested !== 'INFO') {
+      return requested;
+    }
+    if (/^(?:ERROR|错误)[:：\s]|\b(?:failed|failure|exception|error)\b|失败|异常/i.test(message)) {
+      return 'ERROR';
+    }
+    if (/^(?:WARN|警告)[:：\s]|\b(?:timeout|timed out|not found|missing)\b|超时|未收到|未发现|缺少有效|身份冲突|诊断模式跳过/i.test(message)) {
+      return 'WARN';
+    }
+    return 'INFO';
   }
 
   private protocolStage(message: string): string {
