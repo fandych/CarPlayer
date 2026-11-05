@@ -446,7 +446,7 @@ export abstract class SessionControllerConnectionFlow {
     this.events.onLog(`ERROR: ${reason}；已拒绝继续 Pair-Setup/Pair-Verify`);
   }
 
-  protected async startControlAdvertisement(): Promise<void> {
+  protected async startControlAdvertisement(reannounce: boolean = false): Promise<void> {
     if (!this.hasValidDeviceAddress()) {
       this.events.onLog('真实蓝牙 MAC 未配置；跳过 CarPlay 控制广播');
       return;
@@ -470,7 +470,11 @@ export abstract class SessionControllerConnectionFlow {
     );
     this.ctrlAdvertiser = advertiser;
     try {
-      await advertiser.start();
+      if (reannounce) {
+        await advertiser.reannounce();
+      } else {
+        await advertiser.start();
+      }
     } catch (error) {
       if (this.ctrlAdvertiser === advertiser) {
         this.ctrlAdvertiser = undefined;

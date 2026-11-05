@@ -38,6 +38,18 @@ export class WifiNetworkLease {
     return this.localAddresses?.gatewayIpv4 ?? this.localAddresses?.gatewayIpv6;
   }
 
+  scopeLinkLocalAddress(address: string): string {
+    const normalizedAddress = address.replace(/^\[|\]$/g, '');
+    if (!isUnscopedIpv6LinkLocal(normalizedAddress)) {
+      return address;
+    }
+    const interfaceName = this.localAddresses?.interfaceName;
+    if (!interfaceName) {
+      throw new Error('车机 Wi-Fi interfaceName is unavailable for IPv6 link-local address');
+    }
+    return `${normalizedAddress}%${interfaceName}`;
+  }
+
   async acquire(
     ssid: string,
     onLost: (message: string) => void,
@@ -205,14 +217,19 @@ export class WifiNetworkLease {
       throw new Error('没有已确认的车机 WLAN，拒绝使用默认路由');
     }
     const addressFamily = requestedFamily === 2 ? 2 : 1;
-    const localAddress = addressFamily === 2 ? this.localAddresses?.ipv6 : this.localAddresses?.ipv4;
-    if (!localAddress) {
+    const selectedLocalAddress = addressFamily === 2 ? this.localAddresses?.ipv6 : this.localAddresses?.ipv4;
+    if (!selectedLocalAddress && addressFamily === 1) {
       throw new Error(`指定车机 WLAN 没有可用于 IPv${addressFamily} socket 的本机地址，拒绝使用默认路由`);
     }
     let stage: string = 'local-socket-bind';
     try {
+      if (!selectedLocalAddress) {
+        this.log(`车机 WLAN 未列出 IPv6 本机地址；使用 IPv6 通配绑定，由 netId=${handle.netId} 限定网络`);
+      }
       const bindAddress: connection.NetAddress = {
-        address: localAddress,
+        address: selectedLocalAddress
+          ? (addressFamily === 2 ? this.scopeLinkLocalAddress(selectedLocalAddress) : selectedLocalAddress)
+          : '::',
         family: addressFamily,
         port: localPort
       };
@@ -273,6 +290,10 @@ export class WifiNetworkLease {
       throw unregisterError;
     }
   }
+}
+
+function isUnscopedIpv6LinkLocal(address: string): boolean {
+  return !address.includes('%') && /^fe[89ab][0-9a-f]:/i.test(address);
 }
 
 export function getSocketAddressFamily(address: string): number {

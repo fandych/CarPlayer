@@ -1522,7 +1522,8 @@ test('AirPlay feature bit selects pairing only when advertised', () => {
     './Srp6aClient': {},
     './Tlv8': {},
     '../network/WifiNetworkLease': {},
-    './pairing/PairingProtocol': {}
+    './pairing/PairingProtocol': {},
+    '../session/ProtocolLogger': { formatProtocolEvent: () => '' }
   });
   assert.equal(supportsAirPlayPairingAndEncryption('0x00000000,0x00000040'), true);
   assert.equal(supportsAirPlayPairingAndEncryption('0x00000040,0x00000000'), false);
@@ -2626,6 +2627,7 @@ test('CarPlay control service publishes before the Bluetooth listener starts', a
 test('control advertisement survives the WLAN handoff and ignores invites after stop', async () => {
   let created = 0;
   let published = 0;
+  let reannounced = 0;
   let removed = 0;
   let invite;
   const Target = loadMethods('session/SessionController.ets', 'SessionController',
@@ -2633,6 +2635,7 @@ test('control advertisement survives the WLAN handoff and ignores invites after 
       CarPlayCtrlAdvertiser: class {
         constructor(_context, _address, onInvite) { created++; invite = onInvite; }
         async start() { if (!this.started) { published++; this.started = true; } }
+        async reannounce() { reannounced++; }
         async stop() { removed++; }
       }
     });
@@ -2646,9 +2649,9 @@ test('control advertisement survives the WLAN handoff and ignores invites after 
   await target.startControlAdvertisement();
   const advertiser = target.ctrlAdvertiser;
   target.vehicleWifiConnected = true;
-  await target.startControlAdvertisement();
+  await target.startControlAdvertisement(true);
   assert.equal(target.ctrlAdvertiser, advertiser);
-  assert.deepEqual([created, published, removed], [1, 1, 0]);
+  assert.deepEqual([created, published, reannounced, removed], [1, 1, 1, 0]);
   invite();
   assert.equal(target.inviteReceived, true);
   target.inviteReceived = false;
@@ -2661,12 +2664,12 @@ test('control advertisement failures clear ownership for retries and retain nati
   const { describeSocketError } = loadEts('network/CarPlayCtrlAdvertiser.ets', {}, 'describeSocketError');
   const error = { code: 2204004, message: 'service already registered' };
   const PublishTarget = loadMethods('network/CarPlayCtrlAdvertiser.ets', 'CarPlayCtrlAdvertiser',
-    ['start'], {
+    ['start', 'createServiceInfo'], {
       netSocket: { constructTCPSocketServerInstance: () => ({
         async listen() {}, async getLocalAddress() { return { port: 1234 }; }, on() {}
       }) },
       encodeUtf8: () => new Uint8Array(),
-      CARPLAY_SENDER_SOURCE_VERSION: 'test',
+      CARPLAY_CTRL_SOURCE_VERSION: '950.7.1',
       mdns: { async addLocalService() { throw error; } },
       describeSocketError
     });
@@ -2685,6 +2688,45 @@ test('control advertisement failures clear ownership for retries and retain nati
   target.hasValidDeviceAddress = () => true;
   await assert.rejects(target.startControlAdvertisement(), /registration failed/);
   assert.equal(target.ctrlAdvertiser, undefined);
+});
+
+test('CarPlay ctrl reannouncement preserves its port and uses a dedicated source version', async () => {
+  const actions = [];
+  const Target = loadMethods('network/CarPlayCtrlAdvertiser.ets', 'CarPlayCtrlAdvertiser',
+    ['reannounce', 'createServiceInfo'], {
+      CARPLAY_CTRL_SOURCE_VERSION: '950.7.1',
+      encodeUtf8: text => new TextEncoder().encode(text),
+      formatProtocolEvent: event => event,
+      mdns: {
+        async removeLocalService(_context, service) { actions.push({ type: 'remove', service }); },
+        async addLocalService(_context, service) {
+          actions.push({ type: 'add', service });
+          return service;
+        }
+      },
+      describeSocketError: error => error instanceof Error ? error.message : String(error)
+    });
+  const advertiser = new Target();
+  advertiser.context = {};
+  advertiser.deviceAddress = '40:06:34:E5:ED:EA';
+  advertiser.server = {};
+  advertiser.servicePort = 42051;
+  advertiser.service = { port: 42051 };
+  advertiser.toNumberArray = bytes => Array.from(bytes);
+  advertiser.onLog = message => actions.push({ type: 'log', message });
+
+  await advertiser.reannounce();
+
+  assert.equal(actions[0].type, 'remove');
+  assert.equal(actions[1].type, 'add');
+  assert.equal(actions[1].service.port, 42051);
+  const attributes = Object.fromEntries(actions[1].service.serviceAttribute.map(attribute => [
+    attribute.key,
+    new TextDecoder().decode(new Uint8Array(attribute.value))
+  ]));
+  assert.equal(attributes.id, '40:06:34:E5:ED:EA');
+  assert.equal(attributes.srcvers, '950.7.1');
+  assert.equal(advertiser.server !== undefined, true);
 });
 
 test('wireless startup keeps address candidates without treating UUID identities as public keys', () => {
@@ -2918,6 +2960,44 @@ test('Bluetooth adapter mode advertises Wireless iAP and holds post-handoff redi
   assert.ok(closedClients.includes(3));
 });
 
+test('Bluetooth accept retries back off and deduplicate unchanged adapter errors', () => {
+  const callbacks = [];
+  const timers = [];
+  const failures = [];
+  let timerId = 0;
+  const Target = loadMethods('transport/BluetoothIap2Server.ets', 'BluetoothIap2Server',
+    ['acceptNext', 'scheduleAcceptRetry', 'reportAcceptFailure'], {
+      bluetoothSocket: {
+        sppAccept(_serverId, callback) { callbacks.push(callback); }
+      },
+      setTimeout: (callback, delayMs) => {
+        timers.push({ callback, delayMs });
+        return ++timerId;
+      }
+    });
+  const server = new Target();
+  server.serverId = 17;
+  server.onFailure = message => failures.push(message);
+  server.acceptRetryDelayMs = 500;
+  server.acceptRetryTimer = -1;
+  server.lastAcceptFailure = '';
+
+  server.acceptNext();
+  callbacks.shift()({ code: 2900099, message: 'Bluetooth disabled' });
+  assert.equal(failures.length, 1);
+  const firstRetry = timers.shift();
+  assert.equal(firstRetry.delayMs, 500);
+  firstRetry.callback();
+  callbacks.shift()({ code: 2900099, message: 'Bluetooth disabled' });
+  assert.equal(failures.length, 1);
+  const secondRetry = timers.shift();
+  assert.equal(secondRetry.delayMs, 1000);
+  secondRetry.callback();
+  callbacks.shift()({ code: 2900099, message: 'Bluetooth disabled' });
+  assert.equal(failures.length, 1);
+  assert.equal(timers.shift().delayMs, 2000);
+});
+
 test('iAP2 retries 0x5702 after device greetings before falling back to 0x4300', async () => {
   const timers = [];
   let timerId = 0;
@@ -3020,6 +3100,8 @@ test('Buick B233 identity selects strict MFi and encodes two availability groups
   });
   const identity = 'Buick B233 SAIC General Motors';
   assert.equal(session.isBuickB233Identity(identity), true);
+  assert.equal(session.isBuickB233Identity('BUICK_7841 E2LB SAIC General Motors'), true);
+  assert.equal(session.isBuickB233Identity('Buick E2LB Other Manufacturer'), false);
   assert.equal(session.isBuickB233Identity('Buick SAIC General Motors'), false);
   assert.equal(session.isBuickB233Identity('B233 SAIC General Motors'), false);
   const NewProtocolTarget = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
@@ -3058,6 +3140,8 @@ test('Buick B233 identity selects strict MFi and encodes two availability groups
   const target = new Target();
   target.log = () => {};
   await target.chooseChallengeLength(new TextEncoder().encode(identity));
+  assert.deepEqual(Array.from(target.challengeLengths), [32]);
+  await target.chooseChallengeLength(new TextEncoder().encode('BUICK_7841 E2LB SAIC General Motors'));
   assert.deepEqual(Array.from(target.challengeLengths), [32]);
   await target.chooseChallengeLength(new TextEncoder().encode('Audi MIB3'));
   assert.deepEqual(Array.from(target.challengeLengths), [20, 32, 16]);
@@ -3473,7 +3557,7 @@ test('wireless WLAN selection reuses the matching local network without requirin
       async getAllNets() { return [cellular, otherWifi, vehicleWifi]; },
       async getNetCapabilities(handle) { return { bearerTypes: [handle.netId === 1 ? 0 : 1] }; },
       async getConnectionProperties(handle) {
-        return { linkAddresses: [
+        return { interfaceName: 'wlan0', linkAddresses: [
           { address: { address: handle.netId === 3 ? '10.36.232.67' : '192.168.1.2' } },
           ...(handle.netId === 3 ? [{ address: { address: 'fe80::3' } }] : [])
         ] };
@@ -3494,7 +3578,7 @@ test('wireless WLAN selection reuses the matching local network without requirin
     assert.deepEqual(address, { address: '10.36.232.67', family: 1, port: 0 });
   } }, 'test IPv4 TCP');
   await lease.bindSocket({ async bind(address) {
-    assert.deepEqual(address, { address: 'fe80::3', family: 2, port: 0 });
+    assert.deepEqual(address, { address: 'fe80::3%wlan0', family: 2, port: 0 });
   } }, 'test IPv6 TCP', 2);
   await lease.bindSocket({ async bind(address) {
     assert.deepEqual(address, { address: '10.36.232.67', family: 1, port: 5353 });
@@ -3506,6 +3590,71 @@ test('wireless WLAN selection reuses the matching local network without requirin
   await assert.rejects(lease.bindSocket({}), /默认路由/);
   await lease.release();
   assert.equal(unregistered, 1);
+});
+
+test('wireless network lease scopes link-local addresses to the selected interface', () => {
+  const { WifiNetworkLease } = loadEts('network/WifiNetworkLease.ets', {
+    '@ohos.net.connection': {}
+  });
+  const lease = new WifiNetworkLease();
+  lease.localAddresses = { interfaceName: 'wlan0' };
+  assert.equal(lease.scopeLinkLocalAddress('fe80::1899:7bff:fe39:e165'),
+    'fe80::1899:7bff:fe39:e165%wlan0');
+  assert.equal(lease.scopeLinkLocalAddress('fe80::1%wlan0'), 'fe80::1%wlan0');
+  assert.equal(lease.scopeLinkLocalAddress('192.168.49.1'), '192.168.49.1');
+  lease.localAddresses = {};
+  assert.throws(() => lease.scopeLinkLocalAddress('fe80::1'), /interfaceName is unavailable/);
+});
+
+test('IPv6 socket uses a wildcard local bind when the selected WLAN has no enumerated IPv6 address', async () => {
+  const { WifiNetworkLease } = loadEts('network/WifiNetworkLease.ets', {
+    '@ohos.net.connection': {}
+  });
+  const lease = new WifiNetworkLease();
+  const actions = [];
+  lease.netHandle = {
+    netId: 25,
+    async bindSocket() { actions.push('network-bind'); }
+  };
+  lease.localAddresses = { ipv4: '10.12.82.67', interfaceName: 'wlan0' };
+  await lease.bindSocket({
+    async bind(address) {
+      actions.push({ type: 'local-bind', address });
+    }
+  }, 'test IPv6 TCP', 2);
+  assert.deepEqual(actions, [
+    { type: 'local-bind', address: { address: '::', family: 2, port: 0 } },
+    'network-bind'
+  ]);
+});
+
+test('AirPlay RTSP connection scopes an unscoped endpoint before connecting', async () => {
+  const attempts = [];
+  class StubAirPlayRtspClient {
+    constructor() {}
+    async connect(host, port) { attempts.push({ host, port }); }
+    async close() {}
+  }
+  const Target = loadMethods('airplay/AirPlayPairingClient.ets', 'AirPlayPairingClient', ['connect'], {
+    AirPlayRtspClient: StubAirPlayRtspClient,
+    formatProtocolEvent: (event, ...fields) => `${event}:${fields.join(',')}`
+  });
+  const { WifiNetworkLease } = loadEts('network/WifiNetworkLease.ets', {
+    '@ohos.net.connection': {}
+  });
+  const lease = new WifiNetworkLease();
+  lease.localAddresses = { interfaceName: 'wlan0' };
+  const target = new Target();
+  target.log = () => {};
+  target.onDisconnected = () => {};
+  target.wifiNetworkLease = lease;
+  await target.connect({
+    host: 'fe80::1899:7bff:fe39:e165',
+    addresses: [],
+    port: 7000
+  });
+  assert.deepEqual(attempts, [{ host: 'fe80::1899:7bff:fe39:e165%wlan0', port: 7000 }]);
+  assert.equal(target.connectedHost, 'fe80::1899:7bff:fe39:e165%wlan0');
 });
 
 test('wireless WLAN selection cancels pending acquisition and ignores late availability', async () => {
@@ -3556,7 +3705,9 @@ test('wireless discovery and ctrl advertisement start only after network selecti
   target.events = { onLog() {}, onStatus() {} };
   target.requestPermissions = async () => {};
   target.wifi = { async connect() { return { ssid: 'BUICK_7841', ipAddress: '10.36.232.67' }; } };
-  target.startControlAdvertisement = async () => { actions.push('advertise'); };
+  target.startControlAdvertisement = async (reannounce) => {
+    actions.push(reannounce ? 'reannounce' : 'advertise');
+  };
   target.startAirPlayDiscovery = () => { actions.push('discovery'); };
   target.startAirPlayPrerequisiteWait = () => {};
   let finishNetwork;
@@ -3573,7 +3724,7 @@ test('wireless discovery and ctrl advertisement start only after network selecti
   finishNetwork({ netId: 3 });
   await joining;
   assert.equal(target.vehicleWifiConnected, true);
-  assert.deepEqual(actions, ['iap2', 'network', 'refresh', 'discovery', 'advertise', 'pair']);
+  assert.deepEqual(actions, ['iap2', 'network', 'refresh', 'discovery', 'reannounce', 'pair']);
   assert.equal(actions.at(-1), 'pair');
   const diagnostics = [];
   target.vehicleWifiConnected = false;

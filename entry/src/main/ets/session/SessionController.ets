@@ -359,7 +359,7 @@ export class SessionController extends SessionControllerConnectionFlow {
       this.events.onLog(`车机 Wi-Fi 已连接，本机地址 ${result.ipAddress}`);
       this.startAirPlayDiscovery();
       try {
-        await this.startControlAdvertisement();
+        await this.startControlAdvertisement(true);
       } catch (error) {
         this.events.onLog(
           `WARN: CarPlay 控制广播不可用，继续通过 mDNS/iAP2 端点连接：` +

@@ -10,6 +10,7 @@ import { EncodedH264Event } from './AirPlayVideoStream';
 import { AirPlayRtspClient } from './AirPlayRtspClient';
 import { WifiNetworkLease } from '../network/WifiNetworkLease';
 import { Iap2SenderSession } from '../session/Iap2SenderSession';
+import { formatProtocolEvent } from '../session/ProtocolLogger';
 import { AirPlayRtspStatusError, PairSetupClient, PairVerifyClient } from './pairing/PairingProtocol';
 
 export { AirPlayRtspStatusError } from './pairing/PairingProtocol';
@@ -180,9 +181,18 @@ export class AirPlayPairingClient {
     const hosts = Array.from(new Set([service.host, ...(service.addresses ?? [])].filter(Boolean)));
     const failures: string[] = [];
     for (const host of hosts) {
-      if (isUnscopedIpv6LinkLocal(host)) {
-        failures.push(`${host}: IPv6 link-local address is missing an interface scope`);
+      let scopedHost: string;
+      try {
+        scopedHost = this.wifiNetworkLease.scopeLinkLocalAddress(host);
+      } catch (error) {
+        failures.push(`${host}: ${error instanceof Error ? error.message : String(error)}`);
         continue;
+      }
+      if (scopedHost !== host) {
+        this.log(formatProtocolEvent('airplay.endpoint.address.scoped',
+          'originalAddress', host,
+          'scopedAddress', scopedHost
+        ));
       }
       let connectionEstablished = false;
       const client = new AirPlayRtspClient(
@@ -196,14 +206,14 @@ export class AirPlayPairingClient {
       );
       this.client = client;
       try {
-        await client.connect(host, service.port);
+        await client.connect(scopedHost, service.port);
         connectionEstablished = true;
-        this.connectedHost = host;
+        this.connectedHost = scopedHost;
         return;
       } catch (error) {
         this.client = undefined;
         const message = error instanceof Error ? error.message : String(error);
-        failures.push(`${host}: ${message}`);
+        failures.push(`${scopedHost}: ${message}`);
         try {
           await client.close();
         } catch (cleanupError) {
@@ -362,11 +372,6 @@ export class AirPlayPairingClient {
       throw new Error(`AirPlay cleanup failed: ${failures.join('; ')}`);
     }
   }
-}
-
-function isUnscopedIpv6LinkLocal(host: string): boolean {
-  const address = host.replace(/^\[|\]$/g, '');
-  return !address.includes('%') && /^fe[89ab][0-9a-f]:/i.test(address);
 }
 
 function decodeHex(hex: string): Uint8Array {

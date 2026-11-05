@@ -19,6 +19,9 @@ export class BluetoothIap2Server {
   private adapterMode: boolean = false;
   private adapterHandoffCompleted: boolean = false;
   private readonly heldClientIds: number[] = [];
+  private acceptRetryDelayMs: number = 500;
+  private acceptRetryTimer: number = -1;
+  private lastAcceptFailure: string = '';
 
   async start(
     onConnected: () => void,
@@ -31,6 +34,8 @@ export class BluetoothIap2Server {
     }
     this.adapterMode = adapterMode;
     this.adapterHandoffCompleted = false;
+    this.acceptRetryDelayMs = 500;
+    this.lastAcceptFailure = '';
     this.onClientConnected = onConnected;
     this.onClientData = onData;
     this.onFailure = onError;
@@ -70,6 +75,10 @@ export class BluetoothIap2Server {
   }
 
   stop(): void {
+    if (this.acceptRetryTimer >= 0) {
+      clearTimeout(this.acceptRetryTimer);
+      this.acceptRetryTimer = -1;
+    }
     this.disconnectClient();
     this.closeHeldClients();
     if (this.serverId >= 0) {
@@ -86,6 +95,8 @@ export class BluetoothIap2Server {
     this.onFailure = undefined;
     this.adapterMode = false;
     this.adapterHandoffCompleted = false;
+    this.acceptRetryDelayMs = 500;
+    this.lastAcceptFailure = '';
   }
 
   setAdapterHandoffCompleted(completed: boolean): void {
@@ -110,11 +121,13 @@ export class BluetoothIap2Server {
       bluetoothSocket.sppAccept(this.serverId, (error, clientId) => {
         if (error) {
           if (this.serverId >= 0) {
-            this.onFailure?.(`Bluetooth accept failed (${error.code}): ${error.message}`);
-            setTimeout((): void => this.acceptNext(), 500);
+            this.reportAcceptFailure(`Bluetooth accept failed (${error.code}): ${error.message}`);
+            this.scheduleAcceptRetry();
           }
           return;
         }
+        this.acceptRetryDelayMs = 500;
+        this.lastAcceptFailure = '';
         if (this.adapterMode && this.adapterHandoffCompleted && this.clientId >= 0) {
           this.heldClientIds.push(clientId);
           this.acceptNext();
@@ -130,7 +143,7 @@ export class BluetoothIap2Server {
           this.onClientConnected?.();
           this.acceptNext();
         } catch (acceptError) {
-          this.onFailure?.(`Bluetooth client setup failed: ${this.errorMessage(acceptError)}`);
+          this.reportAcceptFailure(`Bluetooth client setup failed: ${this.errorMessage(acceptError)}`);
           if (this.clientId === clientId) {
             this.clientId = -1;
             this.readHandler = undefined;
@@ -140,13 +153,33 @@ export class BluetoothIap2Server {
           } catch (closeError) {
             this.onFailure?.(`Bluetooth client cleanup failed: ${this.errorMessage(closeError)}`);
           }
-          setTimeout((): void => this.acceptNext(), 500);
+          this.scheduleAcceptRetry();
         }
       });
     } catch (error) {
-      this.onFailure?.(`Bluetooth accept failed: ${this.errorMessage(error)}`);
-      setTimeout((): void => this.acceptNext(), 500);
+      this.reportAcceptFailure(`Bluetooth accept failed: ${this.errorMessage(error)}`);
+      this.scheduleAcceptRetry();
     }
+  }
+
+  private scheduleAcceptRetry(): void {
+    if (this.serverId < 0 || this.acceptRetryTimer >= 0) {
+      return;
+    }
+    const delayMs = this.acceptRetryDelayMs;
+    this.acceptRetryDelayMs = Math.min(delayMs * 2, 5000);
+    this.acceptRetryTimer = setTimeout((): void => {
+      this.acceptRetryTimer = -1;
+      this.acceptNext();
+    }, delayMs);
+  }
+
+  private reportAcceptFailure(message: string): void {
+    if (message === this.lastAcceptFailure) {
+      return;
+    }
+    this.lastAcceptFailure = message;
+    this.onFailure?.(message);
   }
 
   private closeClient(): void {

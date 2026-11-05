@@ -212,7 +212,9 @@ export function shouldProbeLegacyWifi(accessorySends?: number[], accessoryReceiv
 
 export function isBuickB233Identity(identity: string): boolean {
   const normalized = identity.toLowerCase().replace(/\s+/g, ' ');
-  return normalized.includes('buick') && normalized.includes('b233') &&
+  // This Buick reports model E2LB in 1D01 instead of the literal B233 product name.
+  const isB233Model = normalized.includes('b233') || normalized.includes('e2lb');
+  return normalized.includes('buick') && isB233Model &&
     normalized.includes('saic general motors');
 }
 

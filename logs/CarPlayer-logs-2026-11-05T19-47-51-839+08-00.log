@@ -1,0 +1,1495 @@
+[19:43:34.742] INFO diagnostics: Log archive initialized for current app session
+[19:43:34.743] INFO runtime: EntryAbility onCreate
+[19:43:34.763] INFO runtime: EntryAbility onWindowStageCreate
+[19:43:34.769] INFO runtime: EntryAbility onForeground
+[19:43:34.822] INFO runtime: Loaded pages/Index
+[19:43:34.866] INFO [会话 20261105194334] session: CarPlayer 手机端初始化
+[19:43:34.875] INFO [会话 20261105194334] settings: 本地设置读取完成
+[19:43:35.455] INFO [会话 20261105194335] bluetooth: 启动 RFCOMM/iAP2 监听，发送端 MAC 已配置
+[19:43:35.456] INFO [会话 20261105194335] session: 日志会话开始，等待车机连接
+[19:43:35.554] INFO [会话 20261105194335] session: 已广播 _carplay-ctrl._tcp，端口 42051；TXT id=40:06:34:E5:ED:EA
+[19:43:35.556] ERROR [会话 20261105194335] iap2: 读取已配对蓝牙设备失败；使用标准 iAP2 SDP：BussinessError 2900003: Bluetooth disabled.
+[19:43:35.556] INFO [会话 20261105194335] iap2: 未检测到已配对 CarPlay 无线适配器；使用标准 iAP2 SDP
+[19:43:35.559] INFO [会话 20261105194335] iap2: 状态：等待车机 iAP2 握手
+[19:43:35.559] INFO [会话 20261105194335] iap2: CarPlay 已开启：等待蓝牙 RFCOMM / iAP2 连接
+[19:43:35.560] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:35.560] ERROR [会话 20261105194335] session: 连接结果：连接阶段失败：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:35.560] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:36.063] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:36.063] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:36.567] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:36.568] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:37.070] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:37.071] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:37.575] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:37.575] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:38.077] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:38.078] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:38.584] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:38.586] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:39.089] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:39.090] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:39.594] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:39.595] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:40.100] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:40.101] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:40.605] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:40.606] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:41.110] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:41.111] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:41.614] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:41.614] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:42.117] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:42.118] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:42.621] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:42.621] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:43.124] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:43.125] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:43.629] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:43.630] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:44.131] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:44.131] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:44.636] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:44.637] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:45.141] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:45.142] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:45.645] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:45.646] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:46.149] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:46.150] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:46.655] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:46.656] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:47.161] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:47.162] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:47.667] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:47.667] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:48.172] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:48.173] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:48.676] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:48.677] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:49.180] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:49.181] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:49.684] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:49.685] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:50.188] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:50.189] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:50.692] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:50.693] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:51.196] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:51.196] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:51.698] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:51.698] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:52.199] ERROR [会话 20261105194335] iap2: 状态：错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:52.200] ERROR [会话 20261105194335] iap2: 错误：Bluetooth accept failed (2900099): Operation failed. Please wait for SPP connection before other API calls.
+[19:43:52.664] WARN [会话 20261105194335] session: 用户请求停止 CarPlayer，会清理全部连接资源
+[19:43:52.672] INFO [会话 20261105194335] session: 状态：已停止
+[19:43:52.672] INFO [会话 20261105194335] session: 连接结果：会话已停止
+[19:43:52.673] INFO [会话 20261105194335] session: 会话已停止
+[19:43:53.568] INFO [会话 20261105194353] bluetooth: 启动 RFCOMM/iAP2 监听，发送端 MAC 已配置
+[19:43:53.569] INFO [会话 20261105194353] session: 日志会话开始，等待车机连接
+[19:43:53.646] INFO [会话 20261105194353] session: 已广播 _carplay-ctrl._tcp，端口 44243；TXT id=40:06:34:E5:ED:EA
+[19:43:53.654] INFO [会话 20261105194353] iap2: 未检测到已配对 CarPlay 无线适配器；使用标准 iAP2 SDP
+[19:43:53.663] INFO [会话 20261105194353] iap2: 状态：等待车机 iAP2 握手
+[19:43:53.663] INFO [会话 20261105194353] iap2: CarPlay 已开启：等待蓝牙 RFCOMM / iAP2 连接
+[19:44:04.595] INFO [会话 20261105194353] iap2: 状态：车机已连接，正在协商 iAP2
+[19:44:04.596] INFO [会话 20261105194353 / 尝试 1] iap2: 已接受 RFCOMM 连接
+[19:44:04.598] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX RFCOMM iAP2 marker bytes=6
+    0000: ff 55 02 00 ee 10
+[19:44:04.600] INFO [会话 20261105194353 / 尝试 1] iap2: 已发送 iAP2 检测标记，等待车机发起链路同步
+[19:44:04.731] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=6
+[19:44:04.732] INFO [会话 20261105194353 / 尝试 1] iap2: RAW RX RFCOMM iAP2 marker bytes=6
+    0000: ff 55 02 00 ee 10
+[19:44:04.733] INFO [会话 20261105194353 / 尝试 1] session: 准备检测确认，等待车机发送 SYN
+[19:44:04.734] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX RFCOMM iAP2 marker bytes=6
+    0000: ff 55 02 00 ee 10
+[19:44:04.808] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=26
+[19:44:04.810] INFO [会话 20261105194353 / 尝试 1] iap2: RAW RX iAP2 bytes=26
+    0000: ff 5a 00 1a 80 81 00 00 8c 01 05 08 00 05 dc 00
+    0010: 49 1e 03 01 00 02 02 01 02 9f
+[19:44:04.811] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x80；序号=129；确认序号=0；iAP2 会话号=0；载荷长度=16；载荷摘要=non-CSM payload omitted (16B)；含义=链路同步帧，声明会话和传输参数
+[19:44:04.812] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 链路参数：maxOutstanding=5, maxPacket=2048, retransmitMs=1500, maxRetransmissions=30
+[19:44:04.814] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=26
+    0000: ff 5a 00 1a c0 63 81 00 e9 01 05 08 00 05 dc 00
+    0010: 49 1e 03 01 00 02 02 01 02 9f
+[19:44:04.815] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0xc0；序号=99；确认序号=129；iAP2 会话号=0；载荷长度=16；载荷摘要=non-CSM payload omitted (16B)；含义=链路同步帧，声明会话和传输参数
+[19:44:04.819] INFO [会话 20261105194353 / 尝试 1] iap2: 收到 iAP2 同步包，控制会话 1
+[19:44:04.820] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 TX CSM id=0x1d00 body=0B hex=empty
+[19:44:04.821] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=16
+    0000: ff 5a 00 10 40 64 81 01 71 40 40 00 06 1d 00 5d
+[19:44:04.823] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=100；确认序号=129；iAP2 会话号=1；载荷长度=6；载荷摘要=iAP2 TX CSM id=0x1d00 body=0B hex=empty；含义=链路承载控制消息或分片
+[19:44:04.825] INFO [会话 20261105194353 / 尝试 1] iap2: 已发送 iAP2 IDENTIFICATION_START，等待车机识别信息
+[19:44:04.832] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:44:04.833] INFO [会话 20261105194353 / 尝试 1] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 81 63 00 7a
+[19:44:04.834] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=129；确认序号=99；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:04.897] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=545
+[19:44:04.899] INFO [会话 20261105194353 / 尝试 1] iap2: RAW RX iAP2 bytes=545
+    0000: ff 5a 02 21 40 82 64 01 5d 40 40 02 17 1d 01 00
+    0010: 0f 00 00 42 55 49 43 4b 5f 37 38 34 31 00 00 09
+    0020: 00 01 45 32 4c 42 00 00 18 00 02 53 61 69 63 20
+    0030: 47 65 6e 65 72 61 6c 20 4d 6f 74 6f 72 73 00 00
+    0040: 0d 00 03 61 31 35 39 31 37 30 66 00 00 2f 00 04
+    0050: 61 65 67 65 61 6e 5f 6e 2d 75 73 65 72 20 31 32
+    0060: 20 53 51 42 50 35 2d 33 30 20 33 30 36 20 72 65
+    0070: 6c 65 61 73 65 2d 6b 65 79 73 00 00 0f 00 05 53
+    0080: 41 38 31 35 35 2d 31 2e 30 00 00 15 00 22 65 66
+    0090: 64 61 61 35 30 66 62 32 62 61 34 31 31 66 00 00
+    00a0: 1a 00 06 aa 06 68 00 68 02 68 03 4c 00 4c 02 4c
+    00b0: 03 4c 05 50 00 50 02 43 01 00 16 00 07 68 01 4c
+    00c0: 01 4c 04 50 01 4e 09 4e 0a 4e 0b 4e 0c 43 00 00
+    00d0: 05 00 08 00 00 06 00 09 00 00 00 07 00 0c 7a 68
+    00e0: 00 00 07 00 0d 65 6e 00 00 07 00 0d 66 72 00 00
+    00f0: 07 00 0d 65 73 00 00 07 00 0d 64 65 00 00 07 00
+    0100: 0d 69 74 00 00 07 00 0d 7a 68 00 00 07 00 0d 72
+    0110: 75 00 00 07 00 0d 6e 6c 00 00 07 00 0d 74 72 00
+    0120: 00 07 00 0d 70 6c 00 00 07 00 0d 70 6b 00 00 07
+    0130: 00 0d 6b 6f 00 00 07 00 0d 61 72 00 00 07 00 0d
+    0140: 65 6c 00 00 07 00 0d 73 76 00 00 07 00 0d 68 75
+    0150: 00 00 07 00 0d 64 61 00 00 07 00 0d 72 6f 00 00
+    0160: 07 00 0d 6e 62 00 00 07 00 0d 66 69 00 00 07 00
+    0170: 0d 68 72 00 00 07 00 0d 73 6c 00 00 07 00 0d 63
+    0180: 73 00 00 07 00 0d 73 6b 00 00 07 00 0d 62 67 00
+    0190: 00 07 00 0d 75 6b 00 00 07 00 0d 73 72 00 00 07
+    01a0: 00 0d 6a 61 00 00 2e 00 11 00 06 00 00 00 02 00
+    01b0: 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f
+    01c0: 6e 65 6e 74 00 00 04 00 02 00 0a 00 03 34 30 3a
+    01d0: 30 36 00 00 2a 00 18 00 06 00 00 00 03 00 18 00
+    01e0: 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f
+    01f0: 6e 65 6e 74 00 00 04 00 02 00 04 00 04 00 23 00
+    0200: 12 00 06 00 00 00 01 00 14 00 01 43 69 6e 65 6d
+    0210: 6f 48 49 44 52 65 6d 6f 74 65 00 00 05 00 02 01
+    0220: 59
+[19:44:04.901] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=130；确认序号=100；iAP2 会话号=1；载荷长度=535；载荷摘要=iAP2 RX CSM id=0x1d01 body=529B hex=00 0f 00 00 42 55 49 43 4b 5f 37 38 34 31 00 00 09 00 01 45 32 4c 42 00 00 18 00 02 53 61 69 63 20 47 65 6e 65 72 61 6c 20 4d 6f 74 6f 72 73 00 00 0d 00 03 61 31 35 39 31 37 30 66 00 00 2f 00 04 61 65 67 65 61 6e 5f 6e 2d 75 73 65 72 20 31 32 20 53 51 42 50 35 2d 33 30 20 33 30 36 20 72 65 6c 65 61 73 65 2d 6b 65 79 73 00 00 0f 00 05 53 41 38 31 35 35 2d 31 2e 30 00 00 15 00 22 65 66 64 61 61 35 30 66 62 32 62 61 34 31 31 66 00 00 1a 00 06 aa 06 68 00 68 02 68 03 4c 00 4c 02 4c 03 4c 05 50 00 50 02 43 01 00 16 00 07 68 01 4c 01 4c 04 50 01 4e 09 4e 0a 4e 0b 4e 0c 43 00 00 05 00 08 00 00 06 00 09 00 00 00 07 00 0c 7a 68 00 00 07 00 0d 65 6e 00 00 07 00 0d 66 72 00 00 07 00 0d 65 73 00 00 07 00 0d 64 65 00 00 07 00 0d 69 74 00 00 07 00 0d 7a 68 00 00 07 00 0d 72 75 00 00 07 00 0d 6e 6c 00 00 07 00 0d 74 72 00 00 07 00 0d 70 6c 00 00 07 00 0d 70 6b 00 00 07 00 0d 6b 6f 00 00 07 00 0d 61 72 00 00 07 00 0d 65 6c 00 00 07 00 0d 73 76 00 00 07 00 0d 68 75 00 00 07 00 0d 64 61 00 00 07 00 0d 72 6f 00 00 07 00 0d 6e 62 00 00 07 00 0d 66 69 00 00 07 00 0d 68 72 00 00 07 00 0d 73 6c 00 00 07 00 0d 63 73 00 00 07 00 0d 73 6b 00 00 07 00 0d 62 67 00 00 07 00 0d 75 6b 00 00 07 00 0d 73 72 00 00 07 00 0d 6a 61 00 00 2e 00 11 00 06 00 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 0a 00 03 34 30 3a 30 36 00 00 2a 00 18 00 06 00 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 04 00 04 00 23 00 12 00 06 00 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00 00 05 00 02 01；含义=链路承载控制消息或分片
+[19:44:04.902] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=9
+    0000: ff 5a 00 09 40 64 82 00 78
+[19:44:04.902] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=100；确认序号=130；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:04.904] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 RX CSM id=0x1d01 body=529B hex=00 0f 00 00 42 55 49 43 4b 5f 37 38 34 31 00 00 09 00 01 45 32 4c 42 00 00 18 00 02 53 61 69 63 20 47 65 6e 65 72 61 6c 20 4d 6f 74 6f 72 73 00 00 0d 00 03 61 31 35 39 31 37 30 66 00 00 2f 00 04 61 65 67 65 61 6e 5f 6e 2d 75 73 65 72 20 31 32 20 53 51 42 50 35 2d 33 30 20 33 30 36 20 72 65 6c 65 61 73 65 2d 6b 65 79 73 00 00 0f 00 05 53 41 38 31 35 35 2d 31 2e 30 00 00 15 00 22 65 66 64 61 61 35 30 66 62 32 62 61 34 31 31 66 00 00 1a 00 06 aa 06 68 00 68 02 68 03 4c 00 4c 02 4c 03 4c 05 50 00 50 02 43 01 00 16 00 07 68 01 4c 01 4c 04 50 01 4e 09 4e 0a 4e 0b 4e 0c 43 00 00 05 00 08 00 00 06 00 09 00 00 00 07 00 0c 7a 68 00 00 07 00 0d 65 6e 00 00 07 00 0d 66 72 00 00 07 00 0d 65 73 00 00 07 00 0d 64 65 00 00 07 00 0d 69 74 00 00 07 00 0d 7a 68 00 00 07 00 0d 72 75 00 00 07 00 0d 6e 6c 00 00 07 00 0d 74 72 00 00 07 00 0d 70 6c 00 00 07 00 0d 70 6b 00 00 07 00 0d 6b 6f 00 00 07 00 0d 61 72 00 00 07 00 0d 65 6c 00 00 07 00 0d 73 76 00 00 07 00 0d 68 75 00 00 07 00 0d 64 61 00 00 07 00 0d 72 6f 00 00 07 00 0d 6e 62 00 00 07 00 0d 66 69 00 00 07 00 0d 68 72 00 00 07 00 0d 73 6c 00 00 07 00 0d 63 73 00 00 07 00 0d 73 6b 00 00 07 00 0d 62 67 00 00 07 00 0d 75 6b 00 00 07 00 0d 73 72 00 00 07 00 0d 6a 61 00 00 2e 00 11 00 06 00 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 0a 00 03 34 30 3a 30 36 00 00 2a 00 18 00 06 00 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 04 00 04 00 23 00 12 00 06 00 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00 00 05 00 02 01
+[19:44:04.905] INFO [会话 20261105194353 / 尝试 1] mfi: 车机身份已读取，首选 MFi challenge 32B
+[19:44:04.905] INFO [会话 20261105194353 / 尝试 1] mfi: 车机 MFi 能力声明：可发 AA01=false, 可发 AA03=false, 可收 AA00=false, 可发 AA06=true
+[19:44:04.905] INFO [会话 20261105194353 / 尝试 1] mfi: iAP2 Authentication 消息不要求列入 1D01 收发清单；按标准执行证书交换
+[19:44:04.905] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 TX CSM id=0x1d02 body=0B hex=empty
+[19:44:04.906] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=16
+    0000: ff 5a 00 10 40 65 82 01 6f 40 40 00 06 1d 02 5b
+[19:44:04.906] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=101；确认序号=130；iAP2 会话号=1；载荷长度=6；载荷摘要=iAP2 TX CSM id=0x1d02 body=0B hex=empty；含义=链路承载控制消息或分片
+[19:44:04.909] INFO [会话 20261105194353 / 尝试 1] mfi: 认证消息属于 iAP2 清单例外；即使 1D01 未列出 AA00/AA01，也按标准发起证书请求
+[19:44:04.909] INFO [会话 20261105194353 / 尝试 1] mfi: iAP2 TX CSM id=0xaa00 body=0B params=[none] data=[REDACTED:MFi]
+[19:44:04.909] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=16
+    0000: ff 5a 00 10 40 66 82 01 6e 40 40 00 06 aa 00 d0
+[19:44:04.909] INFO [会话 20261105194353 / 尝试 1] mfi: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=102；确认序号=130；iAP2 会话号=1；载荷长度=6；载荷摘要=iAP2 TX CSM id=0xaa00 body=0B params=[none] data=[REDACTED:MFi]；含义=链路承载控制消息或分片
+[19:44:04.979] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=628
+[19:44:04.987] INFO [会话 20261105194353 / 尝试 1] iap2: RAW RX iAP2 bytes=628; sensitive-bytes-masked=612
+    0000: ff 5a 02 74 40 83 66 01 07 40 40 02 6a aa 01 **
+    0010: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0020: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0030: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0040: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0050: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0060: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0070: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0080: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0090: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00a0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00b0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00c0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00d0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00e0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00f0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0100: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0110: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0120: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0130: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0140: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0150: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0160: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0170: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0180: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0190: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01a0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01b0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01c0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01d0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01e0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01f0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0200: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0210: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0220: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0230: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0240: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0250: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0260: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0270: ** ** ** 30
+[19:44:04.991] INFO [会话 20261105194353 / 尝试 1] mfi: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=131；确认序号=102；iAP2 会话号=1；载荷长度=618；载荷摘要=iAP2 RX CSM id=0xaa01 body=612B params=[0:608B] data=[REDACTED:MFi]；含义=链路承载控制消息或分片
+[19:44:04.992] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=9
+    0000: ff 5a 00 09 40 66 83 00 75
+[19:44:04.993] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=102；确认序号=131；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:04.995] INFO [会话 20261105194353 / 尝试 1] mfi: iAP2 RX CSM id=0xaa01 body=612B params=[0:608B] data=[REDACTED:MFi]
+[19:44:04.995] INFO [会话 20261105194353 / 尝试 1] mfi: 收到 MFi AA01 证书消息：body=612B, certificateChain=608B
+[19:44:04.996] INFO [会话 20261105194353 / 尝试 1] mfi: 开始解析 MFi 证书链并执行系统 PKIX/本地 pin 校验
+[19:44:04.996] INFO [会话 20261105194353 / 尝试 1] mfi: MFi certificate validation started: payloadBytes=608, container=PKCS#7 SignedData
+[19:44:04.997] INFO [会话 20261105194353 / 尝试 1] mfi: MFi AA01 parameter 0 received: bytes=608
+[19:44:05.020] ERROR [会话 20261105194353 / 尝试 1] session: CMS getCerts(SIGNER_CERTS) failed: Cms get certs fail.
+[19:44:05.024] INFO [会话 20261105194353 / 尝试 1] mfi: MFi certificate payload parsed: format=PKCS#7 SignedData, bytes=608, certificates=1, sha256=4717198bfa37174d72ba2977868488b40a6a4e3b72b196c1623b531b3243a9c4
+[19:44:05.025] INFO [会话 20261105194353 / 尝试 1] mfi: MFi PKIX uses system CA; AIA intermediate download disabled
+[19:44:05.026] INFO [会话 20261105194353 / 尝试 1] mfi: MFi PKIX validation started: candidates=1, untrustedCertificates=1, validationTime=261105114405Z
+[19:44:05.028] INFO [会话 20261105194353 / 尝试 1] mfi: MFi PKIX candidate 0: subject=C=US,O=Apple Inc.,OU=Apple Accessories,CN=IPA_47EF66AE86499201F61A2EC73313F3E1; issuer=C=US,O=Apple Inc.,OU=Apple Certification Authority,CN=Apple Accessories Certification Authority - 00000002
+[19:44:05.032] INFO [会话 20261105194353 / 尝试 1] mfi: MFi PKIX candidate 0 rejected: unable to get local issuer certificate | current cert subject name: C=US,O=Apple Inc.,OU=Apple Accessories,CN=IPA_47EF66AE86499201F61A2EC73313F3E
+[19:44:05.034] INFO [会话 20261105194353 / 尝试 1] mfi: MFi PKIX trust decision: candidate=0, decision=already-pinned, fingerprint=b5e9596be126e3b8f0ed9df83c38349103a8e521606c4ff67a6f86aaacd7ed7d
+[19:44:05.035] INFO [会话 20261105194353 / 尝试 1] mfi: MFi certificate accepted by exact user-pinned SHA-256 fingerprint b5e9596be126e3b8f0ed9df83c38349103a8e521606c4ff67a6f86aaacd7ed7d
+[19:44:05.036] INFO [会话 20261105194353 / 尝试 1] mfi: MFi 证书校验完成：format=PKCS#7 SignedData, certificates=1, candidates=1
+[19:44:05.042] INFO [会话 20261105194353 / 尝试 1] mfi: 按车机身份记忆优先使用 MFi challenge 32B
+[19:44:05.043] INFO [会话 20261105194353 / 尝试 1] mfi: 开始生成 MFi challenge：length=32B, attempt=1/3
+[19:44:05.049] INFO [会话 20261105194353 / 尝试 1] mfi: iAP2 TX CSM id=0xaa02 body=36B params=[0:32B] data=[REDACTED:MFi]
+[19:44:05.050] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=52; sensitive-bytes-masked=36
+    0000: ff 5a 00 34 40 67 83 01 48 40 40 00 2a aa 02 **
+    0010: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0020: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0030: ** ** ** fb
+[19:44:05.052] INFO [会话 20261105194353 / 尝试 1] mfi: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=103；确认序号=131；iAP2 会话号=1；载荷长度=42；载荷摘要=iAP2 TX CSM id=0xaa02 body=36B params=[0:32B] data=[REDACTED:MFi]；含义=链路承载控制消息或分片
+[19:44:05.055] INFO [会话 20261105194353 / 尝试 1] mfi: 已发送 32 字节 MFi challenge (1/3)
+[19:44:05.234] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:44:05.235] INFO [会话 20261105194353 / 尝试 1] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 83 67 00 74
+[19:44:05.235] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=131；确认序号=103；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:05.580] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=84
+[19:44:05.580] INFO [会话 20261105194353 / 尝试 1] iap2: RAW RX iAP2 bytes=84; sensitive-bytes-masked=68
+    0000: ff 5a 00 54 40 84 67 01 27 40 40 00 4a aa 03 **
+    0010: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0020: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0030: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0040: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0050: ** ** ** 4d
+[19:44:05.580] INFO [会话 20261105194353 / 尝试 1] mfi: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=132；确认序号=103；iAP2 会话号=1；载荷长度=74；载荷摘要=iAP2 RX CSM id=0xaa03 body=68B params=[0:64B] data=[REDACTED:MFi]；含义=链路承载控制消息或分片
+[19:44:05.580] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=9
+    0000: ff 5a 00 09 40 67 84 00 73
+[19:44:05.581] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=103；确认序号=132；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:05.583] INFO [会话 20261105194353 / 尝试 1] mfi: iAP2 RX CSM id=0xaa03 body=68B params=[0:64B] data=[REDACTED:MFi]
+[19:44:05.584] INFO [会话 20261105194353 / 尝试 1] mfi: 收到 MFi AA03 challenge 响应：body=68B, parameters=1, challenge=[已脱敏], signature=[已脱敏]
+[19:44:05.584] INFO [会话 20261105194353 / 尝试 1] mfi: 开始验证 MFi challenge 签名；暂不发送认证成功消息
+[19:44:05.584] INFO [会话 20261105194353 / 尝试 1] mfi: MFi challenge verification started: challengeBytes=32, signatureBytes=64, candidates=1
+[19:44:05.584] WARN [会话 20261105194353 / 尝试 1] mfi: WARN TEMPORARY DIAGNOSTIC BYPASS: MFi challenge signature NOT verified; continuing without authentication and without saving a fingerprint pin
+[19:44:05.584] INFO [会话 20261105194353 / 尝试 1] mfi: iAP2 TX CSM id=0xaa05 body=0B params=[none] data=[REDACTED:MFi]
+[19:44:05.584] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=16
+    0000: ff 5a 00 10 40 68 84 01 6a 40 40 00 06 aa 05 cb
+[19:44:05.584] INFO [会话 20261105194353 / 尝试 1] mfi: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=104；确认序号=132；iAP2 会话号=1；载荷长度=6；载荷摘要=iAP2 TX CSM id=0xaa05 body=0B params=[none] data=[REDACTED:MFi]；含义=链路承载控制消息或分片
+[19:44:05.588] WARN [会话 20261105194353 / 尝试 1] mfi: WARN: 诊断模式跳过 challenge 验签；已发送 AA05 继续联调，但不会记录为已验证
+[19:44:05.588] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 TX CSM id=0x4e0d body=5B hex=00 05 00 00 01
+[19:44:05.588] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=21
+    0000: ff 5a 00 15 40 69 84 01 64 40 40 00 0b 4e 0d 00
+    0010: 05 00 00 01 14
+[19:44:05.588] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=105；确认序号=132；iAP2 会话号=1；载荷长度=11；载荷摘要=iAP2 TX CSM id=0x4e0d body=5B hex=00 05 00 00 01；含义=链路承载控制消息或分片
+[19:44:05.590] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 TX CSM id=0x4e0a body=12B hex=00 0c 00 00 7a 68 2d 48 61 6e 73 00
+[19:44:05.590] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=28
+    0000: ff 5a 00 1c 40 6a 84 01 5c 40 40 00 12 4e 0a 00
+    0010: 0c 00 00 7a 68 2d 48 61 6e 73 00 71
+[19:44:05.591] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=106；确认序号=132；iAP2 会话号=1；载荷长度=18；载荷摘要=iAP2 TX CSM id=0x4e0a body=12B hex=00 0c 00 00 7a 68 2d 48 61 6e 73 00；含义=链路承载控制消息或分片
+[19:44:05.591] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 TX CSM id=0x4e09 body=22B hex=00 16 00 00 48 61 72 6d 6f 6e 79 20 43 61 72 50 6c 61 79 65 72 00
+[19:44:05.592] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=38
+    0000: ff 5a 00 26 40 6b 84 01 51 40 40 00 1c 4e 09 00
+    0010: 16 00 00 48 61 72 6d 6f 6e 79 20 43 61 72 50 6c
+    0020: 61 79 65 72 00 76
+[19:44:05.592] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=107；确认序号=132；iAP2 会话号=1；载荷长度=28；载荷摘要=iAP2 TX CSM id=0x4e09 body=22B hex=00 16 00 00 48 61 72 6d 6f 6e 79 20 43 61 72 50 6c 61 79 65 72 00；含义=链路承载控制消息或分片
+[19:44:05.592] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 TX CSM id=0x4e0b body=23B hex=00 0c 00 00 00 00 00 00 6a ec 6c 05 00 06 00 01 01 e0 00 05 00 02 00
+[19:44:05.593] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=39
+    0000: ff 5a 00 27 40 6c 84 01 4f 40 40 00 1d 4e 0b 00
+    0010: 0c 00 00 00 00 00 00 6a ec 6c 05 00 06 00 01 01
+    0020: e0 00 05 00 02 00 48
+[19:44:05.593] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=108；确认序号=132；iAP2 会话号=1；载荷长度=29；载荷摘要=iAP2 TX CSM id=0x4e0b body=23B hex=00 0c 00 00 00 00 00 00 6a ec 6c 05 00 06 00 01 01 e0 00 05 00 02 00；含义=链路承载控制消息或分片
+[19:44:05.593] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 TX CSM id=0x4e0c body=29B hex=00 1d 00 00 48 4f 53 2d 31 61 31 39 62 37 38 64 66 39 39 2d 31 32 66 35 63 36 36 35 00
+[19:44:05.593] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 发送窗口已满（5），1 个分片等待车机 ACK
+[19:44:05.593] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 TX CSM id=0xea00 body=27B hex=00 05 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00
+[19:44:05.594] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 发送窗口已满（5），2 个分片等待车机 ACK
+[19:44:05.594] INFO [会话 20261105194353 / 尝试 1] iap2: 已请求 iAP2 EA 会话：protocol=2 name=CinemoBTComponent
+[19:44:05.594] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 TX CSM id=0xea00 body=29B hex=00 05 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00
+[19:44:05.594] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 发送窗口已满（5），3 个分片等待车机 ACK
+[19:44:05.594] INFO [会话 20261105194353 / 尝试 1] iap2: 已请求 iAP2 EA 会话：protocol=3 name=CinemoWIFIComponent
+[19:44:05.594] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 TX CSM id=0xea00 body=25B hex=00 05 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00
+[19:44:05.594] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 发送窗口已满（5），4 个分片等待车机 ACK
+[19:44:05.594] INFO [会话 20261105194353 / 尝试 1] iap2: 已请求 iAP2 EA 会话：protocol=1 name=CinemoHIDRemote
+[19:44:05.595] INFO [会话 20261105194353 / 尝试 1] mfi: 已为当前车机记忆成功的 32B MFi challenge 长度
+[19:44:05.678] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:44:05.680] INFO [会话 20261105194353 / 尝试 1] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 84 6a 00 70
+[19:44:05.680] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=132；确认序号=106；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:05.682] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=45
+    0000: ff 5a 00 2d 40 6d 84 01 48 40 40 00 23 4e 0c 00
+    0010: 1d 00 00 48 4f 53 2d 31 61 31 39 62 37 38 64 66
+    0020: 39 39 2d 31 32 66 35 63 36 36 35 00 97
+[19:44:05.683] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=109；确认序号=132；iAP2 会话号=1；载荷长度=35；载荷摘要=iAP2 TX CSM id=0x4e0c body=29B hex=00 1d 00 00 48 4f 53 2d 31 61 31 39 62 37 38 64 66 39 39 2d 31 32 66 35 63 36 36 35 00；含义=链路承载控制消息或分片
+[19:44:05.684] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:44:05.685] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=43
+    0000: ff 5a 00 2b 40 6e 84 01 49 40 40 00 21 ea 00 00
+    0010: 05 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54
+    0020: 43 6f 6d 70 6f 6e 65 6e 74 00 b3
+[19:44:05.687] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=110；确认序号=132；iAP2 会话号=1；载荷长度=33；载荷摘要=iAP2 TX CSM id=0xea00 body=27B hex=00 05 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00；含义=链路承载控制消息或分片
+[19:44:05.688] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=45
+    0000: ff 5a 00 2d 40 6f 84 01 46 40 40 00 23 ea 00 00
+    0010: 05 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49
+    0020: 46 49 43 6f 6d 70 6f 6e 65 6e 74 00 15
+[19:44:05.689] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=111；确认序号=132；iAP2 会话号=1；载荷长度=35；载荷摘要=iAP2 TX CSM id=0xea00 body=29B hex=00 05 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00；含义=链路承载控制消息或分片
+[19:44:05.691] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 发送窗口已满（5），1 个分片等待车机 ACK
+[19:44:05.692] INFO [会话 20261105194353 / 尝试 1] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 84 6c 00 6e
+[19:44:05.693] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=132；确认序号=108；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:05.694] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=41
+    0000: ff 5a 00 29 40 70 84 01 49 40 40 00 1f ea 00 00
+    0010: 05 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49
+    0020: 44 52 65 6d 6f 74 65 00 c0
+[19:44:05.695] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=112；确认序号=132；iAP2 会话号=1；载荷长度=31；载荷摘要=iAP2 TX CSM id=0xea00 body=25B hex=00 05 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00；含义=链路承载控制消息或分片
+[19:44:05.836] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:44:05.838] INFO [会话 20261105194353 / 尝试 1] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 84 6f 00 6b
+[19:44:05.840] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=132；确认序号=111；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:05.842] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:44:05.843] INFO [会话 20261105194353 / 尝试 1] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 84 70 00 6a
+[19:44:05.845] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=132；确认序号=112；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:07.596] WARN [会话 20261105194353 / 尝试 1] iap2: 等待 iAP2 StartHID 超时（2s）；继续 Wi-Fi 配置交换
+[19:44:07.598] INFO [会话 20261105194353 / 尝试 1] iap2: 两份完整能力清单均未声明旧式 Wi-Fi；按新协议发送 0x4300/0x4301
+[19:44:07.601] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 TX CSM id=0x4300 body=31B hex=00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00
+[19:44:07.603] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=47
+    0000: ff 5a 00 2f 40 71 84 01 42 40 40 00 25 43 00 00
+    0010: 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30
+    0020: 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00 ff
+[19:44:07.606] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=113；确认序号=132；iAP2 会话号=1；载荷长度=37；载荷摘要=iAP2 TX CSM id=0x4300 body=31B hex=00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00；含义=链路承载控制消息或分片
+[19:44:07.608] INFO [会话 20261105194353 / 尝试 1] session: 已上报设备信息并发送 CarPlay 可用通知
+[19:44:07.608] INFO [会话 20261105194353 / 尝试 1] iap2: CarPlay 已声明可用，等待车机自动启动或用户选择 CarPlay；保持 iAP2 监听
+[19:44:09.109] WARN [会话 20261105194353 / 尝试 1] iap2: iAP2 超时重传序号 113（1/30）
+[19:44:09.110] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=47
+    0000: ff 5a 00 2f 40 71 84 01 42 40 40 00 25 43 00 00
+    0010: 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30
+    0020: 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00 ff
+[19:44:09.111] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=113；确认序号=132；iAP2 会话号=1；载荷长度=37；载荷摘要=iAP2 TX CSM id=0x4300 body=31B hex=00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00；含义=链路承载控制消息或分片
+[19:44:10.614] WARN [会话 20261105194353 / 尝试 1] iap2: iAP2 超时重传序号 113（2/30）
+[19:44:10.616] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=47
+    0000: ff 5a 00 2f 40 71 84 01 42 40 40 00 25 43 00 00
+    0010: 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30
+    0020: 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00 ff
+[19:44:10.618] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=113；确认序号=132；iAP2 会话号=1；载荷长度=37；载荷摘要=iAP2 TX CSM id=0x4300 body=31B hex=00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00；含义=链路承载控制消息或分片
+[19:44:12.122] WARN [会话 20261105194353 / 尝试 1] iap2: iAP2 超时重传序号 113（3/30）
+[19:44:12.124] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=47
+    0000: ff 5a 00 2f 40 71 84 01 42 40 40 00 25 43 00 00
+    0010: 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30
+    0020: 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00 ff
+[19:44:12.126] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=113；确认序号=132；iAP2 会话号=1；载荷长度=37；载荷摘要=iAP2 TX CSM id=0x4300 body=31B hex=00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00；含义=链路承载控制消息或分片
+[19:44:13.631] WARN [会话 20261105194353 / 尝试 1] iap2: iAP2 超时重传序号 113（4/30）
+[19:44:13.632] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=47
+    0000: ff 5a 00 2f 40 71 84 01 42 40 40 00 25 43 00 00
+    0010: 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30
+    0020: 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00 ff
+[19:44:13.633] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=113；确认序号=132；iAP2 会话号=1；载荷长度=37；载荷摘要=iAP2 TX CSM id=0x4300 body=31B hex=00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00；含义=链路承载控制消息或分片
+[19:44:15.135] WARN [会话 20261105194353 / 尝试 1] iap2: iAP2 超时重传序号 113（5/30）
+[19:44:15.136] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=47
+    0000: ff 5a 00 2f 40 71 84 01 42 40 40 00 25 43 00 00
+    0010: 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30
+    0020: 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00 ff
+[19:44:15.138] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=113；确认序号=132；iAP2 会话号=1；载荷长度=37；载荷摘要=iAP2 TX CSM id=0x4300 body=31B hex=00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00；含义=链路承载控制消息或分片
+[19:44:15.609] WARN [会话 20261105194353 / 尝试 1] iap2: 等待 iAP2 0x4301 超时（8000ms）；保留晚到消息处理
+[19:44:15.610] INFO [会话 20261105194353 / 尝试 1] iap2: iAP2 TX CSM id=0x4e0e body=22B hex=00 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00
+[19:44:15.611] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=38
+    0000: ff 5a 00 26 40 72 84 01 4a 40 40 00 1c 4e 0e 00
+    0010: 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45
+    0020: 44 3a 45 41 00 16
+[19:44:15.612] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=114；确认序号=132；iAP2 会话号=1；载荷长度=28；载荷摘要=iAP2 TX CSM id=0x4e0e body=22B hex=00 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00；含义=链路承载控制消息或分片
+[19:44:15.613] INFO [会话 20261105194353 / 尝试 1] iap2: 状态：等待车机发送无线 CarPlay 端点（0x4301）
+[19:44:15.613] WARN [会话 20261105194353 / 尝试 1] iap2: 未收到 Wi-Fi 凭据；按 Cardeck 流程保活等待晚到 0x4301，最长 5 分钟
+[19:44:16.642] WARN [会话 20261105194353 / 尝试 1] iap2: iAP2 超时重传序号 113（6/30）
+[19:44:16.643] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=47
+    0000: ff 5a 00 2f 40 71 84 01 42 40 40 00 25 43 00 00
+    0010: 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30
+    0020: 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00 ff
+[19:44:16.644] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=113；确认序号=132；iAP2 会话号=1；载荷长度=37；载荷摘要=iAP2 TX CSM id=0x4300 body=31B hex=00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00；含义=链路承载控制消息或分片
+[19:44:16.646] WARN [会话 20261105194353 / 尝试 1] iap2: iAP2 超时重传序号 114（1/30）
+[19:44:16.647] INFO [会话 20261105194353 / 尝试 1] iap2: RAW TX iAP2 bytes=38
+    0000: ff 5a 00 26 40 72 84 01 4a 40 40 00 1c 4e 0e 00
+    0010: 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45
+    0020: 44 3a 45 41 00 16
+[19:44:16.649] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=114；确认序号=132；iAP2 会话号=1；载荷长度=28；载荷摘要=iAP2 TX CSM id=0x4e0e body=22B hex=00 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00；含义=链路承载控制消息或分片
+[19:44:17.238] INFO [会话 20261105194353 / 尝试 1] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=6
+[19:44:17.239] INFO [会话 20261105194353 / 尝试 1] iap2: RAW RX RFCOMM iAP2 marker bytes=6
+    0000: ff 55 02 00 ee 10
+[19:44:17.240] INFO [会话 20261105194353 / 尝试 2] iap2: 车机重新发送 iAP2 检测标记；清除旧认证状态并重新协商链路
+[19:44:17.241] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX RFCOMM iAP2 marker bytes=6
+    0000: ff 55 02 00 ee 10
+[19:44:17.243] INFO [会话 20261105194353 / 尝试 2] iap2: 已发送 iAP2 检测标记，等待车机发起链路同步
+[19:44:17.340] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=26
+[19:44:17.342] INFO [会话 20261105194353 / 尝试 2] iap2: RAW RX iAP2 bytes=26
+    0000: ff 5a 00 1a 80 cd 00 00 40 01 05 08 00 05 dc 00
+    0010: 49 1e 03 01 00 02 02 01 02 9f
+[19:44:17.343] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x80；序号=205；确认序号=0；iAP2 会话号=0；载荷长度=16；载荷摘要=non-CSM payload omitted (16B)；含义=链路同步帧，声明会话和传输参数
+[19:44:17.344] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 链路参数：maxOutstanding=5, maxPacket=2048, retransmitMs=1500, maxRetransmissions=30
+[19:44:17.345] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=26
+    0000: ff 5a 00 1a c0 63 cd 00 9d 01 05 08 00 05 dc 00
+    0010: 49 1e 03 01 00 02 02 01 02 9f
+[19:44:17.346] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0xc0；序号=99；确认序号=205；iAP2 会话号=0；载荷长度=16；载荷摘要=non-CSM payload omitted (16B)；含义=链路同步帧，声明会话和传输参数
+[19:44:17.347] INFO [会话 20261105194353 / 尝试 2] iap2: 收到 iAP2 同步包，控制会话 1
+[19:44:17.348] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 TX CSM id=0x1d00 body=0B hex=empty
+[19:44:17.349] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=16
+    0000: ff 5a 00 10 40 64 cd 01 25 40 40 00 06 1d 00 5d
+[19:44:17.350] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=100；确认序号=205；iAP2 会话号=1；载荷长度=6；载荷摘要=iAP2 TX CSM id=0x1d00 body=0B hex=empty；含义=链路承载控制消息或分片
+[19:44:17.351] INFO [会话 20261105194353 / 尝试 2] iap2: 已发送 iAP2 IDENTIFICATION_START，等待车机识别信息
+[19:44:17.421] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:44:17.423] INFO [会话 20261105194353 / 尝试 2] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 cd 63 00 2e
+[19:44:17.425] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=205；确认序号=99；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:17.609] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=545
+[19:44:17.611] INFO [会话 20261105194353 / 尝试 2] iap2: RAW RX iAP2 bytes=545
+    0000: ff 5a 02 21 40 ce 64 01 11 40 40 02 17 1d 01 00
+    0010: 0f 00 00 42 55 49 43 4b 5f 37 38 34 31 00 00 09
+    0020: 00 01 45 32 4c 42 00 00 18 00 02 53 61 69 63 20
+    0030: 47 65 6e 65 72 61 6c 20 4d 6f 74 6f 72 73 00 00
+    0040: 0d 00 03 61 31 35 39 31 37 30 66 00 00 2f 00 04
+    0050: 61 65 67 65 61 6e 5f 6e 2d 75 73 65 72 20 31 32
+    0060: 20 53 51 42 50 35 2d 33 30 20 33 30 36 20 72 65
+    0070: 6c 65 61 73 65 2d 6b 65 79 73 00 00 0f 00 05 53
+    0080: 41 38 31 35 35 2d 31 2e 30 00 00 15 00 22 65 66
+    0090: 64 61 61 35 30 66 62 32 62 61 34 31 31 66 00 00
+    00a0: 1a 00 06 aa 06 68 00 68 02 68 03 4c 00 4c 02 4c
+    00b0: 03 4c 05 50 00 50 02 43 01 00 16 00 07 68 01 4c
+    00c0: 01 4c 04 50 01 4e 09 4e 0a 4e 0b 4e 0c 43 00 00
+    00d0: 05 00 08 00 00 06 00 09 00 00 00 07 00 0c 7a 68
+    00e0: 00 00 07 00 0d 65 6e 00 00 07 00 0d 66 72 00 00
+    00f0: 07 00 0d 65 73 00 00 07 00 0d 64 65 00 00 07 00
+    0100: 0d 69 74 00 00 07 00 0d 7a 68 00 00 07 00 0d 72
+    0110: 75 00 00 07 00 0d 6e 6c 00 00 07 00 0d 74 72 00
+    0120: 00 07 00 0d 70 6c 00 00 07 00 0d 70 6b 00 00 07
+    0130: 00 0d 6b 6f 00 00 07 00 0d 61 72 00 00 07 00 0d
+    0140: 65 6c 00 00 07 00 0d 73 76 00 00 07 00 0d 68 75
+    0150: 00 00 07 00 0d 64 61 00 00 07 00 0d 72 6f 00 00
+    0160: 07 00 0d 6e 62 00 00 07 00 0d 66 69 00 00 07 00
+    0170: 0d 68 72 00 00 07 00 0d 73 6c 00 00 07 00 0d 63
+    0180: 73 00 00 07 00 0d 73 6b 00 00 07 00 0d 62 67 00
+    0190: 00 07 00 0d 75 6b 00 00 07 00 0d 73 72 00 00 07
+    01a0: 00 0d 6a 61 00 00 2e 00 11 00 06 00 00 00 02 00
+    01b0: 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f
+    01c0: 6e 65 6e 74 00 00 04 00 02 00 0a 00 03 34 30 3a
+    01d0: 30 36 00 00 2a 00 18 00 06 00 00 00 03 00 18 00
+    01e0: 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f
+    01f0: 6e 65 6e 74 00 00 04 00 02 00 04 00 04 00 23 00
+    0200: 12 00 06 00 00 00 01 00 14 00 01 43 69 6e 65 6d
+    0210: 6f 48 49 44 52 65 6d 6f 74 65 00 00 05 00 02 01
+    0220: 59
+[19:44:17.613] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=206；确认序号=100；iAP2 会话号=1；载荷长度=535；载荷摘要=iAP2 RX CSM id=0x1d01 body=529B hex=00 0f 00 00 42 55 49 43 4b 5f 37 38 34 31 00 00 09 00 01 45 32 4c 42 00 00 18 00 02 53 61 69 63 20 47 65 6e 65 72 61 6c 20 4d 6f 74 6f 72 73 00 00 0d 00 03 61 31 35 39 31 37 30 66 00 00 2f 00 04 61 65 67 65 61 6e 5f 6e 2d 75 73 65 72 20 31 32 20 53 51 42 50 35 2d 33 30 20 33 30 36 20 72 65 6c 65 61 73 65 2d 6b 65 79 73 00 00 0f 00 05 53 41 38 31 35 35 2d 31 2e 30 00 00 15 00 22 65 66 64 61 61 35 30 66 62 32 62 61 34 31 31 66 00 00 1a 00 06 aa 06 68 00 68 02 68 03 4c 00 4c 02 4c 03 4c 05 50 00 50 02 43 01 00 16 00 07 68 01 4c 01 4c 04 50 01 4e 09 4e 0a 4e 0b 4e 0c 43 00 00 05 00 08 00 00 06 00 09 00 00 00 07 00 0c 7a 68 00 00 07 00 0d 65 6e 00 00 07 00 0d 66 72 00 00 07 00 0d 65 73 00 00 07 00 0d 64 65 00 00 07 00 0d 69 74 00 00 07 00 0d 7a 68 00 00 07 00 0d 72 75 00 00 07 00 0d 6e 6c 00 00 07 00 0d 74 72 00 00 07 00 0d 70 6c 00 00 07 00 0d 70 6b 00 00 07 00 0d 6b 6f 00 00 07 00 0d 61 72 00 00 07 00 0d 65 6c 00 00 07 00 0d 73 76 00 00 07 00 0d 68 75 00 00 07 00 0d 64 61 00 00 07 00 0d 72 6f 00 00 07 00 0d 6e 62 00 00 07 00 0d 66 69 00 00 07 00 0d 68 72 00 00 07 00 0d 73 6c 00 00 07 00 0d 63 73 00 00 07 00 0d 73 6b 00 00 07 00 0d 62 67 00 00 07 00 0d 75 6b 00 00 07 00 0d 73 72 00 00 07 00 0d 6a 61 00 00 2e 00 11 00 06 00 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 0a 00 03 34 30 3a 30 36 00 00 2a 00 18 00 06 00 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 04 00 04 00 23 00 12 00 06 00 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00 00 05 00 02 01；含义=链路承载控制消息或分片
+[19:44:17.613] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=9
+    0000: ff 5a 00 09 40 64 ce 00 2c
+[19:44:17.613] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=100；确认序号=206；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:17.617] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 RX CSM id=0x1d01 body=529B hex=00 0f 00 00 42 55 49 43 4b 5f 37 38 34 31 00 00 09 00 01 45 32 4c 42 00 00 18 00 02 53 61 69 63 20 47 65 6e 65 72 61 6c 20 4d 6f 74 6f 72 73 00 00 0d 00 03 61 31 35 39 31 37 30 66 00 00 2f 00 04 61 65 67 65 61 6e 5f 6e 2d 75 73 65 72 20 31 32 20 53 51 42 50 35 2d 33 30 20 33 30 36 20 72 65 6c 65 61 73 65 2d 6b 65 79 73 00 00 0f 00 05 53 41 38 31 35 35 2d 31 2e 30 00 00 15 00 22 65 66 64 61 61 35 30 66 62 32 62 61 34 31 31 66 00 00 1a 00 06 aa 06 68 00 68 02 68 03 4c 00 4c 02 4c 03 4c 05 50 00 50 02 43 01 00 16 00 07 68 01 4c 01 4c 04 50 01 4e 09 4e 0a 4e 0b 4e 0c 43 00 00 05 00 08 00 00 06 00 09 00 00 00 07 00 0c 7a 68 00 00 07 00 0d 65 6e 00 00 07 00 0d 66 72 00 00 07 00 0d 65 73 00 00 07 00 0d 64 65 00 00 07 00 0d 69 74 00 00 07 00 0d 7a 68 00 00 07 00 0d 72 75 00 00 07 00 0d 6e 6c 00 00 07 00 0d 74 72 00 00 07 00 0d 70 6c 00 00 07 00 0d 70 6b 00 00 07 00 0d 6b 6f 00 00 07 00 0d 61 72 00 00 07 00 0d 65 6c 00 00 07 00 0d 73 76 00 00 07 00 0d 68 75 00 00 07 00 0d 64 61 00 00 07 00 0d 72 6f 00 00 07 00 0d 6e 62 00 00 07 00 0d 66 69 00 00 07 00 0d 68 72 00 00 07 00 0d 73 6c 00 00 07 00 0d 63 73 00 00 07 00 0d 73 6b 00 00 07 00 0d 62 67 00 00 07 00 0d 75 6b 00 00 07 00 0d 73 72 00 00 07 00 0d 6a 61 00 00 2e 00 11 00 06 00 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 0a 00 03 34 30 3a 30 36 00 00 2a 00 18 00 06 00 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 04 00 04 00 23 00 12 00 06 00 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00 00 05 00 02 01
+[19:44:17.617] INFO [会话 20261105194353 / 尝试 2] mfi: 车机身份已读取，首选 MFi challenge 32B
+[19:44:17.617] INFO [会话 20261105194353 / 尝试 2] mfi: 车机 MFi 能力声明：可发 AA01=false, 可发 AA03=false, 可收 AA00=false, 可发 AA06=true
+[19:44:17.618] INFO [会话 20261105194353 / 尝试 2] mfi: iAP2 Authentication 消息不要求列入 1D01 收发清单；按标准执行证书交换
+[19:44:17.618] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 TX CSM id=0x1d02 body=0B hex=empty
+[19:44:17.618] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=16
+    0000: ff 5a 00 10 40 65 ce 01 23 40 40 00 06 1d 02 5b
+[19:44:17.618] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=101；确认序号=206；iAP2 会话号=1；载荷长度=6；载荷摘要=iAP2 TX CSM id=0x1d02 body=0B hex=empty；含义=链路承载控制消息或分片
+[19:44:17.619] INFO [会话 20261105194353 / 尝试 2] mfi: 认证消息属于 iAP2 清单例外；即使 1D01 未列出 AA00/AA01，也按标准发起证书请求
+[19:44:17.619] INFO [会话 20261105194353 / 尝试 2] mfi: iAP2 TX CSM id=0xaa00 body=0B params=[none] data=[REDACTED:MFi]
+[19:44:17.619] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=16
+    0000: ff 5a 00 10 40 66 ce 01 22 40 40 00 06 aa 00 d0
+[19:44:17.619] INFO [会话 20261105194353 / 尝试 2] mfi: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=102；确认序号=206；iAP2 会话号=1；载荷长度=6；载荷摘要=iAP2 TX CSM id=0xaa00 body=0B params=[none] data=[REDACTED:MFi]；含义=链路承载控制消息或分片
+[19:44:17.855] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=628
+[19:44:17.864] INFO [会话 20261105194353 / 尝试 2] iap2: RAW RX iAP2 bytes=628; sensitive-bytes-masked=612
+    0000: ff 5a 02 74 40 cf 66 01 bb 40 40 02 6a aa 01 **
+    0010: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0020: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0030: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0040: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0050: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0060: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0070: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0080: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0090: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00a0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00b0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00c0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00d0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00e0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00f0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0100: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0110: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0120: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0130: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0140: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0150: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0160: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0170: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0180: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0190: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01a0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01b0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01c0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01d0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01e0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01f0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0200: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0210: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0220: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0230: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0240: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0250: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0260: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0270: ** ** ** 30
+[19:44:17.868] INFO [会话 20261105194353 / 尝试 2] mfi: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=207；确认序号=102；iAP2 会话号=1；载荷长度=618；载荷摘要=iAP2 RX CSM id=0xaa01 body=612B params=[0:608B] data=[REDACTED:MFi]；含义=链路承载控制消息或分片
+[19:44:17.869] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=9
+    0000: ff 5a 00 09 40 66 cf 00 29
+[19:44:17.870] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=102；确认序号=207；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:17.873] INFO [会话 20261105194353 / 尝试 2] mfi: iAP2 RX CSM id=0xaa01 body=612B params=[0:608B] data=[REDACTED:MFi]
+[19:44:17.873] INFO [会话 20261105194353 / 尝试 2] mfi: 收到 MFi AA01 证书消息：body=612B, certificateChain=608B
+[19:44:17.873] INFO [会话 20261105194353 / 尝试 2] mfi: 开始解析 MFi 证书链并执行系统 PKIX/本地 pin 校验
+[19:44:17.874] INFO [会话 20261105194353 / 尝试 2] mfi: MFi certificate validation started: payloadBytes=608, container=PKCS#7 SignedData
+[19:44:17.874] INFO [会话 20261105194353 / 尝试 2] mfi: MFi AA01 parameter 0 received: bytes=608
+[19:44:17.970] ERROR [会话 20261105194353 / 尝试 2] session: CMS getCerts(SIGNER_CERTS) failed: Cms get certs fail.
+[19:44:17.970] INFO [会话 20261105194353 / 尝试 2] mfi: MFi certificate payload parsed: format=PKCS#7 SignedData, bytes=608, certificates=1, sha256=4717198bfa37174d72ba2977868488b40a6a4e3b72b196c1623b531b3243a9c4
+[19:44:17.970] INFO [会话 20261105194353 / 尝试 2] mfi: MFi PKIX uses system CA; AIA intermediate download disabled
+[19:44:17.971] INFO [会话 20261105194353 / 尝试 2] mfi: MFi PKIX validation started: candidates=1, untrustedCertificates=1, validationTime=261105114417Z
+[19:44:17.971] INFO [会话 20261105194353 / 尝试 2] mfi: MFi PKIX candidate 0: subject=C=US,O=Apple Inc.,OU=Apple Accessories,CN=IPA_47EF66AE86499201F61A2EC73313F3E1; issuer=C=US,O=Apple Inc.,OU=Apple Certification Authority,CN=Apple Accessories Certification Authority - 00000002
+[19:44:17.972] INFO [会话 20261105194353 / 尝试 2] mfi: MFi PKIX candidate 0 rejected: unable to get local issuer certificate | current cert subject name: C=US,O=Apple Inc.,OU=Apple Accessories,CN=IPA_47EF66AE86499201F61A2EC73313F3E
+[19:44:17.973] INFO [会话 20261105194353 / 尝试 2] mfi: MFi PKIX trust decision: candidate=0, decision=already-pinned, fingerprint=b5e9596be126e3b8f0ed9df83c38349103a8e521606c4ff67a6f86aaacd7ed7d
+[19:44:17.973] INFO [会话 20261105194353 / 尝试 2] mfi: MFi certificate accepted by exact user-pinned SHA-256 fingerprint b5e9596be126e3b8f0ed9df83c38349103a8e521606c4ff67a6f86aaacd7ed7d
+[19:44:17.973] INFO [会话 20261105194353 / 尝试 2] mfi: MFi 证书校验完成：format=PKCS#7 SignedData, certificates=1, candidates=1
+[19:44:17.974] INFO [会话 20261105194353 / 尝试 2] mfi: 按车机身份记忆优先使用 MFi challenge 32B
+[19:44:17.974] INFO [会话 20261105194353 / 尝试 2] mfi: 开始生成 MFi challenge：length=32B, attempt=1/3
+[19:44:17.974] INFO [会话 20261105194353 / 尝试 2] mfi: iAP2 TX CSM id=0xaa02 body=36B params=[0:32B] data=[REDACTED:MFi]
+[19:44:17.974] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=52; sensitive-bytes-masked=36
+    0000: ff 5a 00 34 40 67 cf 01 fc 40 40 00 2a aa 02 **
+    0010: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0020: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0030: ** ** ** 20
+[19:44:17.975] INFO [会话 20261105194353 / 尝试 2] mfi: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=103；确认序号=207；iAP2 会话号=1；载荷长度=42；载荷摘要=iAP2 TX CSM id=0xaa02 body=36B params=[0:32B] data=[REDACTED:MFi]；含义=链路承载控制消息或分片
+[19:44:17.975] INFO [会话 20261105194353 / 尝试 2] mfi: 已发送 32 字节 MFi challenge (1/3)
+[19:44:18.110] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:44:18.111] INFO [会话 20261105194353 / 尝试 2] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 cf 67 00 28
+[19:44:18.112] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=207；确认序号=103；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:18.447] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=84
+[19:44:18.449] INFO [会话 20261105194353 / 尝试 2] iap2: RAW RX iAP2 bytes=84; sensitive-bytes-masked=68
+    0000: ff 5a 00 54 40 d0 67 01 db 40 40 00 4a aa 03 **
+    0010: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0020: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0030: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0040: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0050: ** ** ** fc
+[19:44:18.451] INFO [会话 20261105194353 / 尝试 2] mfi: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=208；确认序号=103；iAP2 会话号=1；载荷长度=74；载荷摘要=iAP2 RX CSM id=0xaa03 body=68B params=[0:64B] data=[REDACTED:MFi]；含义=链路承载控制消息或分片
+[19:44:18.451] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=9
+    0000: ff 5a 00 09 40 67 d0 00 27
+[19:44:18.452] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=103；确认序号=208；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:18.453] INFO [会话 20261105194353 / 尝试 2] mfi: iAP2 RX CSM id=0xaa03 body=68B params=[0:64B] data=[REDACTED:MFi]
+[19:44:18.453] INFO [会话 20261105194353 / 尝试 2] mfi: 收到 MFi AA03 challenge 响应：body=68B, parameters=1, challenge=[已脱敏], signature=[已脱敏]
+[19:44:18.454] INFO [会话 20261105194353 / 尝试 2] mfi: 开始验证 MFi challenge 签名；暂不发送认证成功消息
+[19:44:18.454] INFO [会话 20261105194353 / 尝试 2] mfi: MFi challenge verification started: challengeBytes=32, signatureBytes=64, candidates=1
+[19:44:18.454] WARN [会话 20261105194353 / 尝试 2] mfi: WARN TEMPORARY DIAGNOSTIC BYPASS: MFi challenge signature NOT verified; continuing without authentication and without saving a fingerprint pin
+[19:44:18.455] INFO [会话 20261105194353 / 尝试 2] mfi: iAP2 TX CSM id=0xaa05 body=0B params=[none] data=[REDACTED:MFi]
+[19:44:18.455] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=16
+    0000: ff 5a 00 10 40 68 d0 01 1e 40 40 00 06 aa 05 cb
+[19:44:18.456] INFO [会话 20261105194353 / 尝试 2] mfi: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=104；确认序号=208；iAP2 会话号=1；载荷长度=6；载荷摘要=iAP2 TX CSM id=0xaa05 body=0B params=[none] data=[REDACTED:MFi]；含义=链路承载控制消息或分片
+[19:44:18.457] WARN [会话 20261105194353 / 尝试 2] mfi: WARN: 诊断模式跳过 challenge 验签；已发送 AA05 继续联调，但不会记录为已验证
+[19:44:18.457] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 TX CSM id=0x4e0d body=5B hex=00 05 00 00 01
+[19:44:18.458] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=21
+    0000: ff 5a 00 15 40 69 d0 01 18 40 40 00 0b 4e 0d 00
+    0010: 05 00 00 01 14
+[19:44:18.459] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=105；确认序号=208；iAP2 会话号=1；载荷长度=11；载荷摘要=iAP2 TX CSM id=0x4e0d body=5B hex=00 05 00 00 01；含义=链路承载控制消息或分片
+[19:44:18.460] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 TX CSM id=0x4e0a body=12B hex=00 0c 00 00 7a 68 2d 48 61 6e 73 00
+[19:44:18.461] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=28
+    0000: ff 5a 00 1c 40 6a d0 01 10 40 40 00 12 4e 0a 00
+    0010: 0c 00 00 7a 68 2d 48 61 6e 73 00 71
+[19:44:18.462] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=106；确认序号=208；iAP2 会话号=1；载荷长度=18；载荷摘要=iAP2 TX CSM id=0x4e0a body=12B hex=00 0c 00 00 7a 68 2d 48 61 6e 73 00；含义=链路承载控制消息或分片
+[19:44:18.464] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 TX CSM id=0x4e09 body=22B hex=00 16 00 00 48 61 72 6d 6f 6e 79 20 43 61 72 50 6c 61 79 65 72 00
+[19:44:18.465] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=38
+    0000: ff 5a 00 26 40 6b d0 01 05 40 40 00 1c 4e 09 00
+    0010: 16 00 00 48 61 72 6d 6f 6e 79 20 43 61 72 50 6c
+    0020: 61 79 65 72 00 76
+[19:44:18.466] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=107；确认序号=208；iAP2 会话号=1；载荷长度=28；载荷摘要=iAP2 TX CSM id=0x4e09 body=22B hex=00 16 00 00 48 61 72 6d 6f 6e 79 20 43 61 72 50 6c 61 79 65 72 00；含义=链路承载控制消息或分片
+[19:44:18.468] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 TX CSM id=0x4e0b body=23B hex=00 0c 00 00 00 00 00 00 6a ec 6c 12 00 06 00 01 01 e0 00 05 00 02 00
+[19:44:18.469] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=39
+    0000: ff 5a 00 27 40 6c d0 01 03 40 40 00 1d 4e 0b 00
+    0010: 0c 00 00 00 00 00 00 6a ec 6c 12 00 06 00 01 01
+    0020: e0 00 05 00 02 00 3b
+[19:44:18.470] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=108；确认序号=208；iAP2 会话号=1；载荷长度=29；载荷摘要=iAP2 TX CSM id=0x4e0b body=23B hex=00 0c 00 00 00 00 00 00 6a ec 6c 12 00 06 00 01 01 e0 00 05 00 02 00；含义=链路承载控制消息或分片
+[19:44:18.471] INFO [会话 20261105194353 / 尝试 2] mfi: 已为当前车机记忆成功的 32B MFi challenge 长度
+[19:44:18.472] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 TX CSM id=0x4e0c body=29B hex=00 1d 00 00 48 4f 53 2d 31 61 31 39 62 37 38 64 66 39 39 2d 31 32 66 35 63 36 36 35 00
+[19:44:18.472] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 发送窗口已满（5），1 个分片等待车机 ACK
+[19:44:18.473] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 TX CSM id=0xea00 body=27B hex=00 05 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00
+[19:44:18.473] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 发送窗口已满（5），2 个分片等待车机 ACK
+[19:44:18.473] INFO [会话 20261105194353 / 尝试 2] iap2: 已请求 iAP2 EA 会话：protocol=2 name=CinemoBTComponent
+[19:44:18.474] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 TX CSM id=0xea00 body=29B hex=00 05 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00
+[19:44:18.474] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 发送窗口已满（5），3 个分片等待车机 ACK
+[19:44:18.475] INFO [会话 20261105194353 / 尝试 2] iap2: 已请求 iAP2 EA 会话：protocol=3 name=CinemoWIFIComponent
+[19:44:18.475] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 TX CSM id=0xea00 body=25B hex=00 05 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00
+[19:44:18.475] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 发送窗口已满（5），4 个分片等待车机 ACK
+[19:44:18.475] INFO [会话 20261105194353 / 尝试 2] iap2: 已请求 iAP2 EA 会话：protocol=1 name=CinemoHIDRemote
+[19:44:18.529] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:44:18.530] INFO [会话 20261105194353 / 尝试 2] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 d0 6a 00 24
+[19:44:18.532] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=208；确认序号=106；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:18.533] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=45
+    0000: ff 5a 00 2d 40 6d d0 01 fc 40 40 00 23 4e 0c 00
+    0010: 1d 00 00 48 4f 53 2d 31 61 31 39 62 37 38 64 66
+    0020: 39 39 2d 31 32 66 35 63 36 36 35 00 97
+[19:44:18.535] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=109；确认序号=208；iAP2 会话号=1；载荷长度=35；载荷摘要=iAP2 TX CSM id=0x4e0c body=29B hex=00 1d 00 00 48 4f 53 2d 31 61 31 39 62 37 38 64 66 39 39 2d 31 32 66 35 63 36 36 35 00；含义=链路承载控制消息或分片
+[19:44:18.538] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=43
+    0000: ff 5a 00 2b 40 6e d0 01 fd 40 40 00 21 ea 00 00
+    0010: 05 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54
+    0020: 43 6f 6d 70 6f 6e 65 6e 74 00 b3
+[19:44:18.540] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=110；确认序号=208；iAP2 会话号=1；载荷长度=33；载荷摘要=iAP2 TX CSM id=0xea00 body=27B hex=00 05 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00；含义=链路承载控制消息或分片
+[19:44:18.543] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=45
+    0000: ff 5a 00 2d 40 6f d0 01 fa 40 40 00 23 ea 00 00
+    0010: 05 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49
+    0020: 46 49 43 6f 6d 70 6f 6e 65 6e 74 00 15
+[19:44:18.545] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=111；确认序号=208；iAP2 会话号=1；载荷长度=35；载荷摘要=iAP2 TX CSM id=0xea00 body=29B hex=00 05 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00；含义=链路承载控制消息或分片
+[19:44:18.547] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 发送窗口已满（5），1 个分片等待车机 ACK
+[19:44:18.615] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:44:18.617] INFO [会话 20261105194353 / 尝试 2] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 d0 6d 00 21
+[19:44:18.618] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=208；确认序号=109；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:18.620] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=41
+    0000: ff 5a 00 29 40 70 d0 01 fd 40 40 00 1f ea 00 00
+    0010: 05 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49
+    0020: 44 52 65 6d 6f 74 65 00 c0
+[19:44:18.621] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=112；确认序号=208；iAP2 会话号=1；载荷长度=31；载荷摘要=iAP2 TX CSM id=0xea00 body=25B hex=00 05 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00；含义=链路承载控制消息或分片
+[19:44:18.875] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:44:18.875] INFO [会话 20261105194353 / 尝试 2] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 d0 70 00 1e
+[19:44:18.875] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=208；确认序号=112；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:20.476] WARN [会话 20261105194353 / 尝试 2] iap2: 等待 iAP2 StartHID 超时（2s）；继续 Wi-Fi 配置交换
+[19:44:20.477] INFO [会话 20261105194353 / 尝试 2] iap2: 两份完整能力清单均未声明旧式 Wi-Fi；按新协议发送 0x4300/0x4301
+[19:44:20.479] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 TX CSM id=0x4300 body=31B hex=00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00
+[19:44:20.480] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=47
+    0000: ff 5a 00 2f 40 71 d0 01 f6 40 40 00 25 43 00 00
+    0010: 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30
+    0020: 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00 ff
+[19:44:20.482] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=113；确认序号=208；iAP2 会话号=1；载荷长度=37；载荷摘要=iAP2 TX CSM id=0x4300 body=31B hex=00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00；含义=链路承载控制消息或分片
+[19:44:20.484] INFO [会话 20261105194353 / 尝试 2] session: 已上报设备信息并发送 CarPlay 可用通知
+[19:44:20.485] INFO [会话 20261105194353 / 尝试 2] iap2: CarPlay 已声明可用，等待车机自动启动或用户选择 CarPlay；保持 iAP2 监听
+[19:44:20.583] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:44:20.585] INFO [会话 20261105194353 / 尝试 2] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 d0 71 00 1d
+[19:44:20.586] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=208；确认序号=113；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:44:28.485] WARN [会话 20261105194353 / 尝试 2] iap2: 等待 iAP2 0x4301 超时（8000ms）；保留晚到消息处理
+[19:44:28.486] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 TX CSM id=0x4e0e body=22B hex=00 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00
+[19:44:28.488] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=38
+    0000: ff 5a 00 26 40 72 d0 01 fe 40 40 00 1c 4e 0e 00
+    0010: 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45
+    0020: 44 3a 45 41 00 16
+[19:44:28.490] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=114；确认序号=208；iAP2 会话号=1；载荷长度=28；载荷摘要=iAP2 TX CSM id=0x4e0e body=22B hex=00 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00；含义=链路承载控制消息或分片
+[19:44:28.968] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:44:28.969] INFO [会话 20261105194353 / 尝试 2] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 d0 72 00 1c
+[19:44:28.970] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=208；确认序号=114；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:45:17.171] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=178
+[19:45:17.176] INFO [会话 20261105194353 / 尝试 2] iap2: RAW RX iAP2 bytes=178; sensitive-bytes-masked=17
+    0000: ff 5a 00 b2 40 d1 72 01 71 40 40 00 a8 43 01 00
+    0010: 50 00 01 00 0f 00 00 42 55 49 43 4b 5f 37 38 34
+    0020: 31 00 00 15 00 01 ** ** ** ** ** ** ** ** ** **
+    0030: ** ** ** ** ** ** ** 00 05 00 02 95 00 1e 00 03
+    0040: 66 65 38 30 3a 3a 31 38 39 39 3a 37 62 66 66 3a
+    0050: 66 65 33 39 3a 65 31 36 35 00 00 05 00 04 03 00
+    0060: 08 00 02 00 00 1b 58 00 16 00 03 45 43 3a 44 39
+    0070: 3a 30 39 3a 34 30 3a 37 41 3a 34 39 00 00 29 00
+    0080: 04 32 34 65 33 30 38 39 61 2d 62 39 63 38 2d 34
+    0090: 39 39 38 2d 62 65 62 32 2d 61 65 39 31 32 30 62
+    00a0: 34 34 30 35 33 00 00 0b 00 05 34 35 30 2e 31 34
+    00b0: 00 af
+[19:45:17.181] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=209；确认序号=114；iAP2 会话号=1；载荷长度=168；载荷摘要=iAP2 RX CSM id=0x4301 body=162B params=[group1=[p0:11B=42 55 49 43 4b 5f 37 38 34 31 00; p1:17B=[REDACTED:Wi-Fi passphrase]; p2:1B=95; p3:26B=66 65 38 30 3a 3a 31 38 39 39 3a 37 62 66 66 3a 66 65 33 39 3a 65 31 36 35 00; p4:1B=03]; p2:4B=00 00 1b 58; p3:18B=45 43 3a 44 39 3a 30 39 3a 34 30 3a 37 41 3a 34 39 00; p4:37B=32 34 65 33 30 38 39 61 2d 62 39 63 38 2d 34 39 39 38 2d 62 65 62 32 2d 61 65 39 31 32 30 62 34 34 30 35 33 00; p5:7B=34 35 30 2e 31 34 00]；含义=链路承载控制消息或分片
+[19:45:17.183] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=9
+    0000: ff 5a 00 09 40 72 d1 00 1b
+[19:45:17.184] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=114；确认序号=209；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:45:17.189] INFO [会话 20261105194353 / 尝试 2] iap2: iAP2 RX CSM id=0x4301 body=162B params=[group1=[p0:11B=42 55 49 43 4b 5f 37 38 34 31 00; p1:17B=[REDACTED:Wi-Fi passphrase]; p2:1B=95; p3:26B=66 65 38 30 3a 3a 31 38 39 39 3a 37 62 66 66 3a 66 65 33 39 3a 65 31 36 35 00; p4:1B=03]; p2:4B=00 00 1b 58; p3:18B=45 43 3a 44 39 3a 30 39 3a 34 30 3a 37 41 3a 34 39 00; p4:37B=32 34 65 33 30 38 39 61 2d 62 39 63 38 2d 34 39 39 38 2d 62 65 62 32 2d 61 65 39 31 32 30 62 34 34 30 35 33 00; p5:7B=34 35 30 2e 31 34 00]
+[19:45:17.192] INFO [会话 20261105194353 / 尝试 2] iap2: 从 0x4301 wireless group 解析网络：SSID=BUICK_7841，security=3，channel=149，密码已隐藏
+[19:45:17.192] INFO [会话 20261105194353 / 尝试 2] wifi: 收到车机热点配置：SSID=BUICK_7841，安全类型=3，密码已隐藏
+[19:45:17.194] INFO [会话 20261105194353 / 尝试 2] iap2: 状态：iAP2 已收到热点 BUICK_7841，正在自动连接
+[19:45:17.195] INFO [会话 20261105194353 / 尝试 2] iap2: 已从 iAP2 0x4301 获得 AirPlay 地址候选：1 个地址，port=7000
+[19:45:17.196] INFO [会话 20261105194353 / 尝试 2] iap2: 0x4301 未携带可识别的公钥；仅保留地址候选，身份仍须通过配对验证
+[19:45:17.197] INFO [会话 20261105194353 / 尝试 2] mdns: 解析 AirPlay 服务：iAP2 EC:D9:09:40:7A:49 fe80::1899:7bff:fe39:e165:7000
+[19:45:17.201] INFO [会话 20261105194353 / 尝试 2] wifi: 状态：正在自动连接车机 Wi-Fi：BUICK_7841
+[19:45:17.258] INFO [会话 20261105194353 / 尝试 2] wifi: 【移除 Wi-Fi 候选】 (wifi.candidate.removed) 网络编号=23；原因=before-next-candidate
+[19:45:17.280] INFO [会话 20261105194353 / 尝试 2] wifi: 【添加车机 Wi-Fi 候选】 (wifi.candidate.added) 网络名=BUICK_7841；安全类型=3；信道=149；网络编号=25
+[19:45:17.298] INFO [会话 20261105194353 / 尝试 2] wifi: 【请求连接车机 Wi-Fi】 (wifi.candidate.connect.requested) 网络名=BUICK_7841；网络编号=25；with User Action=否；add Network To System=否
+[19:45:17.301] INFO [会话 20261105194353 / 尝试 2] wifi: 【等待车机 Wi-Fi 地址】 (wifi.link.poll) 耗时=100；请求网络=BUICK_7841；当前网络=无；网络匹配=否；已分配地址=否
+[19:45:18.658] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=178
+[19:45:18.660] INFO [会话 20261105194353 / 尝试 2] iap2: RAW RX iAP2 bytes=178; sensitive-bytes-masked=17
+    0000: ff 5a 00 b2 40 d1 72 01 71 40 40 00 a8 43 01 00
+    0010: 50 00 01 00 0f 00 00 42 55 49 43 4b 5f 37 38 34
+    0020: 31 00 00 15 00 01 ** ** ** ** ** ** ** ** ** **
+    0030: ** ** ** ** ** ** ** 00 05 00 02 95 00 1e 00 03
+    0040: 66 65 38 30 3a 3a 31 38 39 39 3a 37 62 66 66 3a
+    0050: 66 65 33 39 3a 65 31 36 35 00 00 05 00 04 03 00
+    0060: 08 00 02 00 00 1b 58 00 16 00 03 45 43 3a 44 39
+    0070: 3a 30 39 3a 34 30 3a 37 41 3a 34 39 00 00 29 00
+    0080: 04 32 34 65 33 30 38 39 61 2d 62 39 63 38 2d 34
+    0090: 39 39 38 2d 62 65 62 32 2d 61 65 39 31 32 30 62
+    00a0: 34 34 30 35 33 00 00 0b 00 05 34 35 30 2e 31 34
+    00b0: 00 af
+[19:45:18.663] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=209；确认序号=114；iAP2 会话号=1；载荷长度=168；载荷摘要=iAP2 RX CSM id=0x4301 body=162B params=[group1=[p0:11B=42 55 49 43 4b 5f 37 38 34 31 00; p1:17B=[REDACTED:Wi-Fi passphrase]; p2:1B=95; p3:26B=66 65 38 30 3a 3a 31 38 39 39 3a 37 62 66 66 3a 66 65 33 39 3a 65 31 36 35 00; p4:1B=03]; p2:4B=00 00 1b 58; p3:18B=45 43 3a 44 39 3a 30 39 3a 34 30 3a 37 41 3a 34 39 00; p4:37B=32 34 65 33 30 38 39 61 2d 62 39 63 38 2d 34 39 39 38 2d 62 65 62 32 2d 61 65 39 31 32 30 62 34 34 30 35 33 00; p5:7B=34 35 30 2e 31 34 00]；含义=链路承载控制消息或分片
+[19:45:18.664] INFO [会话 20261105194353 / 尝试 2] iap2: RAW TX iAP2 bytes=9
+    0000: ff 5a 00 09 40 72 d1 00 1b
+[19:45:18.664] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=114；确认序号=209；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:45:20.318] INFO [会话 20261105194353 / 尝试 2] wifi: 【已连接车机 Wi-Fi】 (wifi.link.connected) 网络名=BUICK_7841；本机地址=10.12.82.67；网络编号=25；耗时=3116
+[19:45:20.318] INFO [会话 20261105194353 / 尝试 2] wifi: 【保留车机 Wi-Fi 配置】 (wifi.candidate.retained) 网络编号=25；原因=allow-auto-reconnect
+[19:45:20.318] INFO [会话 20261105194353 / 尝试 2] session: 正在请求指定 WLAN 网络：BUICK_7841
+[19:45:20.323] INFO [会话 20261105194353 / 尝试 2] session: 已匹配车机 WLAN：netId=130，localIp=10.12.82.67
+[19:45:20.323] INFO [会话 20261105194353 / 尝试 2] wifi: 指定车机 Wi-Fi 网络可用：netId=130
+[19:45:20.323] INFO [会话 20261105194353 / 尝试 2] wifi: 状态：已连接车机 Wi-Fi：BUICK_7841
+[19:45:20.324] INFO [会话 20261105194353 / 尝试 2] wifi: 车机 Wi-Fi 已连接，本机地址 10.12.82.67
+[19:45:20.324] INFO [会话 20261105194353 / 尝试 2] mdns: 【开始搜索 AirPlay 服务】 (mdns.discovery.started) 服务类型=_airplay._tcp
+[19:45:20.324] INFO [会话 20261105194353 / 尝试 2] airplay: 正在发现 _airplay._tcp 服务
+[19:45:20.325] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:20.325] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:20.325] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:20.325] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:20.342] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:20.342] INFO [会话 20261105194353 / 尝试 2] wifi: 指定车机 Wi-Fi socket 已绑定：purpose=mDNS RAW UDP, netId=130, family=IPv1
+[19:45:20.343] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:20.343] ERROR [会话 20261105194353 / 尝试 2] session: 连接结果：连接阶段失败：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:20.343] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:20.343] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (1，剩余 120 秒)
+[19:45:20.826] ERROR [会话 20261105194353 / 尝试 2] mdns: WARN: mDNS RAW 监听启动失败：[object Object]
+[19:45:22.344] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:22.345] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:22.346] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:22.346] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:22.348] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:22.350] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:22.351] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:22.351] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (2，剩余 118 秒)
+[19:45:24.353] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:24.354] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:24.354] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:24.355] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:24.356] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:24.360] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:24.360] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:24.361] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (3，剩余 116 秒)
+[19:45:25.327] WARN [会话 20261105194353 / 尝试 2] iap2: 【AirPlay 服务发现超时】 (mdns.discovery.timeout) 耗时=5001；服务类型=_airplay._tcp；服务数=0；含义=仍继续后台搜索；等待 0x4301 或后续 mDNS 服务
+[19:45:26.363] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:26.365] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:26.367] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:26.367] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:26.403] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:26.406] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:26.407] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:26.407] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (4，剩余 114 秒)
+[19:45:28.408] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:28.410] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:28.411] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:28.411] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:28.414] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:28.419] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:28.420] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:28.421] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (5，剩余 112 秒)
+[19:45:30.424] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:30.425] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:30.426] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:30.426] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:30.429] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:30.433] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:30.435] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:30.437] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (6，剩余 110 秒)
+[19:45:32.439] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:32.440] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:32.441] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:32.442] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:32.444] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:32.450] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:32.452] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:32.454] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (7，剩余 108 秒)
+[19:45:34.456] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:34.457] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:34.458] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:34.459] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:34.463] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:34.468] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:34.469] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:34.471] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (8，剩余 106 秒)
+[19:45:36.474] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:36.475] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:36.476] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:36.477] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:36.479] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:36.485] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:36.487] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:36.489] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (9，剩余 104 秒)
+[19:45:38.491] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:38.493] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:38.494] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:38.494] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:38.498] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:38.504] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:38.506] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:38.508] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (10，剩余 102 秒)
+[19:45:40.512] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:40.513] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:40.514] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:40.515] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:40.518] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:40.522] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:40.523] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:40.525] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (11，剩余 100 秒)
+[19:45:42.527] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:42.528] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:42.529] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:42.529] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:42.530] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:42.532] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:42.533] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:42.534] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (12，剩余 98 秒)
+[19:45:44.535] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:44.537] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:44.538] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:44.539] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:44.542] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:44.548] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:44.549] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:44.552] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (13，剩余 96 秒)
+[19:45:46.554] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:46.555] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:46.556] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:46.556] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:46.558] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:46.596] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:46.596] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:46.596] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (14，剩余 94 秒)
+[19:45:48.598] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:48.600] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:48.600] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:48.601] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:48.605] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:48.614] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:48.615] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:48.616] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (15，剩余 92 秒)
+[19:45:50.618] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:50.620] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:50.620] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:50.621] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:50.624] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:50.628] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:50.629] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:50.631] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (16，剩余 90 秒)
+[19:45:52.633] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:52.633] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:52.634] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:52.634] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:52.636] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:52.638] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:52.638] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:52.639] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (17，剩余 88 秒)
+[19:45:54.641] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:54.643] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:54.643] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:54.644] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:54.647] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:54.653] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:54.654] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:54.656] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (18，剩余 86 秒)
+[19:45:56.659] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:56.661] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:56.662] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:56.663] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:56.666] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:56.672] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:56.673] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:56.674] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (19，剩余 84 秒)
+[19:45:58.677] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:45:58.679] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:45:58.679] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:45:58.680] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:45:58.683] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:45:58.688] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:58.689] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:45:58.691] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (20，剩余 82 秒)
+[19:46:00.693] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:00.694] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:00.695] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:00.695] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:00.697] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:00.701] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:00.702] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:00.704] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (21，剩余 80 秒)
+[19:46:02.705] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:02.707] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:02.707] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:02.708] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:02.711] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:02.745] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:02.745] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:02.746] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (22，剩余 78 秒)
+[19:46:04.748] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:04.750] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:04.751] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:04.751] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:04.755] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:04.763] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:04.764] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:04.766] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (23，剩余 76 秒)
+[19:46:06.768] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:06.770] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:06.771] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:06.772] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:06.775] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:06.780] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:06.781] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:06.784] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (24，剩余 74 秒)
+[19:46:08.785] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:08.787] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:08.787] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:08.788] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:08.790] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:08.794] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:08.796] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:08.798] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (25，剩余 72 秒)
+[19:46:10.800] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:10.802] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:10.803] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:10.804] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:10.808] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:10.814] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:10.815] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:10.816] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (26，剩余 70 秒)
+[19:46:12.819] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:12.820] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:12.820] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:12.821] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:12.824] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:12.828] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:12.829] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:12.831] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (27，剩余 68 秒)
+[19:46:14.833] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:14.834] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:14.834] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:14.835] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:14.837] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:14.840] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:14.841] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:14.843] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (28，剩余 66 秒)
+[19:46:16.845] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:16.847] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:16.847] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:16.848] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:16.850] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:16.855] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:16.857] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:16.859] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (29，剩余 64 秒)
+[19:46:18.861] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:18.862] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:18.862] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:18.863] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:18.867] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:18.901] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:18.902] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:18.902] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (30，剩余 62 秒)
+[19:46:20.904] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:20.905] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:20.906] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:20.907] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:20.910] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:20.915] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:20.917] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:20.919] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (31，剩余 60 秒)
+[19:46:22.924] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:22.925] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:22.926] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:22.927] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:22.931] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:22.936] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:22.937] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:22.939] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (32，剩余 58 秒)
+[19:46:24.940] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:24.942] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:24.943] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:24.944] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:24.947] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:24.953] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:24.955] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:24.957] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (33，剩余 56 秒)
+[19:46:26.960] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:26.961] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:26.962] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:26.963] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:27.000] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:27.004] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:27.004] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:27.004] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (34，剩余 54 秒)
+[19:46:29.007] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:29.009] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:29.010] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:29.011] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:29.014] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:29.018] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:29.020] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:29.022] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (35，剩余 52 秒)
+[19:46:31.024] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:31.026] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:31.027] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:31.027] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:31.031] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:31.067] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:31.067] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:31.068] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (36，剩余 50 秒)
+[19:46:33.070] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:33.071] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:33.072] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:33.072] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:33.075] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:33.081] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:33.083] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:33.084] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (37，剩余 48 秒)
+[19:46:35.086] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:35.088] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:35.089] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:35.089] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:35.124] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:35.126] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:35.126] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:35.127] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (38，剩余 46 秒)
+[19:46:37.128] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:37.129] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:37.129] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:37.130] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:37.163] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:37.166] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:37.167] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:37.167] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (39，剩余 44 秒)
+[19:46:39.170] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:39.171] INFO [会话 20261105194353 / 尝试 2] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:39.172] INFO [会话 20261105194353 / 尝试 2] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:39.172] INFO [会话 20261105194353 / 尝试 2] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:39.175] INFO [会话 20261105194353 / 尝试 2] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:39.180] ERROR [会话 20261105194353 / 尝试 2] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:39.181] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:39.183] ERROR [会话 20261105194353 / 尝试 2] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (40，剩余 42 秒)
+[19:46:39.962] INFO [会话 20261105194353 / 尝试 2] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=6
+[19:46:39.964] INFO [会话 20261105194353 / 尝试 2] iap2: RAW RX RFCOMM iAP2 marker bytes=6
+    0000: ff 55 02 00 ee 10
+[19:46:39.965] INFO [会话 20261105194353 / 尝试 3] iap2: 车机重新发送 iAP2 检测标记；清除旧认证状态并重新协商链路
+[19:46:39.965] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX RFCOMM iAP2 marker bytes=6
+    0000: ff 55 02 00 ee 10
+[19:46:39.973] INFO [会话 20261105194353 / 尝试 3] iap2: 已发送 iAP2 检测标记，等待车机发起链路同步
+[19:46:40.056] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=26
+[19:46:40.057] INFO [会话 20261105194353 / 尝试 3] iap2: RAW RX iAP2 bytes=26
+    0000: ff 5a 00 1a 80 3d 00 00 d0 01 05 08 00 05 dc 00
+    0010: 49 1e 03 01 00 02 02 01 02 9f
+[19:46:40.059] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x80；序号=61；确认序号=0；iAP2 会话号=0；载荷长度=16；载荷摘要=non-CSM payload omitted (16B)；含义=链路同步帧，声明会话和传输参数
+[19:46:40.060] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 链路参数：maxOutstanding=5, maxPacket=2048, retransmitMs=1500, maxRetransmissions=30
+[19:46:40.061] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=26
+    0000: ff 5a 00 1a c0 63 3d 00 2d 01 05 08 00 05 dc 00
+    0010: 49 1e 03 01 00 02 02 01 02 9f
+[19:46:40.063] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0xc0；序号=99；确认序号=61；iAP2 会话号=0；载荷长度=16；载荷摘要=non-CSM payload omitted (16B)；含义=链路同步帧，声明会话和传输参数
+[19:46:40.064] INFO [会话 20261105194353 / 尝试 3] iap2: 收到 iAP2 同步包，控制会话 1
+[19:46:40.065] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 TX CSM id=0x1d00 body=0B hex=empty
+[19:46:40.066] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=16
+    0000: ff 5a 00 10 40 64 3d 01 b5 40 40 00 06 1d 00 5d
+[19:46:40.068] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=100；确认序号=61；iAP2 会话号=1；载荷长度=6；载荷摘要=iAP2 TX CSM id=0x1d00 body=0B hex=empty；含义=链路承载控制消息或分片
+[19:46:40.071] INFO [会话 20261105194353 / 尝试 3] iap2: 已发送 iAP2 IDENTIFICATION_START，等待车机识别信息
+[19:46:40.128] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:46:40.129] INFO [会话 20261105194353 / 尝试 3] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 3d 63 00 be
+[19:46:40.131] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=61；确认序号=99；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:46:40.221] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=545
+[19:46:40.228] INFO [会话 20261105194353 / 尝试 3] iap2: RAW RX iAP2 bytes=545
+    0000: ff 5a 02 21 40 3e 64 01 a1 40 40 02 17 1d 01 00
+    0010: 0f 00 00 42 55 49 43 4b 5f 37 38 34 31 00 00 09
+    0020: 00 01 45 32 4c 42 00 00 18 00 02 53 61 69 63 20
+    0030: 47 65 6e 65 72 61 6c 20 4d 6f 74 6f 72 73 00 00
+    0040: 0d 00 03 61 31 35 39 31 37 30 66 00 00 2f 00 04
+    0050: 61 65 67 65 61 6e 5f 6e 2d 75 73 65 72 20 31 32
+    0060: 20 53 51 42 50 35 2d 33 30 20 33 30 36 20 72 65
+    0070: 6c 65 61 73 65 2d 6b 65 79 73 00 00 0f 00 05 53
+    0080: 41 38 31 35 35 2d 31 2e 30 00 00 15 00 22 65 66
+    0090: 64 61 61 35 30 66 62 32 62 61 34 31 31 66 00 00
+    00a0: 1a 00 06 aa 06 68 00 68 02 68 03 4c 00 4c 02 4c
+    00b0: 03 4c 05 50 00 50 02 43 01 00 16 00 07 68 01 4c
+    00c0: 01 4c 04 50 01 4e 09 4e 0a 4e 0b 4e 0c 43 00 00
+    00d0: 05 00 08 00 00 06 00 09 00 00 00 07 00 0c 7a 68
+    00e0: 00 00 07 00 0d 65 6e 00 00 07 00 0d 66 72 00 00
+    00f0: 07 00 0d 65 73 00 00 07 00 0d 64 65 00 00 07 00
+    0100: 0d 69 74 00 00 07 00 0d 7a 68 00 00 07 00 0d 72
+    0110: 75 00 00 07 00 0d 6e 6c 00 00 07 00 0d 74 72 00
+    0120: 00 07 00 0d 70 6c 00 00 07 00 0d 70 6b 00 00 07
+    0130: 00 0d 6b 6f 00 00 07 00 0d 61 72 00 00 07 00 0d
+    0140: 65 6c 00 00 07 00 0d 73 76 00 00 07 00 0d 68 75
+    0150: 00 00 07 00 0d 64 61 00 00 07 00 0d 72 6f 00 00
+    0160: 07 00 0d 6e 62 00 00 07 00 0d 66 69 00 00 07 00
+    0170: 0d 68 72 00 00 07 00 0d 73 6c 00 00 07 00 0d 63
+    0180: 73 00 00 07 00 0d 73 6b 00 00 07 00 0d 62 67 00
+    0190: 00 07 00 0d 75 6b 00 00 07 00 0d 73 72 00 00 07
+    01a0: 00 0d 6a 61 00 00 2e 00 11 00 06 00 00 00 02 00
+    01b0: 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f
+    01c0: 6e 65 6e 74 00 00 04 00 02 00 0a 00 03 34 30 3a
+    01d0: 30 36 00 00 2a 00 18 00 06 00 00 00 03 00 18 00
+    01e0: 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f
+    01f0: 6e 65 6e 74 00 00 04 00 02 00 04 00 04 00 23 00
+    0200: 12 00 06 00 00 00 01 00 14 00 01 43 69 6e 65 6d
+    0210: 6f 48 49 44 52 65 6d 6f 74 65 00 00 05 00 02 01
+    0220: 59
+[19:46:40.236] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=62；确认序号=100；iAP2 会话号=1；载荷长度=535；载荷摘要=iAP2 RX CSM id=0x1d01 body=529B hex=00 0f 00 00 42 55 49 43 4b 5f 37 38 34 31 00 00 09 00 01 45 32 4c 42 00 00 18 00 02 53 61 69 63 20 47 65 6e 65 72 61 6c 20 4d 6f 74 6f 72 73 00 00 0d 00 03 61 31 35 39 31 37 30 66 00 00 2f 00 04 61 65 67 65 61 6e 5f 6e 2d 75 73 65 72 20 31 32 20 53 51 42 50 35 2d 33 30 20 33 30 36 20 72 65 6c 65 61 73 65 2d 6b 65 79 73 00 00 0f 00 05 53 41 38 31 35 35 2d 31 2e 30 00 00 15 00 22 65 66 64 61 61 35 30 66 62 32 62 61 34 31 31 66 00 00 1a 00 06 aa 06 68 00 68 02 68 03 4c 00 4c 02 4c 03 4c 05 50 00 50 02 43 01 00 16 00 07 68 01 4c 01 4c 04 50 01 4e 09 4e 0a 4e 0b 4e 0c 43 00 00 05 00 08 00 00 06 00 09 00 00 00 07 00 0c 7a 68 00 00 07 00 0d 65 6e 00 00 07 00 0d 66 72 00 00 07 00 0d 65 73 00 00 07 00 0d 64 65 00 00 07 00 0d 69 74 00 00 07 00 0d 7a 68 00 00 07 00 0d 72 75 00 00 07 00 0d 6e 6c 00 00 07 00 0d 74 72 00 00 07 00 0d 70 6c 00 00 07 00 0d 70 6b 00 00 07 00 0d 6b 6f 00 00 07 00 0d 61 72 00 00 07 00 0d 65 6c 00 00 07 00 0d 73 76 00 00 07 00 0d 68 75 00 00 07 00 0d 64 61 00 00 07 00 0d 72 6f 00 00 07 00 0d 6e 62 00 00 07 00 0d 66 69 00 00 07 00 0d 68 72 00 00 07 00 0d 73 6c 00 00 07 00 0d 63 73 00 00 07 00 0d 73 6b 00 00 07 00 0d 62 67 00 00 07 00 0d 75 6b 00 00 07 00 0d 73 72 00 00 07 00 0d 6a 61 00 00 2e 00 11 00 06 00 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 0a 00 03 34 30 3a 30 36 00 00 2a 00 18 00 06 00 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 04 00 04 00 23 00 12 00 06 00 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00 00 05 00 02 01；含义=链路承载控制消息或分片
+[19:46:40.239] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=9
+    0000: ff 5a 00 09 40 64 3e 00 bc
+[19:46:40.240] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=100；确认序号=62；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:46:40.243] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 RX CSM id=0x1d01 body=529B hex=00 0f 00 00 42 55 49 43 4b 5f 37 38 34 31 00 00 09 00 01 45 32 4c 42 00 00 18 00 02 53 61 69 63 20 47 65 6e 65 72 61 6c 20 4d 6f 74 6f 72 73 00 00 0d 00 03 61 31 35 39 31 37 30 66 00 00 2f 00 04 61 65 67 65 61 6e 5f 6e 2d 75 73 65 72 20 31 32 20 53 51 42 50 35 2d 33 30 20 33 30 36 20 72 65 6c 65 61 73 65 2d 6b 65 79 73 00 00 0f 00 05 53 41 38 31 35 35 2d 31 2e 30 00 00 15 00 22 65 66 64 61 61 35 30 66 62 32 62 61 34 31 31 66 00 00 1a 00 06 aa 06 68 00 68 02 68 03 4c 00 4c 02 4c 03 4c 05 50 00 50 02 43 01 00 16 00 07 68 01 4c 01 4c 04 50 01 4e 09 4e 0a 4e 0b 4e 0c 43 00 00 05 00 08 00 00 06 00 09 00 00 00 07 00 0c 7a 68 00 00 07 00 0d 65 6e 00 00 07 00 0d 66 72 00 00 07 00 0d 65 73 00 00 07 00 0d 64 65 00 00 07 00 0d 69 74 00 00 07 00 0d 7a 68 00 00 07 00 0d 72 75 00 00 07 00 0d 6e 6c 00 00 07 00 0d 74 72 00 00 07 00 0d 70 6c 00 00 07 00 0d 70 6b 00 00 07 00 0d 6b 6f 00 00 07 00 0d 61 72 00 00 07 00 0d 65 6c 00 00 07 00 0d 73 76 00 00 07 00 0d 68 75 00 00 07 00 0d 64 61 00 00 07 00 0d 72 6f 00 00 07 00 0d 6e 62 00 00 07 00 0d 66 69 00 00 07 00 0d 68 72 00 00 07 00 0d 73 6c 00 00 07 00 0d 63 73 00 00 07 00 0d 73 6b 00 00 07 00 0d 62 67 00 00 07 00 0d 75 6b 00 00 07 00 0d 73 72 00 00 07 00 0d 6a 61 00 00 2e 00 11 00 06 00 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 0a 00 03 34 30 3a 30 36 00 00 2a 00 18 00 06 00 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00 00 04 00 02 00 04 00 04 00 23 00 12 00 06 00 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00 00 05 00 02 01
+[19:46:40.245] INFO [会话 20261105194353 / 尝试 3] mfi: 车机身份已读取，首选 MFi challenge 32B
+[19:46:40.246] INFO [会话 20261105194353 / 尝试 3] mfi: 车机 MFi 能力声明：可发 AA01=false, 可发 AA03=false, 可收 AA00=false, 可发 AA06=true
+[19:46:40.246] INFO [会话 20261105194353 / 尝试 3] mfi: iAP2 Authentication 消息不要求列入 1D01 收发清单；按标准执行证书交换
+[19:46:40.247] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 TX CSM id=0x1d02 body=0B hex=empty
+[19:46:40.247] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=16
+    0000: ff 5a 00 10 40 65 3e 01 b3 40 40 00 06 1d 02 5b
+[19:46:40.248] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=101；确认序号=62；iAP2 会话号=1；载荷长度=6；载荷摘要=iAP2 TX CSM id=0x1d02 body=0B hex=empty；含义=链路承载控制消息或分片
+[19:46:40.392] INFO [会话 20261105194353 / 尝试 3] mfi: 认证消息属于 iAP2 清单例外；即使 1D01 未列出 AA00/AA01，也按标准发起证书请求
+[19:46:40.392] INFO [会话 20261105194353 / 尝试 3] mfi: iAP2 TX CSM id=0xaa00 body=0B params=[none] data=[REDACTED:MFi]
+[19:46:40.392] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=16
+    0000: ff 5a 00 10 40 66 3e 01 b2 40 40 00 06 aa 00 d0
+[19:46:40.392] INFO [会话 20261105194353 / 尝试 3] mfi: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=102；确认序号=62；iAP2 会话号=1；载荷长度=6；载荷摘要=iAP2 TX CSM id=0xaa00 body=0B params=[none] data=[REDACTED:MFi]；含义=链路承载控制消息或分片
+[19:46:40.393] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:46:40.393] INFO [会话 20261105194353 / 尝试 3] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 3e 65 00 bb
+[19:46:40.393] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=62；确认序号=101；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:46:40.486] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=628
+[19:46:40.494] INFO [会话 20261105194353 / 尝试 3] iap2: RAW RX iAP2 bytes=628; sensitive-bytes-masked=612
+    0000: ff 5a 02 74 40 3f 66 01 4b 40 40 02 6a aa 01 **
+    0010: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0020: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0030: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0040: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0050: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0060: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0070: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0080: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0090: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00a0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00b0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00c0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00d0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00e0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    00f0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0100: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0110: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0120: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0130: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0140: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0150: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0160: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0170: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0180: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0190: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01a0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01b0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01c0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01d0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01e0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    01f0: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0200: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0210: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0220: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0230: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0240: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0250: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0260: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0270: ** ** ** 30
+[19:46:40.498] INFO [会话 20261105194353 / 尝试 3] mfi: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=63；确认序号=102；iAP2 会话号=1；载荷长度=618；载荷摘要=iAP2 RX CSM id=0xaa01 body=612B params=[0:608B] data=[REDACTED:MFi]；含义=链路承载控制消息或分片
+[19:46:40.499] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=9
+    0000: ff 5a 00 09 40 66 3f 00 b9
+[19:46:40.500] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=102；确认序号=63；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:46:40.643] INFO [会话 20261105194353 / 尝试 3] mfi: iAP2 RX CSM id=0xaa01 body=612B params=[0:608B] data=[REDACTED:MFi]
+[19:46:40.643] INFO [会话 20261105194353 / 尝试 3] mfi: 收到 MFi AA01 证书消息：body=612B, certificateChain=608B
+[19:46:40.643] INFO [会话 20261105194353 / 尝试 3] mfi: 开始解析 MFi 证书链并执行系统 PKIX/本地 pin 校验
+[19:46:40.643] INFO [会话 20261105194353 / 尝试 3] mfi: MFi certificate validation started: payloadBytes=608, container=PKCS#7 SignedData
+[19:46:40.643] INFO [会话 20261105194353 / 尝试 3] mfi: MFi AA01 parameter 0 received: bytes=608
+[19:46:40.659] ERROR [会话 20261105194353 / 尝试 3] session: CMS getCerts(SIGNER_CERTS) failed: Cms get certs fail.
+[19:46:40.660] INFO [会话 20261105194353 / 尝试 3] mfi: MFi certificate payload parsed: format=PKCS#7 SignedData, bytes=608, certificates=1, sha256=4717198bfa37174d72ba2977868488b40a6a4e3b72b196c1623b531b3243a9c4
+[19:46:40.660] INFO [会话 20261105194353 / 尝试 3] mfi: MFi PKIX uses system CA; AIA intermediate download disabled
+[19:46:40.660] INFO [会话 20261105194353 / 尝试 3] mfi: MFi PKIX validation started: candidates=1, untrustedCertificates=1, validationTime=261105114640Z
+[19:46:40.661] INFO [会话 20261105194353 / 尝试 3] mfi: MFi PKIX candidate 0: subject=C=US,O=Apple Inc.,OU=Apple Accessories,CN=IPA_47EF66AE86499201F61A2EC73313F3E1; issuer=C=US,O=Apple Inc.,OU=Apple Certification Authority,CN=Apple Accessories Certification Authority - 00000002
+[19:46:40.662] INFO [会话 20261105194353 / 尝试 3] mfi: MFi PKIX candidate 0 rejected: unable to get local issuer certificate | current cert subject name: C=US,O=Apple Inc.,OU=Apple Accessories,CN=IPA_47EF66AE86499201F61A2EC73313F3E
+[19:46:40.663] INFO [会话 20261105194353 / 尝试 3] mfi: MFi PKIX trust decision: candidate=0, decision=already-pinned, fingerprint=b5e9596be126e3b8f0ed9df83c38349103a8e521606c4ff67a6f86aaacd7ed7d
+[19:46:40.663] INFO [会话 20261105194353 / 尝试 3] mfi: MFi certificate accepted by exact user-pinned SHA-256 fingerprint b5e9596be126e3b8f0ed9df83c38349103a8e521606c4ff67a6f86aaacd7ed7d
+[19:46:40.663] INFO [会话 20261105194353 / 尝试 3] mfi: MFi 证书校验完成：format=PKCS#7 SignedData, certificates=1, candidates=1
+[19:46:40.664] INFO [会话 20261105194353 / 尝试 3] mfi: 按车机身份记忆优先使用 MFi challenge 32B
+[19:46:40.664] INFO [会话 20261105194353 / 尝试 3] mfi: 开始生成 MFi challenge：length=32B, attempt=1/3
+[19:46:40.664] INFO [会话 20261105194353 / 尝试 3] mfi: iAP2 TX CSM id=0xaa02 body=36B params=[0:32B] data=[REDACTED:MFi]
+[19:46:40.665] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=52; sensitive-bytes-masked=36
+    0000: ff 5a 00 34 40 67 3f 01 8c 40 40 00 2a aa 02 **
+    0010: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0020: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0030: ** ** ** 33
+[19:46:40.665] INFO [会话 20261105194353 / 尝试 3] mfi: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=103；确认序号=63；iAP2 会话号=1；载荷长度=42；载荷摘要=iAP2 TX CSM id=0xaa02 body=36B params=[0:32B] data=[REDACTED:MFi]；含义=链路承载控制消息或分片
+[19:46:40.665] INFO [会话 20261105194353 / 尝试 3] mfi: 已发送 32 字节 MFi challenge (1/3)
+[19:46:40.746] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:46:40.747] INFO [会话 20261105194353 / 尝试 3] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 3f 67 00 b8
+[19:46:40.747] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=63；确认序号=103；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:46:41.171] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=84
+[19:46:41.171] INFO [会话 20261105194353 / 尝试 3] iap2: RAW RX iAP2 bytes=84; sensitive-bytes-masked=68
+    0000: ff 5a 00 54 40 40 67 01 6b 40 40 00 4a aa 03 **
+    0010: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0020: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0030: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0040: ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    0050: ** ** ** 62
+[19:46:41.172] INFO [会话 20261105194353 / 尝试 3] mfi: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=64；确认序号=103；iAP2 会话号=1；载荷长度=74；载荷摘要=iAP2 RX CSM id=0xaa03 body=68B params=[0:64B] data=[REDACTED:MFi]；含义=链路承载控制消息或分片
+[19:46:41.172] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=9
+    0000: ff 5a 00 09 40 67 40 00 b7
+[19:46:41.173] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=103；确认序号=64；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:46:41.176] INFO [会话 20261105194353 / 尝试 3] mfi: iAP2 RX CSM id=0xaa03 body=68B params=[0:64B] data=[REDACTED:MFi]
+[19:46:41.176] INFO [会话 20261105194353 / 尝试 3] mfi: 收到 MFi AA03 challenge 响应：body=68B, parameters=1, challenge=[已脱敏], signature=[已脱敏]
+[19:46:41.176] INFO [会话 20261105194353 / 尝试 3] mfi: 开始验证 MFi challenge 签名；暂不发送认证成功消息
+[19:46:41.176] INFO [会话 20261105194353 / 尝试 3] mfi: MFi challenge verification started: challengeBytes=32, signatureBytes=64, candidates=1
+[19:46:41.176] WARN [会话 20261105194353 / 尝试 3] mfi: WARN TEMPORARY DIAGNOSTIC BYPASS: MFi challenge signature NOT verified; continuing without authentication and without saving a fingerprint pin
+[19:46:41.177] INFO [会话 20261105194353 / 尝试 3] mfi: iAP2 TX CSM id=0xaa05 body=0B params=[none] data=[REDACTED:MFi]
+[19:46:41.177] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=16
+    0000: ff 5a 00 10 40 68 40 01 ae 40 40 00 06 aa 05 cb
+[19:46:41.177] INFO [会话 20261105194353 / 尝试 3] mfi: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=104；确认序号=64；iAP2 会话号=1；载荷长度=6；载荷摘要=iAP2 TX CSM id=0xaa05 body=0B params=[none] data=[REDACTED:MFi]；含义=链路承载控制消息或分片
+[19:46:41.178] WARN [会话 20261105194353 / 尝试 3] mfi: WARN: 诊断模式跳过 challenge 验签；已发送 AA05 继续联调，但不会记录为已验证
+[19:46:41.178] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 TX CSM id=0x4e0d body=5B hex=00 05 00 00 01
+[19:46:41.179] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=21
+    0000: ff 5a 00 15 40 69 40 01 a8 40 40 00 0b 4e 0d 00
+    0010: 05 00 00 01 14
+[19:46:41.179] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=105；确认序号=64；iAP2 会话号=1；载荷长度=11；载荷摘要=iAP2 TX CSM id=0x4e0d body=5B hex=00 05 00 00 01；含义=链路承载控制消息或分片
+[19:46:41.181] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 TX CSM id=0x4e0a body=12B hex=00 0c 00 00 7a 68 2d 48 61 6e 73 00
+[19:46:41.181] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=28
+    0000: ff 5a 00 1c 40 6a 40 01 a0 40 40 00 12 4e 0a 00
+    0010: 0c 00 00 7a 68 2d 48 61 6e 73 00 71
+[19:46:41.181] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=106；确认序号=64；iAP2 会话号=1；载荷长度=18；载荷摘要=iAP2 TX CSM id=0x4e0a body=12B hex=00 0c 00 00 7a 68 2d 48 61 6e 73 00；含义=链路承载控制消息或分片
+[19:46:41.183] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 TX CSM id=0x4e09 body=22B hex=00 16 00 00 48 61 72 6d 6f 6e 79 20 43 61 72 50 6c 61 79 65 72 00
+[19:46:41.183] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=38
+    0000: ff 5a 00 26 40 6b 40 01 95 40 40 00 1c 4e 09 00
+    0010: 16 00 00 48 61 72 6d 6f 6e 79 20 43 61 72 50 6c
+    0020: 61 79 65 72 00 76
+[19:46:41.183] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=107；确认序号=64；iAP2 会话号=1；载荷长度=28；载荷摘要=iAP2 TX CSM id=0x4e09 body=22B hex=00 16 00 00 48 61 72 6d 6f 6e 79 20 43 61 72 50 6c 61 79 65 72 00；含义=链路承载控制消息或分片
+[19:46:41.184] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:41.184] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:41.184] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:41.184] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:41.184] INFO [会话 20261105194353 / 尝试 3] mfi: 已为当前车机记忆成功的 32B MFi challenge 长度
+[19:46:41.185] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 TX CSM id=0x4e0b body=23B hex=00 0c 00 00 00 00 00 00 6a ec 6c a1 00 06 00 01 01 e0 00 05 00 02 00
+[19:46:41.185] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=39
+    0000: ff 5a 00 27 40 6c 40 01 93 40 40 00 1d 4e 0b 00
+    0010: 0c 00 00 00 00 00 00 6a ec 6c a1 00 06 00 01 01
+    0020: e0 00 05 00 02 00 ac
+[19:46:41.185] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=108；确认序号=64；iAP2 会话号=1；载荷长度=29；载荷摘要=iAP2 TX CSM id=0x4e0b body=23B hex=00 0c 00 00 00 00 00 00 6a ec 6c a1 00 06 00 01 01 e0 00 05 00 02 00；含义=链路承载控制消息或分片
+[19:46:41.186] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 TX CSM id=0x4e0c body=29B hex=00 1d 00 00 48 4f 53 2d 31 61 31 39 62 37 38 64 66 39 39 2d 31 32 66 35 63 36 36 35 00
+[19:46:41.186] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 发送窗口已满（5），1 个分片等待车机 ACK
+[19:46:41.186] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 TX CSM id=0xea00 body=27B hex=00 05 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00
+[19:46:41.187] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 发送窗口已满（5），2 个分片等待车机 ACK
+[19:46:41.187] INFO [会话 20261105194353 / 尝试 3] iap2: 已请求 iAP2 EA 会话：protocol=2 name=CinemoBTComponent
+[19:46:41.187] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 TX CSM id=0xea00 body=29B hex=00 05 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00
+[19:46:41.187] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 发送窗口已满（5），3 个分片等待车机 ACK
+[19:46:41.187] INFO [会话 20261105194353 / 尝试 3] iap2: 已请求 iAP2 EA 会话：protocol=3 name=CinemoWIFIComponent
+[19:46:41.187] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 TX CSM id=0xea00 body=25B hex=00 05 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00
+[19:46:41.187] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 发送窗口已满（5），4 个分片等待车机 ACK
+[19:46:41.187] INFO [会话 20261105194353 / 尝试 3] iap2: 已请求 iAP2 EA 会话：protocol=1 name=CinemoHIDRemote
+[19:46:41.189] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:41.190] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:41.190] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:41.191] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (41，剩余 40 秒)
+[19:46:41.248] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:46:41.250] INFO [会话 20261105194353 / 尝试 3] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 40 6a 00 b4
+[19:46:41.251] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=64；确认序号=106；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:46:41.253] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=45
+    0000: ff 5a 00 2d 40 6d 40 01 8c 40 40 00 23 4e 0c 00
+    0010: 1d 00 00 48 4f 53 2d 31 61 31 39 62 37 38 64 66
+    0020: 39 39 2d 31 32 66 35 63 36 36 35 00 97
+[19:46:41.254] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=109；确认序号=64；iAP2 会话号=1；载荷长度=35；载荷摘要=iAP2 TX CSM id=0x4e0c body=29B hex=00 1d 00 00 48 4f 53 2d 31 61 31 39 62 37 38 64 66 39 39 2d 31 32 66 35 63 36 36 35 00；含义=链路承载控制消息或分片
+[19:46:41.255] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=43
+    0000: ff 5a 00 2b 40 6e 40 01 8d 40 40 00 21 ea 00 00
+    0010: 05 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54
+    0020: 43 6f 6d 70 6f 6e 65 6e 74 00 b3
+[19:46:41.256] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=110；确认序号=64；iAP2 会话号=1；载荷长度=33；载荷摘要=iAP2 TX CSM id=0xea00 body=27B hex=00 05 00 00 02 00 16 00 01 43 69 6e 65 6d 6f 42 54 43 6f 6d 70 6f 6e 65 6e 74 00；含义=链路承载控制消息或分片
+[19:46:41.257] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=45
+    0000: ff 5a 00 2d 40 6f 40 01 8a 40 40 00 23 ea 00 00
+    0010: 05 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49
+    0020: 46 49 43 6f 6d 70 6f 6e 65 6e 74 00 15
+[19:46:41.258] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=111；确认序号=64；iAP2 会话号=1；载荷长度=35；载荷摘要=iAP2 TX CSM id=0xea00 body=29B hex=00 05 00 00 03 00 18 00 01 43 69 6e 65 6d 6f 57 49 46 49 43 6f 6d 70 6f 6e 65 6e 74 00；含义=链路承载控制消息或分片
+[19:46:41.261] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 发送窗口已满（5），1 个分片等待车机 ACK
+[19:46:41.266] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:46:41.267] INFO [会话 20261105194353 / 尝试 3] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 40 6d 00 b1
+[19:46:41.267] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=64；确认序号=109；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:46:41.268] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=41
+    0000: ff 5a 00 29 40 70 40 01 8d 40 40 00 1f ea 00 00
+    0010: 05 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49
+    0020: 44 52 65 6d 6f 74 65 00 c0
+[19:46:41.269] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=112；确认序号=64；iAP2 会话号=1；载荷长度=31；载荷摘要=iAP2 TX CSM id=0xea00 body=25B hex=00 05 00 00 01 00 14 00 01 43 69 6e 65 6d 6f 48 49 44 52 65 6d 6f 74 65 00；含义=链路承载控制消息或分片
+[19:46:41.351] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:46:41.353] INFO [会话 20261105194353 / 尝试 3] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 40 70 00 ae
+[19:46:41.355] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=64；确认序号=112；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:46:43.189] WARN [会话 20261105194353 / 尝试 3] iap2: 等待 iAP2 StartHID 超时（2s）；继续 Wi-Fi 配置交换
+[19:46:43.190] INFO [会话 20261105194353 / 尝试 3] iap2: 两份完整能力清单均未声明旧式 Wi-Fi；按新协议发送 0x4300/0x4301
+[19:46:43.191] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 TX CSM id=0x4300 body=31B hex=00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00
+[19:46:43.192] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=47
+    0000: ff 5a 00 2f 40 71 40 01 86 40 40 00 25 43 00 00
+    0010: 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30
+    0020: 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00 ff
+[19:46:43.194] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=113；确认序号=64；iAP2 会话号=1；载荷长度=37；载荷摘要=iAP2 TX CSM id=0x4300 body=31B hex=00 1f 00 01 00 05 00 00 01 00 16 00 01 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00；含义=链路承载控制消息或分片
+[19:46:43.195] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:43.195] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:43.195] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:43.196] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:43.196] INFO [会话 20261105194353 / 尝试 3] session: 已上报设备信息并发送 CarPlay 可用通知
+[19:46:43.196] INFO [会话 20261105194353 / 尝试 3] iap2: CarPlay 已声明可用，等待车机自动启动或用户选择 CarPlay；保持 iAP2 监听
+[19:46:43.220] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:43.221] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:43.221] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:43.222] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (42，剩余 38 秒)
+[19:46:43.319] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:46:43.319] INFO [会话 20261105194353 / 尝试 3] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 40 71 00 ad
+[19:46:43.320] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=64；确认序号=113；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:46:45.224] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:45.225] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:45.226] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:45.226] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:45.264] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:45.268] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:45.269] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:45.269] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (43，剩余 36 秒)
+[19:46:47.270] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:47.272] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:47.272] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:47.273] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:47.276] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:47.281] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:47.283] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:47.285] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (44，剩余 34 秒)
+[19:46:49.289] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:49.290] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:49.291] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:49.292] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:49.297] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:49.302] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:49.303] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:49.305] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (45，剩余 32 秒)
+[19:46:51.197] WARN [会话 20261105194353 / 尝试 3] iap2: 等待 iAP2 0x4301 超时（8000ms）；保留晚到消息处理
+[19:46:51.198] INFO [会话 20261105194353 / 尝试 3] iap2: iAP2 TX CSM id=0x4e0e body=22B hex=00 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00
+[19:46:51.200] INFO [会话 20261105194353 / 尝试 3] iap2: RAW TX iAP2 bytes=38
+    0000: ff 5a 00 26 40 72 40 01 8e 40 40 00 1c 4e 0e 00
+    0010: 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45
+    0020: 44 3a 45 41 00 16
+[19:46:51.201] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 发送链路帧】 (iap2.link.tx) 控制字=0x40；序号=114；确认序号=64；iAP2 会话号=1；载荷长度=28；载荷摘要=iAP2 TX CSM id=0x4e0e body=22B hex=00 16 00 00 34 30 3a 30 36 3a 33 34 3a 45 35 3a 45 44 3a 45 41 00；含义=链路承载控制消息或分片
+[19:46:51.308] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:51.309] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:51.310] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:51.311] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:51.313] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:51.315] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:51.315] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:51.316] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (46，剩余 30 秒)
+[19:46:51.609] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收 RFCOMM 数据】 (iap2.transport.rx) 传输层=RFCOMM；数据块长度=9
+[19:46:51.609] INFO [会话 20261105194353 / 尝试 3] iap2: RAW RX iAP2 bytes=9
+    0000: ff 5a 00 09 40 40 72 00 ac
+[19:46:51.609] INFO [会话 20261105194353 / 尝试 3] iap2: 【iAP2 接收链路帧】 (iap2.link.rx) 控制字=0x40；序号=64；确认序号=114；iAP2 会话号=0；载荷长度=0；载荷摘要=empty；含义=链路控制/确认帧，不包含控制消息
+[19:46:53.318] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:53.320] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:53.320] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:53.321] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:53.324] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:53.328] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:53.329] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:53.331] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (47，剩余 27 秒)
+[19:46:55.332] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:55.333] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:55.334] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:55.335] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:55.339] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:55.376] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:55.376] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:55.376] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (48，剩余 25 秒)
+[19:46:57.377] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:57.378] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:57.379] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:57.379] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:57.383] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:57.388] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:57.389] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:57.392] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (49，剩余 23 秒)
+[19:46:59.394] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:46:59.396] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:46:59.397] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:46:59.397] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:46:59.439] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:46:59.443] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:59.443] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:46:59.443] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (50，剩余 21 秒)
+[19:47:01.445] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:47:01.446] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:47:01.447] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:47:01.448] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:47:01.450] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:47:01.455] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:01.456] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:01.457] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (51，剩余 19 秒)
+[19:47:03.459] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:47:03.461] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:47:03.462] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:47:03.462] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:47:03.485] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:47:03.486] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:03.486] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:03.486] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (52，剩余 17 秒)
+[19:47:05.488] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:47:05.488] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:47:05.489] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:47:05.489] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:47:05.512] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:47:05.514] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:05.514] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:05.514] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (53，剩余 15 秒)
+[19:47:07.515] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:47:07.516] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:47:07.516] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:47:07.517] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:47:07.519] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:47:07.522] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:07.522] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:07.523] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (54，剩余 13 秒)
+[19:47:09.526] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:47:09.527] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:47:09.527] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:47:09.527] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:47:09.565] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:47:09.569] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:09.569] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:09.570] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (55，剩余 11 秒)
+[19:47:11.570] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:47:11.571] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:47:11.571] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:47:11.571] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:47:11.590] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:47:11.591] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:11.591] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:11.592] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (56，剩余 9 秒)
+[19:47:13.592] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:47:13.593] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:47:13.593] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:47:13.593] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:47:13.595] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:47:13.597] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:13.597] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:13.598] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (57，剩余 7 秒)
+[19:47:15.599] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:47:15.601] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:47:15.602] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:47:15.603] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:47:15.622] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:47:15.623] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:15.624] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:15.624] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (58，剩余 5 秒)
+[19:47:17.625] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:47:17.626] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:47:17.627] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:47:17.627] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:47:17.650] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:47:17.652] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:17.652] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:17.652] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；2 秒后自动重连 (59，剩余 3 秒)
+[19:47:19.653] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未预广播公钥；Pair-Setup 将验证协商出的接收端身份
+[19:47:19.654] INFO [会话 20261105194353 / 尝试 3] mdns: 状态：车机邀请和 AirPlay 服务已就绪，正在安全配对
+[19:47:19.654] INFO [会话 20261105194353 / 尝试 3] airplay: 开始 AirPlay Pair-Setup/Verify：fe80::1899:7bff:fe39:e165:7000
+[19:47:19.655] INFO [会话 20261105194353 / 尝试 3] airplay: AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份
+[19:47:19.662] INFO [会话 20261105194353 / 尝试 3] airplay: 【AirPlay · endpoint · address · scoped】 (airplay.endpoint.address.scoped) original Address=fe80::1899:7bff:fe39:e165；scoped Address=fe80::1899:7bff:fe39:e165%wlan0
+[19:47:19.665] ERROR [会话 20261105194353 / 尝试 3] airplay: 状态：AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:19.665] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 自动连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)
+[19:47:19.666] ERROR [会话 20261105194353 / 尝试 3] airplay: AirPlay 连接失败：连接 AirPlay 接收端失败：fe80::1899:7bff:fe39:e165%wlan0: AirPlay RTSP connect failed: 指定车机 WLAN 没有可用于 IPv2 socket 的本机地址，拒绝使用默认路由; cleanup failed: AirPlay RTSP cleanup failed (socket close: code=2300999: Unknown Other Error)；0.659 秒后自动重连 (60，剩余 1 秒)
+[19:47:20.053] WARN [会话 20261105194353 / 尝试 3] session: 用户请求停止 CarPlayer，会清理全部连接资源
+[19:47:20.054] INFO [会话 20261105194353 / 尝试 3] mdns: 【AirPlay 服务搜索结束】 (mdns.discovery.stopped) 服务类型=_airplay._tcp；耗时=119730；服务数=0
+[19:47:20.063] INFO [会话 20261105194353 / 尝试 3] session: 状态：已停止
+[19:47:20.063] INFO [会话 20261105194353 / 尝试 3] session: 连接结果：会话已停止
+[19:47:20.063] INFO [会话 20261105194353 / 尝试 3] session: 会话已停止
+

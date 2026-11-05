@@ -7,8 +7,10 @@ import {
   encodeUtf8,
   toArrayBuffer
 } from '../protocol/Iap2Codec';
-import { CARPLAY_SENDER_SOURCE_VERSION } from '../protocol/CarPlaySenderCompatibility';
 import { formatProtocolEvent, formatRawBytesDiagnostic } from '../session/ProtocolLogger';
+
+// The ctrl TXT identifies a receiver-compatible profile, not the AirPlay RTSP sender version.
+export const CARPLAY_CTRL_SOURCE_VERSION: string = '950.7.1';
 
 export class CarPlayCtrlAdvertiser {
   private readonly context: common.UIAbilityContext;
@@ -18,6 +20,7 @@ export class CarPlayCtrlAdvertiser {
   private server?: netSocket.TCPSocketServer;
   private serverHandler?: (connection: netSocket.TCPSocketConnection) => void;
   private service?: mdns.LocalServiceInfo;
+  private servicePort: number = 0;
   private readonly clients: Set<netSocket.TCPSocketConnection> = new Set<netSocket.TCPSocketConnection>();
 
   constructor(
@@ -46,24 +49,17 @@ export class CarPlayCtrlAdvertiser {
       if (port < 1) {
         throw new Error('系统未分配 CarPlay 控制服务端口');
       }
+      this.servicePort = port;
 
       this.serverHandler = (connection: netSocket.TCPSocketConnection): void => {
         this.handleClient(connection);
       };
       server.on('connect', this.serverHandler);
-
-      const attributes: mdns.ServiceAttribute[] = [
-        { key: 'id', value: this.toNumberArray(encodeUtf8(this.deviceAddress)) },
-        { key: 'srcvers', value: this.toNumberArray(encodeUtf8(CARPLAY_SENDER_SOURCE_VERSION)) }
-      ];
-      const serviceInfo: mdns.LocalServiceInfo = {
-        serviceType: '_carplay-ctrl._tcp',
-        serviceName: 'sender',
-        port,
-        serviceAttribute: attributes
-      };
-      this.service = await mdns.addLocalService(this.context, serviceInfo);
-      this.onLog(`已广播 _carplay-ctrl._tcp，端口 ${port}；TXT id=${this.deviceAddress}`);
+      this.service = await mdns.addLocalService(this.context, this.createServiceInfo(port));
+      this.onLog(
+        `已广播 _carplay-ctrl._tcp，端口 ${port}；TXT id=${this.deviceAddress}；` +
+          `srcvers=${CARPLAY_CTRL_SOURCE_VERSION}`
+      );
     } catch (error) {
       const message = describeSocketError(error);
       try {
@@ -74,6 +70,40 @@ export class CarPlayCtrlAdvertiser {
       }
       throw new Error(`启动 CarPlay 控制广播失败：${message}`);
     }
+  }
+
+  async reannounce(): Promise<void> {
+    if (!this.server) {
+      await this.start();
+      return;
+    }
+    const port = this.servicePort;
+    if (port < 1) {
+      throw new Error('CarPlay 控制服务端口尚未就绪，无法重新广播');
+    }
+    try {
+      const currentService = this.service;
+      if (currentService) {
+        await mdns.removeLocalService(this.context, currentService);
+        this.service = undefined;
+      }
+      this.service = await mdns.addLocalService(this.context, this.createServiceInfo(port));
+    } catch (error) {
+      const message = describeSocketError(error);
+      try {
+        await this.stop();
+      } catch (cleanupError) {
+        throw new Error(
+          `重新发布 CarPlay 控制广播失败：${message}；清理也失败：${describeSocketError(cleanupError)}`
+        );
+      }
+      throw new Error(`重新发布 CarPlay 控制广播失败：${message}`);
+    }
+    this.onLog(formatProtocolEvent('carplay.ctrl.advertisement.refreshed',
+      'port', port,
+      'srcvers', CARPLAY_CTRL_SOURCE_VERSION,
+      'meaning', '车机 Wi-Fi 就绪后使用原 TCP 端口重新发布控制服务'
+    ));
   }
 
   async stop(): Promise<void> {
@@ -103,6 +133,7 @@ export class CarPlayCtrlAdvertiser {
         failures.push(`TCP 监听关闭失败：${error instanceof Error ? error.message : String(error)}`);
       }
     }
+    this.servicePort = 0;
     this.serverHandler = undefined;
     const clients = Array.from(this.clients);
     this.clients.clear();
@@ -116,6 +147,19 @@ export class CarPlayCtrlAdvertiser {
     if (failures.length > 0) {
       throw new Error(failures.join('；'));
     }
+  }
+
+  private createServiceInfo(port: number): mdns.LocalServiceInfo {
+    const attributes: mdns.ServiceAttribute[] = [
+      { key: 'id', value: this.toNumberArray(encodeUtf8(this.deviceAddress)) },
+      { key: 'srcvers', value: this.toNumberArray(encodeUtf8(CARPLAY_CTRL_SOURCE_VERSION)) }
+    ];
+    return {
+      serviceType: '_carplay-ctrl._tcp',
+      serviceName: 'sender',
+      port,
+      serviceAttribute: attributes
+    };
   }
 
   private handleClient(connection: netSocket.TCPSocketConnection): void {
