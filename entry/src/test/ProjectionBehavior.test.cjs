@@ -1662,6 +1662,170 @@ test('AirPlay Pair-Setup verifies the receiver key when it was not advertised in
   );
 });
 
+test('AirPlay Pair-Verify binds to the Pair-Setup key and rejects a different receiver ID', async () => {
+  const setupReceiverKey = Uint8Array.from({ length: 32 }, (_, index) => index + 1);
+  let pairVerifyKey;
+  const Target = loadMethods('airplay/AirPlayPairingClient.ets', 'AirPlayPairingClient', ['pair'], {
+    decodeHex: () => new Uint8Array(0),
+    PairSetupClient: class {
+      constructor() {}
+      async run(advertisedKey) {
+        assert.equal(advertisedKey, undefined);
+        return { receiverId: 'setup-receiver', receiverPublicKey: setupReceiverKey };
+      }
+    },
+    PairVerifyClient: class {
+      constructor() {}
+      async run(receiverKey) {
+        pairVerifyKey = receiverKey;
+        return {
+          receiverId: 'different-receiver',
+          sharedSecret: Uint8Array.of(1),
+          phoneReadKey: Uint8Array.of(2),
+          phoneWriteKey: Uint8Array.of(3)
+        };
+      }
+    }
+  });
+  const target = new Target();
+  target.lifecycleGeneration = 1;
+  target.identityStore = {
+    loadOrCreate: async () => ({ pairingId: 'controller' }),
+    loadVerifiedReceiver: async () => undefined,
+    saveVerifiedReceiver: async () => {}
+  };
+  target.connect = async () => {};
+  target.requireClient = () => ({ activateEncryption() {} });
+  target.log = () => {};
+  target.close = async () => {};
+
+  await assert.rejects(
+    () => target.pair({}, { host: '10.36.232.90', port: 7000, txt: {} }),
+    /pair-setup and pair-verify receiver identities do not match/
+  );
+  assert.deepEqual(pairVerifyKey, setupReceiverKey);
+});
+
+test('AirPlay Pair-Setup 403 without an advertised key preserves the status for backoff', async () => {
+  class StubAirPlayRtspStatusError extends Error {
+    constructor() {
+      super('HTTP 403 Forbidden');
+      this.statusCode = 403;
+    }
+  }
+  const forbidden = new StubAirPlayRtspStatusError();
+  const Target = loadMethods('airplay/AirPlayPairingClient.ets', 'AirPlayPairingClient', ['pair'], {
+    decodeHex: () => new Uint8Array(0),
+    Error,
+    AirPlayRtspStatusError: StubAirPlayRtspStatusError,
+    PairSetupClient: class {
+      constructor() {}
+      async run() { throw forbidden; }
+    }
+  });
+  const target = new Target();
+  target.lifecycleGeneration = 1;
+  target.identityStore = {
+    loadOrCreate: async () => ({ pairingId: 'controller' }),
+    loadVerifiedReceiver: async () => undefined,
+    saveVerifiedReceiver: async () => {}
+  };
+  target.connect = async () => {};
+  target.requireClient = () => ({});
+  target.log = () => {};
+  target.close = async () => {};
+
+  await assert.rejects(
+    () => target.pair({}, { host: '10.36.232.90', port: 7000, txt: {} }),
+    error => error === forbidden && error.statusCode === 403
+  );
+});
+
+test('AirPlay Pair-Setup 403 fast path uses only a previously verified device identity', async () => {
+  class StubAirPlayRtspStatusError extends Error {
+    constructor() {
+      super('HTTP 403 Forbidden');
+      this.statusCode = 403;
+    }
+  }
+  const forbidden = new StubAirPlayRtspStatusError();
+  const trustedKey = new Uint8Array(32).fill(7);
+  const connects = [];
+  const verifiedKeys = [];
+  const savedIdentities = [];
+  const Target = loadMethods('airplay/AirPlayPairingClient.ets', 'AirPlayPairingClient', ['pair'], {
+    decodeHex: () => new Uint8Array(0),
+    Error,
+    AirPlayRtspStatusError: StubAirPlayRtspStatusError,
+    PairSetupClient: class {
+      constructor() {}
+      async run(expectedKey) {
+        assert.deepEqual(expectedKey, trustedKey);
+        throw forbidden;
+      }
+    },
+    PairVerifyClient: class {
+      constructor() {}
+      async run(receiverKey) {
+        verifiedKeys.push(receiverKey);
+        return {
+          receiverId: 'trusted-receiver',
+          sharedSecret: Uint8Array.of(1),
+          phoneReadKey: Uint8Array.of(2),
+          phoneWriteKey: Uint8Array.of(3)
+        };
+      }
+    }
+  });
+  const target = new Target();
+  target.lifecycleGeneration = 1;
+  target.identityStore = {
+    loadOrCreate: async () => ({ pairingId: 'controller' }),
+    loadVerifiedReceiver: async (_context, deviceId) => {
+      assert.equal(deviceId, 'AA:BB:CC:DD:EE:FF');
+      return { receiverId: 'trusted-receiver', publicKeyRaw: trustedKey };
+    },
+    saveVerifiedReceiver: async (...identity) => savedIdentities.push(identity)
+  };
+  target.connect = async () => { connects.push(true); };
+  target.closeResources = async () => {};
+  target.requireClient = () => ({ activateEncryption() {} });
+  target.log = () => {};
+  target.close = async () => {};
+
+  const result = await target.pair({}, {
+    host: '10.36.232.90', port: 7000, txt: { deviceid: 'AA:BB:CC:DD:EE:FF' }
+  });
+  assert.equal(result.receiverId, 'trusted-receiver');
+  assert.equal(connects.length, 2);
+  assert.deepEqual(verifiedKeys, [trustedKey]);
+  assert.equal(savedIdentities.length, 1);
+  assert.equal(savedIdentities[0][1], 'AA:BB:CC:DD:EE:FF');
+});
+
+test('AirPlay verified receiver identities are persisted per normalized deviceid', async () => {
+  const values = new Map();
+  const store = {
+    async get(key, fallback) { return values.has(key) ? values.get(key) : fallback; },
+    async put(key, value) { values.set(key, value); },
+    async flush() {}
+  };
+  const { AirPlayIdentityStore } = loadEts('airplay/AirPlayIdentityStore.ets', {
+    '@ohos.app.ability.common': {},
+    '@ohos.security.cryptoFramework': {},
+    '@ohos.data.preferences': { getPreferences: async () => store },
+    './AirPlayCrypto': {}
+  });
+  const identities = new AirPlayIdentityStore();
+  const publicKeyRaw = new Uint8Array(32).fill(11);
+  await identities.saveVerifiedReceiver({}, 'AA:BB:CC:DD:EE:FF', 'receiver-1', publicKeyRaw);
+  assert.deepEqual(
+    await identities.loadVerifiedReceiver({}, 'aa-bb-cc-dd-ee-ff'),
+    { receiverId: 'receiver-1', publicKeyRaw }
+  );
+  assert.equal(await identities.loadVerifiedReceiver({}, '11:22:33:44:55:66'), undefined);
+});
+
 test('binary plist diagnostics redact credentials and identifiers while explaining ordinary fields', () => {
   const { PlistNode, formatPlistDiagnostic } = loadEts('airplay/BinaryPlist.ets', {
     '@ohos.util': {},
@@ -1838,6 +2002,144 @@ test('AirPlay mDNS discovery reports a bounded no-service timeout and keeps sear
     global.setTimeout = previousSetTimeout;
     global.clearTimeout = previousClearTimeout;
   }
+});
+
+test('AirPlay mDNS discovery re-resolves a repeated service name when its endpoint changes', async () => {
+  const handlers = {};
+  const discovered = [];
+  const discoveryService = {
+    on(type, handler) { handlers[type] = handler; },
+    off() {},
+    startSearchingMDNS() {},
+    stopSearchingMDNS() {}
+  };
+  let host = '10.36.232.90';
+  const { AirPlayMdnsDiscovery } = loadEts('network/AirPlayMdnsDiscovery.ets', {
+    '@ohos.net.mdns': {
+      createDiscoveryService: () => discoveryService,
+      resolveLocalService: async (_context, service) => ({
+        serviceName: service.serviceName,
+        host: { address: host },
+        port: 7000,
+        serviceAttribute: [{ key: 'deviceid', value: new TextEncoder().encode('AA:BB:CC:DD:EE:FF') }]
+      })
+    },
+    '@ohos.app.ability.common': {},
+    '@ohos.util': {
+      TextDecoder: { create: () => ({ decodeToString: bytes => new TextDecoder().decode(bytes) }) }
+    },
+    '../session/ProtocolLogger': {
+      formatProtocolEvent: (event, ...fields) => `【${event}】 ${fields.join(' ')}`
+    }
+  });
+  const discovery = new AirPlayMdnsDiscovery({}, service => discovered.push(service), () => {});
+  discovery.start();
+  const found = { serviceName: 'receiver._airplay._tcp' };
+  handlers.serviceFound(found);
+  await new Promise(resolve => setImmediate(resolve));
+  handlers.serviceFound(found);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(discovered.map(service => service.host), ['10.36.232.90']);
+  host = '10.36.232.92';
+  handlers.serviceFound(found);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(discovered.map(service => service.host), ['10.36.232.90', '10.36.232.92']);
+  discovery.stop();
+});
+
+test('AirPlay ctrl reannouncement respects the active generation and pairing deadline', async () => {
+  const previousSetTimeout = global.setTimeout;
+  const previousClearTimeout = global.clearTimeout;
+  const previousDateNow = Date.now;
+  let now = 1000;
+  let scheduled;
+  const cleared = [];
+  let reannounceCount = 0;
+  global.setTimeout = (callback, delay) => {
+    scheduled = { callback, delay };
+    return 17;
+  };
+  global.clearTimeout = timer => cleared.push(timer);
+  Date.now = () => now;
+  try {
+    const Target = loadMethods('session/SessionControllerConnectionFlow.ets', 'SessionControllerConnectionFlow', [
+      'scheduleAirPlayControlReannounce', 'reannounceAirPlayControl', 'clearAirPlayCtrlReannounceTimer'
+    ], {
+      AIRPLAY_CTRL_REANNOUNCE_INTERVAL_MS: 10000,
+      Date: { now: () => now },
+      setTimeout: global.setTimeout,
+      clearTimeout: global.clearTimeout
+    });
+    const target = new Target();
+    target.running = true;
+    target.vehicleWifiConnected = true;
+    target.airPlayGeneration = 2;
+    target.airPlayPairingDeadline = 5500;
+    target.airPlayCtrlReannounceTimer = 12;
+    target.ctrlAdvertiser = { async reannounce() { reannounceCount++; } };
+    target.events = { onLog() {} };
+
+    target.clearAirPlayCtrlReannounceTimer();
+    target.scheduleAirPlayControlReannounce(2);
+    assert.deepEqual(cleared, [12]);
+    assert.equal(scheduled.delay, 4500);
+    target.airPlayGeneration = 3;
+    await scheduled.callback();
+    assert.equal(reannounceCount, 0);
+    assert.equal(target.airPlayCtrlReannounceTimer, -1);
+
+    target.airPlayGeneration = 3;
+    target.airPlayPairingDeadline = now;
+    target.scheduleAirPlayControlReannounce(3);
+    assert.equal(target.airPlayCtrlReannounceTimer, -1);
+  } finally {
+    global.setTimeout = previousSetTimeout;
+    global.clearTimeout = previousClearTimeout;
+    Date.now = previousDateNow;
+  }
+});
+
+test('Bluetooth outbound RFCOMM connects to the wireless accessory service and attaches its client', async () => {
+  const events = [];
+  const timer = 23;
+  const Target = loadMethods('transport/BluetoothIap2Server.ets', 'BluetoothIap2Server', [
+    'connectToDevice', 'attachClient', 'closeActiveClient', 'closeSocket', 'errorMessage'
+  ], {
+    bluetoothSocket: {
+      SppType: { SPP_RFCOMM: 1 },
+      sppConnect(deviceId, options, callback) {
+        events.push(['connect', deviceId, options]);
+        callback(undefined, 9);
+      },
+      on(event, clientId, handler) { events.push(['on', event, clientId, typeof handler]); },
+      off(event, clientId) { events.push(['off', event, clientId]); },
+      sppCloseClientSocket(clientId) { events.push(['close', clientId]); },
+      isConnected: () => true
+    },
+    setInterval: () => timer,
+    clearInterval: id => events.push(['clearInterval', id])
+  });
+  const target = new Target();
+  target.serverId = 4;
+  target.clientId = -1;
+  target.connectPending = false;
+  target.connectionGeneration = 0;
+  target.connectionMonitorTimer = -1;
+  target.onClientData = () => {};
+  target.onClientConnected = () => events.push(['connected']);
+  target.onClientDisconnected = () => events.push(['disconnected']);
+  target.onFailure = message => events.push(['failure', message]);
+
+  assert.equal(await target.connectToDevice('AA:BB:CC:DD:EE:FF'), true);
+  assert.equal(target.clientId, 9);
+  assert.equal(events[0][0], 'connect');
+  assert.equal(events[0][1], 'AA:BB:CC:DD:EE:FF');
+  assert.equal(events[0][2].uuid, '00000000-deca-fade-deca-deafdecacaff');
+  assert.equal(events[0][2].secure, true);
+  assert.equal(events[0][2].type, 1);
+  assert.ok(events.some(event => event[0] === 'connected'));
+  target.closeActiveClient(false);
+  assert.ok(events.some(event => event[0] === 'close' && event[1] === 9));
 });
 
 test('diagnostic archive batches packet log writes and flushes before export', () => {
@@ -2614,6 +2916,69 @@ test('AirPlay mDNS discovery can release the ctrl invite wait early', () => {
   assert.equal(isAirPlayStartReady(false, true, true, true), false);
 });
 
+test('AirPlay mDNS callback rejects endpoints outside the selected WLAN prefix', async () => {
+  const Target = loadMethods('session/SessionControllerConnectionFlow.ets', 'SessionControllerConnectionFlow',
+    ['handleDiscoveredAirPlayService']);
+  const target = new Target();
+  const actions = [];
+  target.wifiNetworkLease = { isAirPlayAddressOnSelectedNetwork: address => address.startsWith('10.36.232.') };
+  target.events = {
+    onAirPlayService: service => actions.push(['service', service.host]),
+    onLog: message => actions.push(['log', message])
+  };
+  target.refreshDiscoveredAirPlay = () => actions.push(['refresh']);
+  target.hasSelfContainedAirPlayEndpoint = () => false;
+  target.clearAirPlayWaitTimers = () => actions.push(['clear-timers']);
+  target.connectAirPlay = async () => { actions.push(['connect']); };
+  target.reportError = error => { throw error; };
+  target.mdnsAirPlayService = undefined;
+  target.inviteReceived = false;
+  target.airPlayInviteWaitElapsed = false;
+
+  target.handleDiscoveredAirPlayService({ name: 'other', host: '192.168.1.5', port: 7000, txt: {} });
+  assert.equal(target.mdnsAirPlayService, undefined);
+  assert.deepEqual(actions, [['log', '忽略不属于车机 WLAN 网段的 AirPlay mDNS 地址：192.168.1.5']]);
+
+  actions.length = 0;
+  target.handleDiscoveredAirPlayService({ name: 'vehicle', host: '10.36.232.90', port: 7000, txt: {} });
+  await Promise.resolve();
+  assert.equal(target.mdnsAirPlayService.host, '10.36.232.90');
+  assert.deepEqual(actions.map(action => action[0]), ['refresh', 'service', 'log', 'connect']);
+});
+
+test('AirPlay 403 retries back off longer than ordinary connection failures', () => {
+  class StubAirPlayRtspStatusError extends Error {
+    constructor(statusCode) {
+      super(`HTTP ${statusCode}`);
+      this.statusCode = statusCode;
+    }
+  }
+  const delays = [];
+  const Target = loadMethods('session/SessionControllerConnectionFlow.ets', 'SessionControllerConnectionFlow',
+    ['airPlayRetryDelayMs', 'scheduleAirPlayReconnect'], {
+      AIRPLAY_FORBIDDEN_RETRY_DELAY_MS: 5000,
+      AIRPLAY_RECONNECT_DELAY_MS: 2000,
+      AIRPLAY_PAIRING_WINDOW_MS: 120000,
+      AirPlayRtspStatusError: StubAirPlayRtspStatusError,
+      Error,
+      setTimeout: (_callback, delayMs) => { delays.push(delayMs); return delays.length; }
+    });
+  const target = new Target();
+  target.running = true;
+  target.hasAirPlayStartSignal = () => true;
+  target.discoveredAirPlay = {};
+  target.airPlayReconnectTimer = -1;
+  target.airPlayPairingDeadline = Date.now() + 60000;
+  target.airPlayReconnectAttempts = 0;
+  target.events = { onLog() {} };
+
+  target.scheduleAirPlayReconnect('Pair-Verify HTTP 403',
+    target.airPlayRetryDelayMs(new StubAirPlayRtspStatusError(403)));
+  target.airPlayReconnectTimer = -1;
+  target.scheduleAirPlayReconnect('TCP connection failed', target.airPlayRetryDelayMs(new Error('connection')));
+  assert.deepEqual(delays, [5000, 2000]);
+});
+
 test('AirPlay waits 4 seconds for ctrl invite and 3 seconds for endpoint resolution', () => {
   const timers = [];
   let timerId = 0;
@@ -2677,6 +3042,7 @@ test('CarPlay control service publishes before the Bluetooth listener starts', a
   target.clearAirPlayWaitTimers = () => {};
   target.clearPendingStartSessionTimer = () => {};
   target.clearWifiReconnectTimer = () => {};
+  target.scheduleBluetoothOutboundAttempt = () => {};
   target.events = { onStatus() {}, onLog() {} };
 
   await target.start();
@@ -3685,8 +4051,8 @@ test('wireless WLAN selection reuses the matching local network without requirin
       async getNetCapabilities(handle) { return { bearerTypes: [handle.netId === 1 ? 0 : 1] }; },
       async getConnectionProperties(handle) {
         return { interfaceName: 'wlan0', linkAddresses: [
-          { address: { address: handle.netId === 3 ? '10.36.232.67' : '192.168.1.2' } },
-          ...(handle.netId === 3 ? [{ address: { address: 'fe80::3' } }] : [])
+          { address: { address: handle.netId === 3 ? '10.36.232.67' : '192.168.1.2' }, prefixLength: 24 },
+          ...(handle.netId === 3 ? [{ address: { address: 'fe80::3' }, prefixLength: 64 }] : [])
         ] };
       },
       createNetConnection(specifier, timeout) {
@@ -3700,6 +4066,17 @@ test('wireless WLAN selection reuses the matching local network without requirin
   const lease = new WifiNetworkLease();
   let lost = false;
   assert.equal((await lease.acquire('BUICK_7841', () => { lost = true; }, () => {}, '10.36.232.67')).netId, 3);
+  assert.equal(lease.isAirPlayAddressOnSelectedNetwork('10.36.232.98'), true);
+  assert.equal(lease.isAirPlayAddressOnSelectedNetwork('10.36.233.98'), false);
+  assert.equal(lease.isAirPlayAddressOnSelectedNetwork('fe80::1899:7bff:fe39:e165%wlan0'), true);
+  const selectedIpv6Address = lease.localAddresses.ipv6;
+  const selectedIpv6PrefixLength = lease.localAddresses.ipv6PrefixLength;
+  lease.localAddresses.ipv6 = '2001:db8:1::1';
+  lease.localAddresses.ipv6PrefixLength = 64;
+  assert.equal(lease.isAirPlayAddressOnSelectedNetwork('2001:db8:1::ab'), true);
+  assert.equal(lease.isAirPlayAddressOnSelectedNetwork('2001:db8:2::ab'), false);
+  lease.localAddresses.ipv6 = selectedIpv6Address;
+  lease.localAddresses.ipv6PrefixLength = selectedIpv6PrefixLength;
   await lease.bindSocket({ async bind(address) {
     socketEvents.push('socket-bind');
     assert.deepEqual(address, { address: '10.36.232.67', family: 1, port: 0 });
@@ -3720,7 +4097,7 @@ test('wireless WLAN selection reuses the matching local network without requirin
 });
 
 test('wireless network lease scopes link-local addresses to the selected interface', () => {
-  const { WifiNetworkLease } = loadEts('network/WifiNetworkLease.ets', {
+  const { WifiNetworkLease, orderAirPlayAddresses, stripIpv6ScopeId } = loadEts('network/WifiNetworkLease.ets', {
     '@ohos.net.connection': {}
   });
   const lease = new WifiNetworkLease();
@@ -3729,6 +4106,11 @@ test('wireless network lease scopes link-local addresses to the selected interfa
     'fe80::1899:7bff:fe39:e165%wlan0');
   assert.equal(lease.scopeLinkLocalAddress('fe80::1%wlan0'), 'fe80::1%wlan0');
   assert.equal(lease.scopeLinkLocalAddress('192.168.49.1'), '192.168.49.1');
+  assert.equal(stripIpv6ScopeId('fe80::1899:7bff:fe39:e165%wlan0'), 'fe80::1899:7bff:fe39:e165');
+  assert.equal(stripIpv6ScopeId('192.168.49.1'), '192.168.49.1');
+  assert.deepEqual(orderAirPlayAddresses([
+    'fe80::1%wlan0', '2001:db8::1', '192.168.49.2', 'fe80::1', 'receiver.local', '192.168.49.2'
+  ]), ['192.168.49.2', '2001:db8::1', 'fe80::1%wlan0', 'receiver.local']);
   lease.localAddresses = {};
   assert.throws(() => lease.scopeLinkLocalAddress('fe80::1'), /interfaceName is unavailable/);
 });
@@ -3755,19 +4137,21 @@ test('IPv6 socket uses a wildcard local bind when the selected WLAN has no enume
   ]);
 });
 
-test('AirPlay RTSP connection scopes an unscoped endpoint before connecting', async () => {
+test('AirPlay RTSP connection strips IPv6 scope IDs before connecting', async () => {
   const attempts = [];
   class StubAirPlayRtspClient {
     constructor() {}
     async connect(host, port) { attempts.push({ host, port }); }
     async close() {}
   }
+  const { WifiNetworkLease, orderAirPlayAddresses, stripIpv6ScopeId } = loadEts('network/WifiNetworkLease.ets', {
+    '@ohos.net.connection': {}
+  });
   const Target = loadMethods('airplay/AirPlayPairingClient.ets', 'AirPlayPairingClient', ['connect'], {
     AirPlayRtspClient: StubAirPlayRtspClient,
+    orderAirPlayAddresses,
+    stripIpv6ScopeId,
     formatProtocolEvent: (event, ...fields) => `${event}:${fields.join(',')}`
-  });
-  const { WifiNetworkLease } = loadEts('network/WifiNetworkLease.ets', {
-    '@ohos.net.connection': {}
   });
   const lease = new WifiNetworkLease();
   lease.localAddresses = { interfaceName: 'wlan0' };
@@ -3776,12 +4160,40 @@ test('AirPlay RTSP connection scopes an unscoped endpoint before connecting', as
   target.onDisconnected = () => {};
   target.wifiNetworkLease = lease;
   await target.connect({
-    host: 'fe80::1899:7bff:fe39:e165',
+    host: 'fe80::1899:7bff:fe39:e165%wlan0',
     addresses: [],
     port: 7000
   });
-  assert.deepEqual(attempts, [{ host: 'fe80::1899:7bff:fe39:e165%wlan0', port: 7000 }]);
-  assert.equal(target.connectedHost, 'fe80::1899:7bff:fe39:e165%wlan0');
+  assert.deepEqual(attempts, [{ host: 'fe80::1899:7bff:fe39:e165', port: 7000 }]);
+  assert.equal(target.connectedHost, 'fe80::1899:7bff:fe39:e165');
+});
+
+test('AirPlay RTSP tries IPv4 endpoint candidates before IPv6 candidates', async () => {
+  const attempts = [];
+  class StubAirPlayRtspClient {
+    constructor() {}
+    async connect(host, port) { attempts.push({ host, port }); }
+    async close() {}
+  }
+  const { orderAirPlayAddresses, stripIpv6ScopeId } = loadEts('network/WifiNetworkLease.ets', {
+    '@ohos.net.connection': {}
+  });
+  const Target = loadMethods('airplay/AirPlayPairingClient.ets', 'AirPlayPairingClient', ['connect'], {
+    AirPlayRtspClient: StubAirPlayRtspClient,
+    orderAirPlayAddresses,
+    stripIpv6ScopeId,
+    formatProtocolEvent: (event, ...fields) => `${event}:${fields.join(',')}`
+  });
+  const target = new Target();
+  target.log = () => {};
+  target.onDisconnected = () => {};
+  target.wifiNetworkLease = {};
+  await target.connect({
+    host: 'fe80::1899:7bff:fe39:e165',
+    addresses: ['2001:db8::2', '192.168.49.8'],
+    port: 7000
+  });
+  assert.deepEqual(attempts, [{ host: '192.168.49.8', port: 7000 }]);
 });
 
 test('wireless WLAN selection cancels pending acquisition and ignores late availability', async () => {

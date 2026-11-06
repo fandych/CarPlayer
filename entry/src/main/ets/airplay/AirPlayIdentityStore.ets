@@ -10,6 +10,11 @@ export interface AirPlayControllerIdentity {
   newlyCreated: boolean;
 }
 
+export interface VerifiedAirPlayReceiverIdentity {
+  receiverId: string;
+  publicKeyRaw: Uint8Array;
+}
+
 export class AirPlayIdentityStore {
   async loadOrCreate(context: common.UIAbilityContext): Promise<AirPlayControllerIdentity> {
     const store = await preferences.getPreferences(context, 'airplay_controller_identity');
@@ -48,6 +53,52 @@ export class AirPlayIdentityStore {
     };
     return generated;
   }
+
+  async loadVerifiedReceiver(
+    context: common.UIAbilityContext,
+    deviceIdentifier: string
+  ): Promise<VerifiedAirPlayReceiverIdentity | undefined> {
+    const suffix = receiverPreferenceSuffix(deviceIdentifier);
+    if (!suffix) {
+      return undefined;
+    }
+    const store = await preferences.getPreferences(context, 'airplay_controller_identity');
+    const receiverIdValue = await store.get(`receiver_${suffix}_id`, '');
+    const publicKeyValue = await store.get(`receiver_${suffix}_publicKeyRawHex`, '');
+    if (typeof receiverIdValue !== 'string' || receiverIdValue.length === 0 ||
+      typeof publicKeyValue !== 'string') {
+      return undefined;
+    }
+    try {
+      const publicKeyRaw = fromHex(publicKeyValue);
+      return publicKeyRaw.length === 32
+        ? { receiverId: receiverIdValue, publicKeyRaw }
+        : undefined;
+    } catch (_error) {
+      return undefined;
+    }
+  }
+
+  async saveVerifiedReceiver(
+    context: common.UIAbilityContext,
+    deviceIdentifier: string,
+    receiverId: string,
+    publicKeyRaw: Uint8Array
+  ): Promise<void> {
+    const suffix = receiverPreferenceSuffix(deviceIdentifier);
+    if (!suffix || !receiverId || publicKeyRaw.length !== 32) {
+      throw new Error('Verified AirPlay receiver identity is incomplete');
+    }
+    const store = await preferences.getPreferences(context, 'airplay_controller_identity');
+    await store.put(`receiver_${suffix}_id`, receiverId);
+    await store.put(`receiver_${suffix}_publicKeyRawHex`, toHex(publicKeyRaw));
+    await store.flush();
+  }
+}
+
+function receiverPreferenceSuffix(deviceIdentifier: string): string {
+  const suffix = deviceIdentifier.trim().toLowerCase().replace(/[:-]/g, '');
+  return /^[a-z0-9]{1,128}$/.test(suffix) ? suffix : '';
 }
 
 function toHex(bytes: Uint8Array): string {

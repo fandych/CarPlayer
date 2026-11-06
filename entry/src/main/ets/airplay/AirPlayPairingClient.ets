@@ -8,7 +8,7 @@ import {
 } from './AirPlayMediaSession';
 import { EncodedH264Event } from './AirPlayVideoStream';
 import { AirPlayRtspClient } from './AirPlayRtspClient';
-import { WifiNetworkLease } from '../network/WifiNetworkLease';
+import { orderAirPlayAddresses, stripIpv6ScopeId, WifiNetworkLease } from '../network/WifiNetworkLease';
 import { Iap2SenderSession } from '../session/Iap2SenderSession';
 import { formatProtocolEvent } from '../session/ProtocolLogger';
 import { AirPlayRtspStatusError, PairSetupClient, PairVerifyClient } from './pairing/PairingProtocol';
@@ -82,9 +82,18 @@ export class AirPlayPairingClient {
       this.log('AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份');
     }
     const identity = await this.identityStore.loadOrCreate(context);
+    const deviceIdentifier = service.txt['deviceid'] ?? '';
+    const storedReceiver = await this.identityStore.loadVerifiedReceiver(context, deviceIdentifier);
     if (generation !== this.lifecycleGeneration) {
       throw new Error('AirPlay pairing was cancelled');
     }
+    if (advertisedReceiverKey.length === 32 && storedReceiver &&
+      !equalBytes(advertisedReceiverKey, storedReceiver.publicKeyRaw)) {
+      throw new Error('AirPlay receiver key conflicts with the previously verified identity');
+    }
+    const expectedReceiverKey = advertisedReceiverKey.length === 32
+      ? advertisedReceiverKey
+      : storedReceiver?.publicKeyRaw;
     try {
       await this.connect(service);
       if (generation !== this.lifecycleGeneration) {
@@ -96,15 +105,16 @@ export class AirPlayPairingClient {
       let usedPairVerifyFastPath = false;
       try {
         const receiver = await new PairSetupClient(this.requireClient(), identity, this.log)
-          .run(advertisedReceiverKey.length === 32 ? advertisedReceiverKey : undefined);
+          .run(expectedReceiverKey);
         setupReceiverId = receiver.receiverId;
         setupReceiverKey = receiver.receiverPublicKey;
       } catch (error) {
         if (!(error instanceof AirPlayRtspStatusError) || error.statusCode !== 403) {
           throw error instanceof Error ? error : new Error(String(error));
         }
-        if (advertisedReceiverKey.length !== 32) {
-          throw new Error('Pair-Setup was rejected and no advertised receiver key is available for Pair-Verify');
+        if (!expectedReceiverKey) {
+          this.log('Pair-Setup 403 fast path rejected: no advertised or previously verified receiver key is available');
+          throw error;
         }
         this.log('Pair-Setup 被接收端以 403 拒绝；关闭当前 TCP 并按 CardDeck 已配对快路径重连 Pair-Verify');
         await this.closeResources();
@@ -118,8 +128,8 @@ export class AirPlayPairingClient {
         }
         usedPairVerifyFastPath = true;
       }
-      const receiverKey = setupReceiverKey ?? advertisedReceiverKey;
-      if (receiverKey.length !== 32) {
+      const receiverKey = setupReceiverKey ?? expectedReceiverKey;
+      if (!receiverKey || receiverKey.length !== 32) {
         throw new Error('Pair-Setup did not provide a verifiable receiver public key');
       }
       const keys = await new PairVerifyClient(this.requireClient(), identity, this.log).run(receiverKey);
@@ -129,6 +139,16 @@ export class AirPlayPairingClient {
       }
       if (setupReceiverId && setupReceiverId !== keys.receiverId) {
         throw new Error('pair-setup and pair-verify receiver identities do not match');
+      }
+      if (storedReceiver && storedReceiver.receiverId !== keys.receiverId) {
+        throw new Error('pair-verify receiver ID conflicts with the previously verified identity');
+      }
+      if (deviceIdentifier) {
+        try {
+          await this.identityStore.saveVerifiedReceiver(context, deviceIdentifier, keys.receiverId, receiverKey);
+        } catch (error) {
+          this.log(`WARN: AirPlay verified receiver identity could not be persisted: ${error instanceof Error ? error.message : String(error)}`);
+        }
       }
       const client = this.requireClient();
       client.activateEncryption(keys.phoneReadKey, keys.phoneWriteKey);
@@ -178,20 +198,14 @@ export class AirPlayPairingClient {
   }
 
   private async connect(service: AirPlayService): Promise<void> {
-    const hosts = Array.from(new Set([service.host, ...(service.addresses ?? [])].filter(Boolean)));
+    const hosts = orderAirPlayAddresses([service.host, ...(service.addresses ?? [])].filter(Boolean));
     const failures: string[] = [];
     for (const host of hosts) {
-      let scopedHost: string;
-      try {
-        scopedHost = this.wifiNetworkLease.scopeLinkLocalAddress(host);
-      } catch (error) {
-        failures.push(`${host}: ${error instanceof Error ? error.message : String(error)}`);
-        continue;
-      }
-      if (scopedHost !== host) {
-        this.log(formatProtocolEvent('airplay.endpoint.address.scoped',
+      const socketHost = stripIpv6ScopeId(host);
+      if (socketHost !== host) {
+        this.log(formatProtocolEvent('airplay.endpoint.address.normalized',
           'originalAddress', host,
-          'scopedAddress', scopedHost
+          'socketAddress', socketHost
         ));
       }
       let connectionEstablished = false;
@@ -206,14 +220,14 @@ export class AirPlayPairingClient {
       );
       this.client = client;
       try {
-        await client.connect(scopedHost, service.port);
+        await client.connect(socketHost, service.port);
         connectionEstablished = true;
-        this.connectedHost = scopedHost;
+        this.connectedHost = socketHost;
         return;
       } catch (error) {
         this.client = undefined;
         const message = error instanceof Error ? error.message : String(error);
-        failures.push(`${scopedHost}: ${message}`);
+        failures.push(`${socketHost}: ${message}`);
         try {
           await client.close();
         } catch (cleanupError) {
@@ -384,4 +398,15 @@ function decodeHex(hex: string): Uint8Array {
     result[index] = parseInt(normalized.slice(index * 2, index * 2 + 2), 16);
   }
   return result;
+}
+
+function equalBytes(left: Uint8Array, right: Uint8Array): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  let difference = 0;
+  for (let index = 0; index < left.length; index++) {
+    difference |= left[index] ^ right[index];
+  }
+  return difference === 0;
 }

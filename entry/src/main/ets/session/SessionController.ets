@@ -47,6 +47,11 @@ export {
 
 export class SessionController extends SessionControllerConnectionFlow {
   private backgroundTask?: CarPlayBackgroundTask;
+  private bluetoothOutboundTimer: number = -1;
+  private bluetoothOutboundGeneration: number = 0;
+  private bluetoothOutboundDeviceIndex: number = 0;
+  private bluetoothOutboundConnecting: boolean = false;
+  private lastBluetoothOutboundLog: string = '';
 
   async start(): Promise<void> {
     if (this.running) {
@@ -59,6 +64,9 @@ export class SessionController extends SessionControllerConnectionFlow {
       return;
     }
     this.running = true;
+    this.bluetoothOutboundGeneration++;
+    this.bluetoothOutboundDeviceIndex = 0;
+    this.bluetoothOutboundConnecting = false;
     this.inviteReceived = false;
     this.wifiJoinInProgress = false;
     this.wifiJoinGeneration++;
@@ -113,7 +121,8 @@ export class SessionController extends SessionControllerConnectionFlow {
         () => this.handleBluetoothConnected(),
         (bytes: Uint8Array) => this.handleBluetoothData(bytes),
         (message: string) => this.reportError(message),
-        this.adapterMode
+        this.adapterMode,
+        (): void => this.handleBluetoothDisconnected()
       );
       if (!this.running || !isCurrentSessionGeneration(generation)) {
         this.bluetooth.stop();
@@ -123,6 +132,7 @@ export class SessionController extends SessionControllerConnectionFlow {
       await this.setKeepScreenOn(true);
       this.events.onStatus('等待车机 iAP2 握手');
       this.events.onLog('CarPlay 已开启：等待蓝牙 RFCOMM / iAP2 连接');
+      this.scheduleBluetoothOutboundAttempt(0);
     } catch (error) {
       if (!isCurrentSessionGeneration(generation)) {
         this.running = false;
@@ -171,9 +181,101 @@ export class SessionController extends SessionControllerConnectionFlow {
     }
   }
 
+  private clearBluetoothOutboundTimer(): void {
+    if (this.bluetoothOutboundTimer >= 0) {
+      clearTimeout(this.bluetoothOutboundTimer);
+      this.bluetoothOutboundTimer = -1;
+    }
+  }
+
+  private scheduleBluetoothOutboundAttempt(delayMs: number): void {
+    if (!this.running || this.bluetooth.isClientConnected || this.bluetoothOutboundConnecting ||
+      this.bluetoothOutboundTimer >= 0) {
+      return;
+    }
+    const generation = this.bluetoothOutboundGeneration;
+    this.bluetoothOutboundTimer = setTimeout((): void => {
+      this.bluetoothOutboundTimer = -1;
+      void this.tryBluetoothOutboundConnection(generation);
+    }, delayMs);
+  }
+
+  private async tryBluetoothOutboundConnection(generation: number): Promise<void> {
+    if (!this.running || generation !== this.bluetoothOutboundGeneration ||
+      this.bluetooth.isClientConnected || this.bluetoothOutboundConnecting) {
+      return;
+    }
+    let deviceIds: string[];
+    try {
+      deviceIds = bluetoothConnection.getPairedDevices();
+    } catch (error) {
+      const signature = `list:${error instanceof Error ? error.message : String(error)}`;
+      if (signature !== this.lastBluetoothOutboundLog) {
+        this.lastBluetoothOutboundLog = signature;
+        this.events.onLog(`无法读取已配对蓝牙设备，暂不主动连接：${signature.slice(5)}`);
+      }
+      this.scheduleBluetoothOutboundAttempt(5000);
+      return;
+    }
+    const candidates: string[] = [];
+    for (const deviceId of deviceIds) {
+      try {
+        const name = bluetoothConnection.getRemoteDeviceName(deviceId);
+        if (!isCarPlayAdapterName(name)) {
+          candidates.push(deviceId);
+        }
+      } catch (_error) {
+        candidates.push(deviceId);
+      }
+    }
+    if (candidates.length === 0) {
+      const signature = deviceIds.length === 0 ? '没有已配对设备' : '未发现适合主动 iAP2 的已配对设备';
+      if (signature !== this.lastBluetoothOutboundLog) {
+        this.lastBluetoothOutboundLog = signature;
+        this.events.onLog(`主动 RFCOMM 连接待命：${signature}；继续保持 iAP2 监听`);
+      }
+      this.scheduleBluetoothOutboundAttempt(8000);
+      return;
+    }
+    this.lastBluetoothOutboundLog = '';
+    const index = this.bluetoothOutboundDeviceIndex % candidates.length;
+    const deviceId = candidates[index];
+    this.bluetoothOutboundDeviceIndex++;
+    this.bluetoothOutboundConnecting = true;
+    this.events.onLog(`尝试主动连接已配对设备 ${deviceId} 的无线 iAP2 RFCOMM 服务`);
+    let connected = false;
+    try {
+      connected = await this.bluetooth.connectToDevice(deviceId);
+    } catch (error) {
+      this.events.onLog(`主动 RFCOMM 连接失败：${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      this.bluetoothOutboundConnecting = false;
+    }
+    if (!this.running || generation !== this.bluetoothOutboundGeneration || connected ||
+      this.bluetooth.isClientConnected) {
+      return;
+    }
+    this.scheduleBluetoothOutboundAttempt(3000);
+  }
+
+  private handleBluetoothDisconnected(): void {
+    const session = this.iap2;
+    this.iap2 = undefined;
+    session?.cancel();
+    this.clearPendingStartSessionTimer();
+    if (!this.running) {
+      return;
+    }
+    this.events.onLog('RFCOMM 链路已断开；保留监听并恢复主动 iAP2 连接轮询');
+    this.scheduleBluetoothOutboundAttempt(3000);
+  }
+
   async stop(): Promise<void> {
     advanceSessionGeneration();
     this.running = false;
+    this.bluetoothOutboundGeneration++;
+    this.clearBluetoothOutboundTimer();
+    this.bluetoothOutboundConnecting = false;
     this.airPlayGeneration++;
     this.wifiJoinGeneration++;
     this.clearAirPlayTimers();

@@ -17,7 +17,8 @@ export class AirPlayMdnsDiscovery {
   private foundHandler?: (service: mdns.LocalServiceInfo) => void;
   private readonly onService: (service: AirPlayService) => void;
   private readonly onError: (message: string) => void;
-  private readonly resolvedNames: Set<string> = new Set<string>();
+  private readonly resolvingNames: Set<string> = new Set<string>();
+  private readonly resolvedSignatures: Map<string, string> = new Map<string, string>();
   private discoveryStartedAt: number = 0;
   private discoveryTimeoutTimer: number = -1;
   private foundCount: number = 0;
@@ -40,10 +41,10 @@ export class AirPlayMdnsDiscovery {
     this.discoveryStartedAt = Date.now();
     this.foundCount = 0;
     this.foundHandler = (service: mdns.LocalServiceInfo): void => {
-      if (this.resolvedNames.has(service.serviceName)) {
+      if (this.resolvingNames.has(service.serviceName)) {
         return;
       }
-      this.resolvedNames.add(service.serviceName);
+      this.resolvingNames.add(service.serviceName);
       this.foundCount++;
       this.clearDiscoveryTimeoutTimer();
       this.onError(formatProtocolEvent('mdns.service.found',
@@ -55,6 +56,7 @@ export class AirPlayMdnsDiscovery {
           const host = resolved.host?.address ?? '';
           const port = resolved.port ?? 0;
           if (!host || port < 1) {
+            this.resolvingNames.delete(service.serviceName);
             this.onError(formatProtocolEvent('mdns.service.invalid',
               'serviceName', resolved.serviceName,
               'hasHost', host.length > 0,
@@ -73,6 +75,13 @@ export class AirPlayMdnsDiscovery {
             port,
             txt
           };
+          this.resolvingNames.delete(service.serviceName);
+          const signature = `${host}:${port}:${Object.keys(txt).sort()
+            .map((key: string): string => `${key}=${txt[key] ?? ''}`).join('|')}`;
+          if (this.resolvedSignatures.get(resolved.serviceName) === signature) {
+            return;
+          }
+          this.resolvedSignatures.set(resolved.serviceName, signature);
           this.onError(formatProtocolEvent('mdns.service.resolved',
             'serviceName', airPlayService.name,
             'host', airPlayService.host,
@@ -82,7 +91,7 @@ export class AirPlayMdnsDiscovery {
           this.onService(airPlayService);
         })
         .catch((error: Error): void => {
-          this.resolvedNames.delete(service.serviceName);
+          this.resolvingNames.delete(service.serviceName);
           this.onError(formatProtocolEvent('mdns.service.resolve_failed',
             'serviceName', service.serviceName,
             'error', error.message
@@ -121,7 +130,8 @@ export class AirPlayMdnsDiscovery {
     this.clearDiscoveryTimeoutTimer();
     this.discovery = undefined;
     this.foundHandler = undefined;
-    this.resolvedNames.clear();
+    this.resolvingNames.clear();
+    this.resolvedSignatures.clear();
     this.onError(formatProtocolEvent('mdns.discovery.stopped',
       'serviceType', '_airplay._tcp',
       'elapsedMs', elapsedMs,

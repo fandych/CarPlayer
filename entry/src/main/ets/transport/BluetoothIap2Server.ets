@@ -15,19 +15,24 @@ export class BluetoothIap2Server {
   private readHandler?: (data: ArrayBuffer) => void;
   private onClientData?: ByteHandler;
   private onClientConnected?: () => void;
+  private onClientDisconnected?: () => void;
   private onFailure?: (message: string) => void;
   private adapterMode: boolean = false;
   private adapterHandoffCompleted: boolean = false;
   private readonly heldClientIds: number[] = [];
   private acceptRetryDelayMs: number = 500;
   private acceptRetryTimer: number = -1;
+  private connectionMonitorTimer: number = -1;
+  private connectionGeneration: number = 0;
+  private connectPending: boolean = false;
   private lastAcceptFailure: string = '';
 
   async start(
     onConnected: () => void,
     onData: ByteHandler,
     onError: (message: string) => void,
-    adapterMode: boolean = false
+    adapterMode: boolean = false,
+    onDisconnected: () => void = (): void => {}
   ): Promise<void> {
     if (this.serverId >= 0) {
       throw new Error('Bluetooth listener is already running');
@@ -38,6 +43,7 @@ export class BluetoothIap2Server {
     this.lastAcceptFailure = '';
     this.onClientConnected = onConnected;
     this.onClientData = onData;
+    this.onClientDisconnected = onDisconnected;
     this.onFailure = onError;
     await new Promise<void>((resolve, reject) => {
       const options: bluetoothSocket.SppOptions = {
@@ -74,7 +80,66 @@ export class BluetoothIap2Server {
     }
   }
 
+  get isClientConnected(): boolean {
+    return this.clientId >= 0;
+  }
+
+  async connectToDevice(deviceId: string): Promise<boolean> {
+    if (this.serverId < 0 || this.clientId >= 0 || this.connectPending) {
+      return false;
+    }
+    const generation = ++this.connectionGeneration;
+    this.connectPending = true;
+    return await new Promise<boolean>((resolve): void => {
+      const options: bluetoothSocket.SppOptions = {
+        uuid: '00000000-deca-fade-deca-deafdecacaff',
+        secure: true,
+        type: bluetoothSocket.SppType.SPP_RFCOMM
+      };
+      try {
+        bluetoothSocket.sppConnect(deviceId, options, (error, clientId): void => {
+          if (generation !== this.connectionGeneration || this.serverId < 0) {
+            if (!error) {
+              this.closeSocket(clientId, 'stale outgoing Bluetooth socket');
+            }
+            resolve(false);
+            return;
+          }
+          this.connectPending = false;
+          if (error) {
+            this.reportAcceptFailure(`Bluetooth RFCOMM connect failed (${error.code}): ${error.message}`);
+            resolve(false);
+            return;
+          }
+          if (this.clientId >= 0) {
+            this.closeSocket(clientId, 'superseded outgoing Bluetooth socket');
+            resolve(false);
+            return;
+          }
+          try {
+            this.attachClient(clientId);
+            resolve(true);
+          } catch (connectError) {
+            this.reportAcceptFailure(`Bluetooth outgoing client setup failed: ${this.errorMessage(connectError)}`);
+            if (this.clientId === clientId) {
+              this.closeClient();
+            } else {
+              this.closeSocket(clientId, 'failed outgoing Bluetooth client setup');
+            }
+            resolve(false);
+          }
+        });
+      } catch (error) {
+        this.connectPending = false;
+        this.reportAcceptFailure(`Bluetooth RFCOMM connect failed: ${this.errorMessage(error)}`);
+        resolve(false);
+      }
+    });
+  }
+
   stop(): void {
+    this.connectionGeneration++;
+    this.connectPending = false;
     if (this.acceptRetryTimer >= 0) {
       clearTimeout(this.acceptRetryTimer);
       this.acceptRetryTimer = -1;
@@ -92,6 +157,7 @@ export class BluetoothIap2Server {
     this.readHandler = undefined;
     this.onClientData = undefined;
     this.onClientConnected = undefined;
+    this.onClientDisconnected = undefined;
     this.onFailure = undefined;
     this.adapterMode = false;
     this.adapterHandoffCompleted = false;
@@ -110,6 +176,8 @@ export class BluetoothIap2Server {
   }
 
   disconnectClient(): void {
+    this.connectionGeneration++;
+    this.connectPending = false;
     this.closeClient();
   }
 
@@ -134,13 +202,8 @@ export class BluetoothIap2Server {
           return;
         }
         try {
-          this.closeClient();
-          this.clientId = clientId;
-          this.readHandler = (data: ArrayBuffer): void => {
-            this.onClientData?.(new Uint8Array(data));
-          };
-          bluetoothSocket.on('sppRead', clientId, this.readHandler);
-          this.onClientConnected?.();
+          this.closeActiveClient(true);
+          this.attachClient(clientId);
           this.acceptNext();
         } catch (acceptError) {
           this.reportAcceptFailure(`Bluetooth client setup failed: ${this.errorMessage(acceptError)}`);
@@ -183,23 +246,66 @@ export class BluetoothIap2Server {
   }
 
   private closeClient(): void {
+    this.closeActiveClient(false);
+  }
+
+  private closeActiveClient(notify: boolean): void {
     if (this.clientId < 0) {
       return;
     }
+    const clientId = this.clientId;
+    if (this.connectionMonitorTimer >= 0) {
+      clearInterval(this.connectionMonitorTimer);
+      this.connectionMonitorTimer = -1;
+    }
     if (this.readHandler) {
       try {
-        bluetoothSocket.off('sppRead', this.clientId, this.readHandler);
+        bluetoothSocket.off('sppRead', clientId, this.readHandler);
       } catch (error) {
         this.onFailure?.(`Bluetooth read listener cleanup failed: ${this.errorMessage(error)}`);
       }
     }
     try {
-      bluetoothSocket.sppCloseClientSocket(this.clientId);
+      bluetoothSocket.sppCloseClientSocket(clientId);
     } catch (error) {
       this.onFailure?.(`Bluetooth client socket cleanup failed: ${this.errorMessage(error)}`);
     }
     this.clientId = -1;
     this.readHandler = undefined;
+    if (notify) {
+      this.onClientDisconnected?.();
+    }
+  }
+
+  private attachClient(clientId: number): void {
+    this.clientId = clientId;
+    this.readHandler = (data: ArrayBuffer): void => {
+      if (this.clientId === clientId) {
+        this.onClientData?.(new Uint8Array(data));
+      }
+    };
+    bluetoothSocket.on('sppRead', clientId, this.readHandler);
+    this.onClientConnected?.();
+    this.connectionMonitorTimer = setInterval((): void => {
+      if (this.clientId !== clientId) {
+        return;
+      }
+      try {
+        if (!bluetoothSocket.isConnected(clientId)) {
+          this.closeActiveClient(true);
+        }
+      } catch (error) {
+        this.reportAcceptFailure(`Bluetooth connection state check failed: ${this.errorMessage(error)}`);
+      }
+    }, 1000);
+  }
+
+  private closeSocket(clientId: number, reason: string): void {
+    try {
+      bluetoothSocket.sppCloseClientSocket(clientId);
+    } catch (error) {
+      this.onFailure?.(`Bluetooth ${reason} cleanup failed: ${this.errorMessage(error)}`);
+    }
   }
 
   private closeHeldClients(): void {
