@@ -245,7 +245,8 @@ export class SessionController extends SessionControllerConnectionFlow {
     this.events.onLog(`尝试主动连接已配对设备 ${deviceId} 的无线 iAP2 RFCOMM 服务`);
     let connected = false;
     try {
-      connected = await this.bluetooth.connectToDevice(deviceId);
+      connected = await this.bluetooth.connectToDevice(deviceId,
+        (message: string): void => this.events.onLog(`主动 RFCOMM 连接探测未成功：${message}`));
     } catch (error) {
       this.events.onLog(`主动 RFCOMM 连接失败：${error instanceof Error ? error.message : String(error)}`);
     } finally {

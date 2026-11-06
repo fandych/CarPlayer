@@ -753,6 +753,15 @@ test('session lifecycle adapter delegates opaque generation tokens to native sta
   assert.equal(isCurrentSessionGeneration(second), true);
 });
 
+test('recoverable CMS signer-certificate fallback is classified as a warning', () => {
+  const Target = loadMethods('pages/Index.ets', 'Index', ['resolveProtocolLogLevel']);
+  const target = new Target();
+  assert.equal(target.resolveProtocolLogLevel(
+    'WARN: CMS SIGNER_CERTS extraction unavailable; using available certificate chain (1 certificate(s))',
+    'INFO'
+  ), 'WARN');
+});
+
 test('AirPlay requests /info with a plist body only after initial SETUP', () => {
   const pairingSource = fs.readFileSync(path.join(sourceRoot, 'airplay/AirPlayPairingClient.ets'), 'utf8');
   const sessionSource = fs.readFileSync(path.join(sourceRoot, 'airplay/AirPlayMediaSession.ets'), 'utf8');
@@ -1931,7 +1940,8 @@ test('mDNS RAW monitor binds the vehicle network and releases multicast membersh
   const logs = [];
   const { AirPlayMdnsRawMonitor, summarizeMdnsDnsPacket } = loadEts('network/AirPlayMdnsRawMonitor.ets', {
     '@ohos.net.socket': { constructMulticastSocketInstance: () => socket },
-    '../session/ProtocolLogger': { formatProtocolEvent, formatRawBytesDiagnostic }
+    '../session/ProtocolLogger': { formatProtocolEvent, formatRawBytesDiagnostic },
+    './WifiNetworkLease': { formatNetworkError: error => `${error.code}: ${error.message}` }
   });
   const dnsResponse = summarizeMdnsDnsPacket(Uint8Array.from([
     0, 1, 0x84, 0, 0, 1, 0, 2, 0, 0, 0, 0
@@ -1965,6 +1975,32 @@ test('mDNS RAW monitor binds the vehicle network and releases multicast membersh
   assert.ok(socketEvents.includes('off:message'));
   assert.ok(socketEvents.includes('off:error'));
   assert.ok(socketEvents.includes('close'));
+});
+
+test('mDNS RAW monitor reports the failing startup stage and Harmony error details', async () => {
+  const socketEvents = [];
+  const socket = {
+    setReuseAddress() {},
+    on() {},
+    off() {},
+    async bind() {},
+    async addMembership() { throw { code: 401, message: 'Parameter error' }; },
+    async close() { socketEvents.push('closed'); }
+  };
+  const { AirPlayMdnsRawMonitor } = loadEts('network/AirPlayMdnsRawMonitor.ets', {
+    '@ohos.net.socket': { constructMulticastSocketInstance: () => socket },
+    '../session/ProtocolLogger': {
+      formatProtocolEvent: event => event,
+      formatRawBytesDiagnostic: () => ''
+    },
+    './WifiNetworkLease': {
+      formatNetworkError: error => `code=${error.code}: ${error.message}`
+    }
+  });
+  const monitor = new AirPlayMdnsRawMonitor({ async bindSocket() {} }, () => {});
+
+  await assert.rejects(() => monitor.start(), /stage=multicast-membership.*code=401: Parameter error/);
+  assert.deepEqual(socketEvents, ['closed']);
 });
 
 test('AirPlay mDNS discovery reports a bounded no-service timeout and keeps searching', () => {
@@ -2140,6 +2176,77 @@ test('Bluetooth outbound RFCOMM connects to the wireless accessory service and a
   assert.ok(events.some(event => event[0] === 'connected'));
   target.closeActiveClient(false);
   assert.ok(events.some(event => event[0] === 'close' && event[1] === 9));
+});
+
+test('Bluetooth outbound RFCOMM failures are retry diagnostics, not listener failures', async () => {
+  const listenerFailures = [];
+  const attemptFailures = [];
+  const Target = loadMethods('transport/BluetoothIap2Server.ets', 'BluetoothIap2Server', [
+    'connectToDevice', 'reportAcceptFailure'
+  ], {
+    bluetoothSocket: {
+      SppType: { SPP_RFCOMM: 1 },
+      sppConnect(_deviceId, _options, callback) {
+        callback({ code: 2900099, message: 'Operation failed' });
+      }
+    }
+  });
+  const target = new Target();
+  target.serverId = 4;
+  target.clientId = -1;
+  target.connectPending = false;
+  target.connectionGeneration = 0;
+  target.onFailure = message => listenerFailures.push(message);
+
+  assert.equal(await target.connectToDevice('06:C7:C7:7F:FE:24', message => attemptFailures.push(message)), false);
+  assert.deepEqual(listenerFailures, []);
+  assert.match(attemptFailures[0], /2900099.*Operation failed/);
+});
+
+test('an accepted inbound RFCOMM client invalidates a pending outbound attempt', async () => {
+  const events = [];
+  const acceptCallbacks = [];
+  let outboundCallback;
+  const Target = loadMethods('transport/BluetoothIap2Server.ets', 'BluetoothIap2Server', [
+    'connectToDevice', 'acceptNext', 'attachClient', 'closeActiveClient', 'closeSocket',
+    'reportAcceptFailure', 'scheduleAcceptRetry', 'errorMessage'
+  ], {
+    bluetoothSocket: {
+      SppType: { SPP_RFCOMM: 1 },
+      sppConnect(_deviceId, _options, callback) { outboundCallback = callback; },
+      sppAccept(_serverId, callback) { acceptCallbacks.push(callback); },
+      on(event, clientId) { events.push(['on', event, clientId]); },
+      off(event, clientId) { events.push(['off', event, clientId]); },
+      sppCloseClientSocket(clientId) { events.push(['close', clientId]); }
+    },
+    setInterval: () => 31,
+    clearInterval: id => events.push(['clearInterval', id])
+  });
+  const target = new Target();
+  target.serverId = 4;
+  target.clientId = -1;
+  target.connectPending = false;
+  target.connectionGeneration = 0;
+  target.connectionMonitorTimer = -1;
+  target.adapterMode = false;
+  target.adapterHandoffCompleted = false;
+  target.acceptRetryDelayMs = 500;
+  target.heldClientIds = [];
+  target.onClientData = () => {};
+  target.onClientConnected = () => events.push(['connected']);
+  target.onClientDisconnected = () => events.push(['disconnected']);
+  target.onFailure = message => events.push(['listenerFailure', message]);
+
+  const outboundResult = target.connectToDevice('06:C7:C7:7F:FE:24');
+  target.acceptNext();
+  acceptCallbacks[0](undefined, 20);
+  assert.equal(target.clientId, 20);
+  outboundCallback(undefined, 21);
+  assert.equal(await outboundResult, false);
+  assert.equal(target.clientId, 20);
+  assert.ok(events.some(event => event[0] === 'close' && event[1] === 21));
+  assert.equal(events.filter(event => event[0] === 'connected').length, 1);
+  assert.ok(!events.some(event => event[0] === 'listenerFailure'));
 });
 
 test('diagnostic archive batches packet log writes and flushes before export', () => {
@@ -4166,6 +4273,28 @@ test('AirPlay RTSP connection strips IPv6 scope IDs before connecting', async ()
   });
   assert.deepEqual(attempts, [{ host: 'fe80::1899:7bff:fe39:e165', port: 7000 }]);
   assert.equal(target.connectedHost, 'fe80::1899:7bff:fe39:e165');
+});
+
+test('AirPlay RTSP connect passes the address family for IPv6 endpoints', async () => {
+  let connectOptions;
+  const socket = {
+    on() {},
+    async connect(options) { connectOptions = options; }
+  };
+  const Target = loadMethods('airplay/AirPlayRtspClient.ets', 'AirPlayRtspClient', ['connect'], {
+    netSocket: { constructTCPSocketInstance: () => socket },
+    getSocketAddressFamily: address => address.includes(':') ? 2 : 1,
+    formatNetworkError: error => error.message
+  });
+  const target = new Target();
+  target.wifiNetworkLease = { async bindSocket() { return true; } };
+  target.onError = () => {};
+  target.onDisconnected = () => {};
+
+  await target.connect('fe80::1899:7bff:fe39:e165', 7000);
+  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165');
+  assert.equal(connectOptions.address.family, 2);
+  assert.equal(connectOptions.address.port, 7000);
 });
 
 test('AirPlay RTSP tries IPv4 endpoint candidates before IPv6 candidates', async () => {

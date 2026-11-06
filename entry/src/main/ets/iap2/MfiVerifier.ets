@@ -358,7 +358,6 @@ export class MfiVerifier {
         signerCertificates = await parser.getCerts(cert.CmsCertType.SIGNER_CERTS);
       } catch (error) {
         signerCertificateError = error instanceof Error ? error.message : String(error);
-        this.log(`CMS getCerts(SIGNER_CERTS) failed: ${signerCertificateError}`);
       }
       if (untrustedCertificates.length === 0) {
         let extracted: Uint8Array[] = [];
@@ -437,6 +436,12 @@ export class MfiVerifier {
         candidateCertificates = signerCertificates.length > 0
           ? signerCertificates
           : untrustedCertificates;
+      }
+      if (signerCertificateError && untrustedCertificates.length > 0) {
+        this.log(
+          `WARN: CMS SIGNER_CERTS extraction unavailable; using available certificate chain ` +
+            `(${untrustedCertificates.length} certificate(s))`
+        );
       }
       if (!encodingName) {
         encodingName = 'PKCS#7 SignedData';

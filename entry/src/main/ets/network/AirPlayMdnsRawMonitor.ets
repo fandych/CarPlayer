@@ -1,6 +1,6 @@
 import netSocket from '@ohos.net.socket';
 import { formatProtocolEvent, formatRawBytesDiagnostic } from '../session/ProtocolLogger';
-import { WifiNetworkLease } from './WifiNetworkLease';
+import { formatNetworkError, WifiNetworkLease } from './WifiNetworkLease';
 
 const MDNS_GROUP_ADDRESS: string = '224.0.0.251';
 const MDNS_PORT: number = 5353;
@@ -65,6 +65,7 @@ export class AirPlayMdnsRawMonitor {
     };
     this.messageHandler = messageHandler;
     this.errorHandler = errorHandler;
+    let stage: string = 'socket-setup';
     try {
       if (typeof socket.setReuseAddress !== 'function') {
         throw new Error('当前系统未提供 MulticastSocket 地址复用能力；为避免抢占系统 mDNS 端口，跳过 RAW 监听');
@@ -72,7 +73,9 @@ export class AirPlayMdnsRawMonitor {
       socket.setReuseAddress(true);
       socket.on('message', messageHandler);
       socket.on('error', errorHandler);
+      stage = 'network-bind';
       await this.wifiNetworkLease.bindSocket(socket, 'mDNS RAW UDP', 1, MDNS_PORT);
+      stage = 'multicast-membership';
       await socket.addMembership({
         address: MDNS_GROUP_ADDRESS,
         family: 1,
@@ -87,7 +90,7 @@ export class AirPlayMdnsRawMonitor {
         'meaning', 'HarmonyOS mDNS discovery does not expose outgoing DNS query bytes'
       ));
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
+      const detail = formatNetworkError(error);
       let cleanupDetail = '';
       try {
         await this.closeSocket(socket);
@@ -95,8 +98,8 @@ export class AirPlayMdnsRawMonitor {
         cleanupDetail = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
       }
       const message = cleanupDetail
-        ? `mDNS RAW 监听启动失败：${detail}；socket 清理失败：${cleanupDetail}`
-        : `mDNS RAW 监听启动失败：${detail}`;
+        ? `mDNS RAW 监听启动失败：stage=${stage}，${detail}；socket 清理失败：${cleanupDetail}`
+        : `mDNS RAW 监听启动失败：stage=${stage}，${detail}`;
       throw new Error(message);
     }
   }

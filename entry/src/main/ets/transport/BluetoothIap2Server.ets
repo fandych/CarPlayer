@@ -84,7 +84,10 @@ export class BluetoothIap2Server {
     return this.clientId >= 0;
   }
 
-  async connectToDevice(deviceId: string): Promise<boolean> {
+  async connectToDevice(
+    deviceId: string,
+    onAttemptFailure: (message: string) => void = (_message: string): void => {}
+  ): Promise<boolean> {
     if (this.serverId < 0 || this.clientId >= 0 || this.connectPending) {
       return false;
     }
@@ -107,7 +110,7 @@ export class BluetoothIap2Server {
           }
           this.connectPending = false;
           if (error) {
-            this.reportAcceptFailure(`Bluetooth RFCOMM connect failed (${error.code}): ${error.message}`);
+            onAttemptFailure(`Bluetooth RFCOMM connect failed (${error.code}): ${error.message}`);
             resolve(false);
             return;
           }
@@ -120,7 +123,7 @@ export class BluetoothIap2Server {
             this.attachClient(clientId);
             resolve(true);
           } catch (connectError) {
-            this.reportAcceptFailure(`Bluetooth outgoing client setup failed: ${this.errorMessage(connectError)}`);
+            onAttemptFailure(`Bluetooth outgoing client setup failed: ${this.errorMessage(connectError)}`);
             if (this.clientId === clientId) {
               this.closeClient();
             } else {
@@ -131,7 +134,7 @@ export class BluetoothIap2Server {
         });
       } catch (error) {
         this.connectPending = false;
-        this.reportAcceptFailure(`Bluetooth RFCOMM connect failed: ${this.errorMessage(error)}`);
+        onAttemptFailure(`Bluetooth RFCOMM connect failed: ${this.errorMessage(error)}`);
         resolve(false);
       }
     });
@@ -202,6 +205,8 @@ export class BluetoothIap2Server {
           return;
         }
         try {
+          this.connectionGeneration++;
+          this.connectPending = false;
           this.closeActiveClient(true);
           this.attachClient(clientId);
           this.acceptNext();

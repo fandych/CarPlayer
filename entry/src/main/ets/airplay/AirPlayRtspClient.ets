@@ -97,7 +97,7 @@ export class AirPlayRtspClient {
       socket.on('error', this.errorHandler);
       socket.on('close', this.closeHandler);
       const options: netSocket.TCPConnectOptions = {
-        address: { address: host, port },
+        address: { address: host, family: getSocketAddressFamily(host), port },
         timeout: 5000
       };
       if (await this.wifiNetworkLease.bindSocket(socket, 'AirPlay RTSP TCP', getSocketAddressFamily(host))) {
