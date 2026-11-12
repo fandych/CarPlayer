@@ -43,6 +43,11 @@ import {
 } from './WirelessSessionParser';
 import { Iap2LinkLayer } from './Iap2LinkLayer';
 
+interface PendingAuthenticatedMessage {
+  messageId: number;
+  body: Uint8Array;
+}
+
 export abstract class Iap2SenderSessionFlow extends Iap2LinkLayer {
   protected readonly onWifi: (credentials: WifiCredentials) => void;
   protected readonly onEndpoint: (endpoint: WirelessAirPlayEndpoint | undefined) => void;
@@ -68,7 +73,7 @@ export abstract class Iap2SenderSessionFlow extends Iap2LinkLayer {
   protected buickReidentificationUsed: boolean = false;
   protected buickReauthenticationInProgress: boolean = false;
   protected pendingBuickStartSession?: Uint8Array;
-  protected pendingAuthenticatedMessages: Array<{ messageId: number; body: Uint8Array }> = [];
+  protected pendingAuthenticatedMessages: PendingAuthenticatedMessage[] = [];
   protected lastDetectionResponseAt: number = 0;
   protected detectionRetryCount: number = 0;
   protected accessorySendMessages?: number[];
@@ -102,6 +107,10 @@ export abstract class Iap2SenderSessionFlow extends Iap2LinkLayer {
   protected abstract receiveControlMessage(messageId: number, body: Uint8Array): Promise<void>;
 
   protected deferAuthenticatedMessage(messageId: number, body: Uint8Array): void {
+    const pendingMessage: PendingAuthenticatedMessage = {
+      messageId: messageId,
+      body: body.slice()
+    };
     const existingIndex = this.pendingAuthenticatedMessages.findIndex(
       (message) => message.messageId === messageId
     );
@@ -113,7 +122,7 @@ export abstract class Iap2SenderSessionFlow extends Iap2LinkLayer {
       this.log(`认证前消息暂存区已满；忽略 0x${messageId.toString(16)}，避免无界占用内存`);
       return;
     }
-    this.pendingAuthenticatedMessages.push({ messageId, body: body.slice() });
+    this.pendingAuthenticatedMessages.push(pendingMessage);
     this.log(`认证尚未完成；暂存 0x${messageId.toString(16)}，将在认证后处理`);
   }
 
