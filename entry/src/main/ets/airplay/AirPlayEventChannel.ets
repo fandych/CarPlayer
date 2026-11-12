@@ -222,14 +222,16 @@ export class AirPlayEventChannel {
     try {
       socket.on('message', this.messageHandler);
       socket.on('error', this.errorHandler);
-      if (await this.wifiNetworkLease.bindSocket(socket, 'AirPlay event TCP', getSocketAddressFamily(host))) {
+      const socketHost = this.wifiNetworkLease.scopeLinkLocalAddress(host);
+      const addressFamily = getSocketAddressFamily(socketHost);
+      if (await this.wifiNetworkLease.bindSocket(socket, 'AirPlay event TCP', addressFamily)) {
         this.log('AirPlay event socket 已绑定指定车机 Wi-Fi 网络');
       }
       await socket.connect({
-        address: { address: host, port },
+        address: { address: socketHost, family: addressFamily, port },
         timeout: 5000
       });
-      this.log(`AirPlay ${this.cipher ? 'encrypted' : 'plaintext'} event channel connected to ${host}:${port}`);
+      this.log(`AirPlay ${this.cipher ? 'encrypted' : 'plaintext'} event channel connected to ${socketHost}:${port}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       try {

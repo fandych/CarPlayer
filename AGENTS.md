@@ -2,6 +2,9 @@
 
 本文件适用于在此仓库中工作的编码代理。项目概览见 [README.md](README.md)；Copilot 的补充说明见 [.github/copilot-instructions.md](.github/copilot-instructions.md)。
 
+## Harmony OS Documents
+[Documents](https://developer.huawei.com/config/llms.txt)
+
 ## 项目结构与职责
 
 - 这是由 Hvigor 构建的 HarmonyOS 应用，主业务模块为 `entry`。

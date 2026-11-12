@@ -61,15 +61,16 @@ export class WifiNetworkLease {
   }
 
   scopeLinkLocalAddress(address: string): string {
-    const normalizedAddress = address.replace(/^\[|\]$/g, '');
-    if (!isUnscopedIpv6LinkLocal(normalizedAddress)) {
-      return address;
+    const normalizedAddress = address.trim().replace(/^\[|\]$/g, '');
+    const unscopedAddress = stripIpv6ScopeId(normalizedAddress);
+    if (!isIpv6LinkLocal(unscopedAddress)) {
+      return normalizedAddress;
     }
     const interfaceName = this.localAddresses?.interfaceName;
     if (!interfaceName) {
       throw new Error('车机 Wi-Fi interfaceName is unavailable for IPv6 link-local address');
     }
-    return `${normalizedAddress}%${interfaceName}`;
+    return `${unscopedAddress}%${interfaceName}`;
   }
 
   async acquire(
@@ -316,10 +317,6 @@ export class WifiNetworkLease {
       throw unregisterError;
     }
   }
-}
-
-function isUnscopedIpv6LinkLocal(address: string): boolean {
-  return !address.includes('%') && isIpv6LinkLocal(address);
 }
 
 function isIpv6LinkLocal(address: string): boolean {

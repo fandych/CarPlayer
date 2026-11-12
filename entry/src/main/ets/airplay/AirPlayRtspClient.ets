@@ -96,11 +96,13 @@ export class AirPlayRtspClient {
       socket.on('message', this.messageHandler);
       socket.on('error', this.errorHandler);
       socket.on('close', this.closeHandler);
+      const socketHost = this.wifiNetworkLease.scopeLinkLocalAddress(host);
       const options: netSocket.TCPConnectOptions = {
-        address: { address: host, family: getSocketAddressFamily(host), port },
+        address: { address: socketHost, family: getSocketAddressFamily(socketHost), port },
         timeout: 5000
       };
-      if (await this.wifiNetworkLease.bindSocket(socket, 'AirPlay RTSP TCP', getSocketAddressFamily(host))) {
+      if (await this.wifiNetworkLease.bindSocket(
+        socket, 'AirPlay RTSP TCP', getSocketAddressFamily(socketHost))) {
         this.onError('AirPlay RTSP socket 已绑定指定车机 Wi-Fi 网络');
       }
       await socket.connect(options);

@@ -8,7 +8,7 @@ import {
 } from './AirPlayMediaSession';
 import { EncodedH264Event } from './AirPlayVideoStream';
 import { AirPlayRtspClient } from './AirPlayRtspClient';
-import { orderAirPlayAddresses, stripIpv6ScopeId, WifiNetworkLease } from '../network/WifiNetworkLease';
+import { orderAirPlayAddresses, WifiNetworkLease } from '../network/WifiNetworkLease';
 import { Iap2SenderSession } from '../session/Iap2SenderSession';
 import { formatProtocolEvent } from '../session/ProtocolLogger';
 import { AirPlayRtspStatusError, PairSetupClient, PairVerifyClient } from './pairing/PairingProtocol';
@@ -201,7 +201,7 @@ export class AirPlayPairingClient {
     const hosts = orderAirPlayAddresses([service.host, ...(service.addresses ?? [])].filter(Boolean));
     const failures: string[] = [];
     for (const host of hosts) {
-      const socketHost = stripIpv6ScopeId(host);
+      const socketHost = this.wifiNetworkLease.scopeLinkLocalAddress(host);
       if (socketHost !== host) {
         this.log(formatProtocolEvent('airplay.endpoint.address.normalized',
           'originalAddress', host,

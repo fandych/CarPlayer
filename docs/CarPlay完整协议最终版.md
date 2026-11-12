@@ -322,6 +322,8 @@ Wi-Fi 配置相关消息：
 
 AirPlay 服务通过 `_airplay._tcp` 发布；TXT 属性可包含 `deviceid`、`features`、`flags`、`model`、`srcvers`、`protovers`、`pi` 和 `pk`，SRV 提供目标和端口。它们是发现提示，不能替代会话能力、身份验证或流 SETUP。
 
+若端点是 IPv6 link-local（`fe80::/10`），连接时还必须指定当前车机 WLAN 的接口作用域；未带作用域的地址不能唯一确定出接口。获得 Wi-Fi 后再解析/连接端点，并在 RTSP、Event 和媒体 socket 中保持该作用域。
+
 #### 5.4 反向手机控制探测
 
 采用反向控制探测的连接由车机发现手机的 `_carplay-ctrl._tcp`，向手机服务发送 **`GET /ctrl-int/1/connect HTTP/1.1`**，携带 `AirPlay-Receiver-Device-ID`。该请求不属于主 AirPlay 控制连接，也不是 `/command`。

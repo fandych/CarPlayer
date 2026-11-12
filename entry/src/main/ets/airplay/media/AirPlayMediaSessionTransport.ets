@@ -104,7 +104,7 @@ export abstract class AirPlayMediaSessionTransport {
     wifiNetworkLease: WifiNetworkLease
   ) {
     this.client = client;
-    this.receiverHost = receiverHost;
+    this.receiverHost = wifiNetworkLease.scopeLinkLocalAddress(receiverHost);
     this.log = log;
     this.onTransportDisconnected = onTransportDisconnected;
     this.wifiNetworkLease = wifiNetworkLease;
@@ -139,7 +139,11 @@ export abstract class AirPlayMediaSessionTransport {
 
       const options: netSocket.UDPSendOptions = {
         data: toArrayBuffer(response),
-        address: { address: info.remoteInfo.address, port: info.remoteInfo.port }
+        address: {
+          address: this.wifiNetworkLease.scopeLinkLocalAddress(info.remoteInfo.address),
+          family: getSocketAddressFamily(info.remoteInfo.address),
+          port: info.remoteInfo.port
+        }
       };
       void socket.send(options).then((): void => {
         this.log(formatRawBytesDiagnostic('TX', 'AirPlay timing UDP', response, 64));
@@ -189,6 +193,7 @@ export abstract class AirPlayMediaSessionTransport {
   }
 
   protected async openVideoDataPort(port: number): Promise<void> {
+    const socketHost = this.wifiNetworkLease.scopeLinkLocalAddress(this.receiverHost);
     const socket = netSocket.constructTCPSocketInstance();
     const errorHandler = (error: Error): void => {
       this.reportVideoSocketFailure(socket, `socket error: ${describeNetworkError(error)}`);
@@ -203,14 +208,14 @@ export abstract class AirPlayMediaSessionTransport {
     socket.on('close', closeHandler);
     try {
       if (await this.wifiNetworkLease.bindSocket(
-        socket, 'AirPlay video TCP', getSocketAddressFamily(this.receiverHost))) {
+        socket, 'AirPlay video TCP', getSocketAddressFamily(socketHost))) {
         this.log('AirPlay video TCP socket 已绑定指定车机 Wi-Fi 网络');
       }
       await socket.connect({
-        address: { address: this.receiverHost, port },
+        address: { address: socketHost, family: getSocketAddressFamily(socketHost), port },
         timeout: 5000
       });
-      this.log(`AirPlay screen data TCP connected: ${this.receiverHost}:${port}`);
+      this.log(`AirPlay screen data TCP connected: ${socketHost}:${port}`);
     } catch (error) {
       if (this.videoDataSocket === socket) {
         this.videoDataSocket = undefined;
@@ -454,10 +459,15 @@ export abstract class AirPlayMediaSessionTransport {
     if (!socket || !this.running) {
       return;
     }
+    const socketHost = this.wifiNetworkLease.scopeLinkLocalAddress(this.receiverHost);
     const beacon = this.createLowPowerKeepAliveBeacon();
     const options: netSocket.UDPSendOptions = {
       data: toArrayBuffer(beacon),
-      address: { address: this.receiverHost, port }
+      address: {
+        address: socketHost,
+        family: getSocketAddressFamily(socketHost),
+        port
+      }
     };
     await socket.send(options);
     const packetNumber = ++this.lowPowerKeepAlivesSent;

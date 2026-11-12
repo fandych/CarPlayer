@@ -28,6 +28,7 @@ export abstract class Iap2LinkLayer {
   protected sessionGeneration: number = 0;
   protected identificationRequested: boolean = false;
   protected peerSyncSequence?: number;
+  protected peerSyncPayload?: Uint8Array;
   protected peerSyncResponse?: Iap2LinkFrame;
   protected peerMaxOutstanding: number = 1;
   protected peerMaxPacketLength: number = 1024;
@@ -46,6 +47,7 @@ export abstract class Iap2LinkLayer {
 
   protected abstract onControlMessageReceived(messageId: number, body: Uint8Array): Promise<void>;
   protected abstract onIdentificationRequested(): Promise<void>;
+  protected abstract restartSessionForNewPeerSync(): Promise<void>;
   protected abstract onLinkResetDiagnostic(): void;
   protected abstract onBuickRetransmissionFailure(): boolean;
   protected abstract onFrameSentWhileBuickWaiting(): boolean;
@@ -61,12 +63,23 @@ export abstract class Iap2LinkLayer {
       throw new Error('车机发送 iAP2 链路复位，已终止当前认证会话');
     }
     if ((frame.control & 0x80) !== 0 && frame.payload.length >= 10) {
-      if (this.identificationRequested && this.peerSyncSequence === frame.sequence) {
+      const sameSyncPayload = this.peerSyncPayload !== undefined &&
+        this.peerSyncPayload.length === frame.payload.length &&
+        this.peerSyncPayload.every((value: number, index: number): boolean => value === frame.payload[index]);
+      if (this.identificationRequested && this.peerSyncSequence === frame.sequence &&
+        this.lastReceivedSequence === frame.sequence && sameSyncPayload) {
         if ((frame.control & 0x40) === 0 && this.peerSyncResponse) {
           await this.sendLinkFrame(this.peerSyncResponse);
         }
         this.log(`收到重复 iAP2 SYN：seq=${frame.sequence}，保持现有协商状态`);
+        if (this.identificationTimer !== undefined) {
+          await this.onIdentificationRequested();
+        }
         return;
+      }
+      if (this.identificationRequested) {
+        this.log(`收到新的 iAP2 SYN：seq=${frame.sequence}；清理旧协商状态并重新开始识别`);
+        await this.restartSessionForNewPeerSync();
       }
       const peerControlSession = this.readControlSessionId(frame.payload);
       if (peerControlSession === undefined) {
@@ -75,6 +88,7 @@ export abstract class Iap2LinkLayer {
       this.lastReceivedSequence = frame.sequence;
       this.controlSessionId = peerControlSession;
       this.peerSyncSequence = frame.sequence;
+      this.peerSyncPayload = frame.payload.slice();
       this.applyPeerLinkParameters(frame.payload);
       if (this.detectionRetryTimer !== undefined) {
         clearTimeout(this.detectionRetryTimer);
@@ -100,6 +114,21 @@ export abstract class Iap2LinkLayer {
         await this.onIdentificationRequested();
       }
       return;
+    }
+    if (!this.identificationRequested && this.peerSyncSequence === undefined &&
+      (frame.control & 0x40) !== 0 && (frame.control & 0x20) === 0 &&
+      frame.sessionId > 0 && frame.payload.length >= 6 &&
+      frame.payload[0] === 0x40 && frame.payload[1] === 0x40) {
+      this.controlSessionId = frame.sessionId;
+      this.lastReceivedSequence = (frame.sequence - 1 + 256) & 0xff;
+      this.identificationRequested = true;
+      if (this.detectionRetryTimer !== undefined) {
+        clearTimeout(this.detectionRetryTimer);
+        this.detectionRetryTimer = undefined;
+      }
+      this.log(
+        `未收到 SYN 即收到 iAP2 控制数据；按 CSM 会话 ${frame.sessionId}、序号 ${frame.sequence} 恢复接收`
+      );
     }
     if ((frame.control & 0x40) !== 0) {
       for (const sequence of Array.from(this.unacknowledgedFrames.keys())) {
@@ -203,6 +232,30 @@ export abstract class Iap2LinkLayer {
       }
     }
     return undefined;
+  }
+
+  protected resetLinkSessionState(): void {
+    if (this.detectionRetryTimer !== undefined) {
+      clearTimeout(this.detectionRetryTimer);
+      this.detectionRetryTimer = undefined;
+    }
+    this.clearRetransmitTimer();
+    this.controlDecoder = new Iap2ControlDecoder();
+    this.nextSequence = 99;
+    this.lastReceivedSequence = 0;
+    this.controlSessionId = 10;
+    this.identificationRequested = false;
+    this.peerSyncSequence = undefined;
+    this.peerSyncPayload = undefined;
+    this.peerSyncResponse = undefined;
+    this.peerMaxOutstanding = 1;
+    this.peerMaxPacketLength = 1024;
+    this.peerRetransmitTimeoutMs = 1500;
+    this.peerMaxRetransmissions = 3;
+    this.unacknowledgedFrames.clear();
+    this.outOfOrderFrames.clear();
+    this.outboundQueue.length = 0;
+    this.retransmitCounts.clear();
   }
 
   protected async sendControl(messageId: number, body: Uint8Array = new Uint8Array(0)): Promise<void> {

@@ -3491,6 +3491,7 @@ test('iAP2 StartHID is acknowledged before Wi-Fi configuration begins', async ()
   const target = new Target();
   const actions = [];
   target.log = () => {};
+  target.authenticated = true;
   target.hidStartWaitTimer = 1;
   target.parameter = (id, value) => new Uint8Array([id, ...value]);
   target.sendControl = async messageId => { actions.push(messageId); };
@@ -3498,6 +3499,169 @@ test('iAP2 StartHID is acknowledged before Wi-Fi configuration begins', async ()
 
   await target.receiveControlMessage(0x6800, new Uint8Array(0));
   assert.deepEqual(actions, [0x6801, 'wifi']);
+  actions.length = 0;
+  target.hidStartWaitTimer = undefined;
+  target.wifiConfigurationReceived = true;
+  await target.receiveControlMessage(0x6800, new Uint8Array(0));
+  assert.deepEqual(actions, [0x6801]);
+});
+
+test('iAP2 defers early Wi-Fi and CarPlay session messages until MFi completes', async () => {
+  const MESSAGE = {
+    WIFI_CONFIGURATION: 0x5703,
+    CARPLAY_START_SESSION: 0x4301
+  };
+  const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
+    ['receiveControlMessage', 'deferAuthenticatedMessage', 'replayAuthenticatedMessages'], {
+      MESSAGE,
+      formatIap2MessageDiagnostic: () => ''
+    });
+  const target = new Target();
+  const handled = [];
+  const logs = [];
+  target.started = true;
+  target.authenticated = false;
+  target.mfiOnlyVirtualLink = false;
+  target.pendingAuthenticatedMessages = [];
+  target.log = message => logs.push(message);
+
+  await target.receiveControlMessage(MESSAGE.CARPLAY_START_SESSION, Uint8Array.of(1));
+  await target.receiveControlMessage(MESSAGE.WIFI_CONFIGURATION, Uint8Array.of(2));
+  await target.receiveControlMessage(MESSAGE.CARPLAY_START_SESSION, Uint8Array.of(3));
+  assert.deepEqual(target.pendingAuthenticatedMessages.map(message => message.messageId), [
+    MESSAGE.WIFI_CONFIGURATION, MESSAGE.CARPLAY_START_SESSION
+  ]);
+  assert.deepEqual(Array.from(target.pendingAuthenticatedMessages[1].body), [3]);
+
+  target.authenticated = true;
+  target.receiveControlMessage = async (messageId, body) => { handled.push([messageId, Array.from(body)]); };
+  await target.replayAuthenticatedMessages();
+  assert.deepEqual(handled, [[MESSAGE.WIFI_CONFIGURATION, [2]], [MESSAGE.CARPLAY_START_SESSION, [3]]]);
+  assert.equal(target.pendingAuthenticatedMessages.length, 0);
+  assert.ok(logs.some(message => message.includes('将在认证后处理')));
+});
+
+test('iAP2 ignores an early MFi response and requests the missing certificate without bypassing auth', async () => {
+  const MESSAGE = {
+    MFI_RESPONSE: 0xaa03,
+    MFI_CERTIFICATE_REQUEST: 0xaa00
+  };
+  const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
+    ['receiveControlMessage'], {
+      MESSAGE,
+      decodeIap2Parameters: () => [],
+      formatIap2MessageDiagnostic: () => ''
+    });
+  const target = new Target();
+  const sent = [];
+  let failures = 0;
+  target.started = true;
+  target.authenticated = false;
+  target.mfiOnlyVirtualLink = false;
+  target.mfiAuthenticationFailed = false;
+  target.mfiCertificateRequestCount = 0;
+  target.pendingMfiChallenge = undefined;
+  target.validatedAccessoryCertificate = undefined;
+  target.log = () => {};
+  target.sendControl = async messageId => { sent.push(messageId); };
+  target.startMfiCertificateTimer = () => {};
+  target.failMfiAuthentication = () => { failures++; };
+
+  await target.receiveControlMessage(MESSAGE.MFI_RESPONSE, new Uint8Array(0));
+  assert.deepEqual(sent, [MESSAGE.MFI_CERTIFICATE_REQUEST]);
+  assert.equal(target.mfiCertificateRequestCount, 1);
+  assert.equal(target.authenticated, false);
+  assert.equal(failures, 0);
+});
+
+test('iAP2 restarts on a new SYN after progress and adopts a direct mid-session CSM frame', async () => {
+  const Target = loadMethods('session/iap2/Iap2LinkLayer.ets', 'Iap2LinkLayer',
+    ['receiveLinkFrame'], {
+      formatIap2RawFrameDiagnostic: () => '',
+      formatIap2FrameInterpretation: () => ''
+    });
+  const syncTarget = new Target();
+  const syncPayload = Uint8Array.of(1, 2, 0, 5, 0, 10, 0, 0, 3, 0);
+  let restarts = 0;
+  let identificationRequests = 0;
+  const syncFrames = [];
+  syncTarget.log = () => {};
+  syncTarget.started = true;
+  syncTarget.identificationRequested = true;
+  syncTarget.peerSyncSequence = 42;
+  syncTarget.peerSyncPayload = syncPayload.slice();
+  syncTarget.lastReceivedSequence = 43;
+  syncTarget.peerSyncResponse = undefined;
+  syncTarget.detectionRetryTimer = undefined;
+  syncTarget.restartSessionForNewPeerSync = async () => {
+    restarts++;
+    syncTarget.identificationRequested = false;
+    syncTarget.lastReceivedSequence = 0;
+    syncTarget.peerSyncSequence = undefined;
+    syncTarget.peerSyncPayload = undefined;
+    syncTarget.peerSyncResponse = undefined;
+  };
+  syncTarget.readControlSessionId = () => 1;
+  syncTarget.applyPeerLinkParameters = () => {};
+  syncTarget.takeSequence = () => 99;
+  syncTarget.sendLinkFrame = async frame => { syncFrames.push(frame); };
+  syncTarget.onIdentificationRequested = async () => { identificationRequests++; };
+  await syncTarget.receiveLinkFrame({
+    control: 0x80, sequence: 42, acknowledgement: 0, sessionId: 0, payload: syncPayload
+  });
+  assert.equal(restarts, 1);
+  assert.equal(identificationRequests, 1);
+  assert.equal(syncTarget.controlSessionId, 1);
+  assert.equal(syncFrames[0].control, 0xc0);
+
+  const delayedTarget = new Target();
+  const syncResponse = {
+    control: 0xc0, sequence: 99, acknowledgement: 42, sessionId: 0, payload: syncPayload
+  };
+  let delayedStartRequests = 0;
+  const repeatedSyncResponses = [];
+  delayedTarget.log = () => {};
+  delayedTarget.identificationRequested = true;
+  delayedTarget.peerSyncSequence = 42;
+  delayedTarget.peerSyncPayload = syncPayload.slice();
+  delayedTarget.lastReceivedSequence = 42;
+  delayedTarget.peerSyncResponse = syncResponse;
+  delayedTarget.identificationTimer = 1;
+  delayedTarget.sendLinkFrame = async frame => { repeatedSyncResponses.push(frame); };
+  delayedTarget.onIdentificationRequested = async () => { delayedStartRequests++; };
+  await delayedTarget.receiveLinkFrame({
+    control: 0x80, sequence: 42, acknowledgement: 0, sessionId: 0, payload: syncPayload
+  });
+  assert.deepEqual(repeatedSyncResponses, [syncResponse]);
+  assert.equal(delayedStartRequests, 1);
+
+  const dataTarget = new Target();
+  const accepted = [];
+  dataTarget.log = () => {};
+  dataTarget.started = true;
+  dataTarget.identificationRequested = false;
+  dataTarget.peerSyncSequence = undefined;
+  dataTarget.controlSessionId = 10;
+  dataTarget.lastReceivedSequence = 0;
+  dataTarget.detectionRetryTimer = undefined;
+  dataTarget.unacknowledgedFrames = new Map();
+  dataTarget.retransmitCounts = new Map();
+  dataTarget.outboundQueue = [];
+  dataTarget.outOfOrderFrames = new Map();
+  dataTarget.nextSequence = 100;
+  dataTarget.clearRetransmitTimer = () => {};
+  dataTarget.transmitPending = async () => {};
+  dataTarget.sendLinkFrame = async () => {};
+  dataTarget.acceptDataFrame = async frame => { accepted.push(frame); };
+  const firstFrame = {
+    control: 0x40, sequence: 201, acknowledgement: 0, sessionId: 3,
+    payload: Uint8Array.of(0x40, 0x40, 0, 6, 0x1d, 0x01)
+  };
+  await dataTarget.receiveLinkFrame(firstFrame);
+  assert.equal(dataTarget.controlSessionId, 3);
+  assert.equal(dataTarget.identificationRequested, true);
+  assert.equal(dataTarget.lastReceivedSequence, 201);
+  assert.deepEqual(accepted, [firstFrame]);
 });
 
 test('iAP2 receiver profile matches CardDeck Wi-Fi and MIB3 capability rules', () => {
@@ -4115,7 +4279,7 @@ test('wireless gateway fallback uses only the selected WLAN route and never inve
 test('wireless startup rejects malformed and unauthenticated start requests', async () => {
   let valid = false;
   const Target = loadMethods('session/Iap2SenderSession.ets', 'Iap2SenderSession',
-    ['receiveControlMessage'], {
+    ['receiveControlMessage', 'deferAuthenticatedMessage'], {
       MESSAGE: { CARPLAY_START_SESSION: 0x4301 },
       formatIap2MessageDiagnostic: () => '',
       decodeIap2Parameters: () => { if (!valid) throw new Error('invalid length'); return []; },
@@ -4125,6 +4289,7 @@ test('wireless startup rejects malformed and unauthenticated start requests', as
   const target = new Target();
   target.log = () => {};
   target.authenticated = true;
+  target.pendingAuthenticatedMessages = [];
   target.errorDetails = error => error.message;
   target.clearWifiConfigurationTimer = () => {};
   target.clearStartSessionWaitTimer = () => {};
@@ -4138,6 +4303,7 @@ test('wireless startup rejects malformed and unauthenticated start requests', as
   target.authenticated = false;
   await target.receiveControlMessage(0x4301, new Uint8Array(0));
   assert.equal(invitations, 0);
+  assert.equal(target.pendingAuthenticatedMessages.length, 1);
   target.authenticated = true;
   await target.receiveControlMessage(0x4301, new Uint8Array(0));
   assert.equal(invitations, 1);
@@ -4212,6 +4378,7 @@ test('wireless network lease scopes link-local addresses to the selected interfa
   assert.equal(lease.scopeLinkLocalAddress('fe80::1899:7bff:fe39:e165'),
     'fe80::1899:7bff:fe39:e165%wlan0');
   assert.equal(lease.scopeLinkLocalAddress('fe80::1%wlan0'), 'fe80::1%wlan0');
+  assert.equal(lease.scopeLinkLocalAddress('fe80::1%p2p0'), 'fe80::1%wlan0');
   assert.equal(lease.scopeLinkLocalAddress('192.168.49.1'), '192.168.49.1');
   assert.equal(stripIpv6ScopeId('fe80::1899:7bff:fe39:e165%wlan0'), 'fe80::1899:7bff:fe39:e165');
   assert.equal(stripIpv6ScopeId('192.168.49.1'), '192.168.49.1');
@@ -4244,7 +4411,7 @@ test('IPv6 socket uses a wildcard local bind when the selected WLAN has no enume
   ]);
 });
 
-test('AirPlay RTSP connection strips IPv6 scope IDs before connecting', async () => {
+test('AirPlay RTSP connection scopes IPv6 link-local addresses to the selected interface', async () => {
   const attempts = [];
   class StubAirPlayRtspClient {
     constructor() {}
@@ -4267,15 +4434,15 @@ test('AirPlay RTSP connection strips IPv6 scope IDs before connecting', async ()
   target.onDisconnected = () => {};
   target.wifiNetworkLease = lease;
   await target.connect({
-    host: 'fe80::1899:7bff:fe39:e165%wlan0',
+    host: 'fe80::1899:7bff:fe39:e165',
     addresses: [],
     port: 7000
   });
-  assert.deepEqual(attempts, [{ host: 'fe80::1899:7bff:fe39:e165', port: 7000 }]);
-  assert.equal(target.connectedHost, 'fe80::1899:7bff:fe39:e165');
+  assert.deepEqual(attempts, [{ host: 'fe80::1899:7bff:fe39:e165%wlan0', port: 7000 }]);
+  assert.equal(target.connectedHost, 'fe80::1899:7bff:fe39:e165%wlan0');
 });
 
-test('AirPlay RTSP connect passes the address family for IPv6 endpoints', async () => {
+test('AirPlay RTSP connect scopes IPv6 link-local endpoints and passes the IPv6 family', async () => {
   let connectOptions;
   const socket = {
     on() {},
@@ -4287,14 +4454,70 @@ test('AirPlay RTSP connect passes the address family for IPv6 endpoints', async 
     formatNetworkError: error => error.message
   });
   const target = new Target();
-  target.wifiNetworkLease = { async bindSocket() { return true; } };
+  target.wifiNetworkLease = {
+    scopeLinkLocalAddress: address => `${address}%wlan0`,
+    async bindSocket() { return true; }
+  };
   target.onError = () => {};
   target.onDisconnected = () => {};
 
   await target.connect('fe80::1899:7bff:fe39:e165', 7000);
-  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165');
+  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165%wlan0');
   assert.equal(connectOptions.address.family, 2);
   assert.equal(connectOptions.address.port, 7000);
+});
+
+test('AirPlay event channel scopes IPv6 link-local endpoints before TCP connect', async () => {
+  let connectOptions;
+  const socket = {
+    on() {},
+    async connect(options) { connectOptions = options; }
+  };
+  const Target = loadMethods('airplay/AirPlayEventChannel.ets', 'AirPlayEventChannel',
+    ['connect'], {
+      netSocket: { constructTCPSocketInstance: () => socket },
+      getSocketAddressFamily: address => address.includes(':') ? 2 : 1,
+      formatProtocolEvent: () => ''
+    });
+  const target = new Target();
+  target.log = () => {};
+  target.wifiNetworkLease = {
+    scopeLinkLocalAddress: address => `${address}%wlan0`,
+    async bindSocket() { return true; }
+  };
+
+  await target.connect('fe80::1899:7bff:fe39:e165', 7000);
+  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165%wlan0');
+  assert.equal(connectOptions.address.family, 2);
+  assert.equal(connectOptions.address.port, 7000);
+});
+
+test('AirPlay video TCP scopes IPv6 link-local receiver addresses', async () => {
+  let connectOptions;
+  const socket = {
+    on() {},
+    off() {},
+    async connect(options) { connectOptions = options; },
+    async close() {}
+  };
+  const Target = loadMethods('airplay/media/AirPlayMediaSessionTransport.ets',
+    'AirPlayMediaSessionTransport', ['openVideoDataPort'], {
+      netSocket: { constructTCPSocketInstance: () => socket },
+      getSocketAddressFamily: address => address.includes(':') ? 2 : 1
+    });
+  const target = new Target();
+  target.receiverHost = 'fe80::1899:7bff:fe39:e165';
+  target.log = () => {};
+  target.reportVideoSocketFailure = () => {};
+  target.wifiNetworkLease = {
+    scopeLinkLocalAddress: address => `${address}%wlan0`,
+    async bindSocket() { return true; }
+  };
+
+  await target.openVideoDataPort(7001);
+  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165%wlan0');
+  assert.equal(connectOptions.address.family, 2);
+  assert.equal(connectOptions.address.port, 7001);
 });
 
 test('AirPlay RTSP tries IPv4 endpoint candidates before IPv6 candidates', async () => {
@@ -4316,7 +4539,7 @@ test('AirPlay RTSP tries IPv4 endpoint candidates before IPv6 candidates', async
   const target = new Target();
   target.log = () => {};
   target.onDisconnected = () => {};
-  target.wifiNetworkLease = {};
+  target.wifiNetworkLease = { scopeLinkLocalAddress: address => address };
   await target.connect({
     host: 'fe80::1899:7bff:fe39:e165',
     addresses: ['2001:db8::2', '192.168.49.8'],

@@ -68,6 +68,7 @@ export abstract class Iap2SenderSessionFlow extends Iap2LinkLayer {
   protected buickReidentificationUsed: boolean = false;
   protected buickReauthenticationInProgress: boolean = false;
   protected pendingBuickStartSession?: Uint8Array;
+  protected pendingAuthenticatedMessages: Array<{ messageId: number; body: Uint8Array }> = [];
   protected lastDetectionResponseAt: number = 0;
   protected detectionRetryCount: number = 0;
   protected accessorySendMessages?: number[];
@@ -99,6 +100,31 @@ export abstract class Iap2SenderSessionFlow extends Iap2LinkLayer {
   protected buickAvailabilityFrameDigest: string = '';
 
   protected abstract receiveControlMessage(messageId: number, body: Uint8Array): Promise<void>;
+
+  protected deferAuthenticatedMessage(messageId: number, body: Uint8Array): void {
+    const existingIndex = this.pendingAuthenticatedMessages.findIndex(
+      (message) => message.messageId === messageId
+    );
+    if (existingIndex >= 0) {
+      this.pendingAuthenticatedMessages.splice(existingIndex, 1);
+      this.log(`认证完成前再次收到 0x${messageId.toString(16)}；用最新消息替换暂存内容`);
+    }
+    if (this.pendingAuthenticatedMessages.length >= 8) {
+      this.log(`认证前消息暂存区已满；忽略 0x${messageId.toString(16)}，避免无界占用内存`);
+      return;
+    }
+    this.pendingAuthenticatedMessages.push({ messageId, body: body.slice() });
+    this.log(`认证尚未完成；暂存 0x${messageId.toString(16)}，将在认证后处理`);
+  }
+
+  protected async replayAuthenticatedMessages(): Promise<void> {
+    while (this.started && this.authenticated && this.pendingAuthenticatedMessages.length > 0) {
+      const message = this.pendingAuthenticatedMessages.shift();
+      if (message) {
+        await this.receiveControlMessage(message.messageId, message.body);
+      }
+    }
+  }
 
   constructor(
     sendBytes: (bytes: Uint8Array) => Promise<void>,
@@ -388,6 +414,7 @@ export abstract class Iap2SenderSessionFlow extends Iap2LinkLayer {
         this.buickAvailabilitySent = true;
         this.log('Buick B233 二次认证期间收到 0x4301；认证完成后继续处理该启动请求');
         await this.receiveControlMessage(MESSAGE.CARPLAY_START_SESSION, pendingStartSession);
+        await this.replayAuthenticatedMessages();
         return;
       }
     }
@@ -400,6 +427,7 @@ export abstract class Iap2SenderSessionFlow extends Iap2LinkLayer {
     } catch (error) {
       this.log(`MFi 认证流程已结束，但启动车机无线配置流程失败：${this.errorDetails(error)}`);
     }
+    await this.replayAuthenticatedMessages();
   }
 
   protected async startPostAuthenticationSequence(generation: number): Promise<void> {

@@ -73,6 +73,10 @@ export class Iap2SenderSession extends Iap2SenderSessionFlow {
   }
 
   protected async onIdentificationRequested(): Promise<void> {
+    if (this.identificationTimer !== undefined) {
+      clearTimeout(this.identificationTimer);
+      this.identificationTimer = undefined;
+    }
     await this.sendControl(MESSAGE.IDENTIFICATION_START);
     this.log('已发送 iAP2 IDENTIFICATION_START，等待车机识别信息');
     this.identificationTimer = setTimeout((): void => {
@@ -81,6 +85,16 @@ export class Iap2SenderSession extends Iap2SenderSessionFlow {
         this.log('等待 iAP2 0x1D01 超时：检查车机是否接受 SYN-ACK、RFCOMM 链路序号与识别消息');
       }
     }, 8000);
+  }
+
+  protected async restartSessionForNewPeerSync(): Promise<void> {
+    this.cancel();
+    this.resetLinkSessionState();
+    this.mfiAuthenticationFailed = false;
+    this.mfiCertificateRequestCount = 0;
+    this.challengeIndex = 0;
+    this.validatedAccessoryCertificate = undefined;
+    await this.start(false);
   }
 
   protected onLinkResetDiagnostic(): void {
@@ -125,6 +139,14 @@ export class Iap2SenderSession extends Iap2SenderSessionFlow {
     }
     this.started = true;
     this.detectionRetryCount = 0;
+    this.authenticated = false;
+    this.mfiVerified = false;
+    this.mfiAuthenticationFailed = false;
+    this.mfiCertificateRequestCount = 0;
+    this.challengeIndex = 0;
+    this.validatedAccessoryCertificate = undefined;
+    this.clearMfiChallenge();
+    this.clearMfiCertificateTimer();
     this.accessoryIdentity = '';
     this.buickB233Receiver = false;
     this.buickAvailabilitySent = false;
@@ -134,6 +156,9 @@ export class Iap2SenderSession extends Iap2SenderSessionFlow {
     this.buickReidentificationUsed = false;
     this.buickReauthenticationInProgress = false;
     this.pendingBuickStartSession = undefined;
+    this.pendingAuthenticatedMessages.length = 0;
+    this.transportIdentifierSent = false;
+    this.transportIdentifierPending = false;
     this.deviceAnnouncementSent = false;
     this.deviceAnnouncementInProgress = false;
     this.deviceStateGreetingsSent = false;
@@ -228,6 +253,7 @@ export class Iap2SenderSession extends Iap2SenderSessionFlow {
       this.controlSessionId = 10;
       this.identificationRequested = false;
       this.peerSyncSequence = undefined;
+      this.peerSyncPayload = undefined;
       this.peerSyncResponse = undefined;
       this.mfiAuthenticationFailed = false;
       this.accessorySendMessages = undefined;
@@ -312,6 +338,7 @@ export class Iap2SenderSession extends Iap2SenderSessionFlow {
       this.buickReidentificationUsed = false;
       this.buickReauthenticationInProgress = false;
       this.pendingBuickStartSession = undefined;
+      this.pendingAuthenticatedMessages.length = 0;
       this.deviceAnnouncementSent = false;
       this.deviceAnnouncementInProgress = false;
       this.deviceStateGreetingsSent = false;
@@ -321,6 +348,7 @@ export class Iap2SenderSession extends Iap2SenderSessionFlow {
       this.buickReidentificationWindowOpen = false;
       this.buickMarkerEchoSent = false;
       this.clearBuickStartSessionTimer();
+      this.mfiAuthenticationFailed = false;
   }
 
   protected async receiveControlMessage(messageId: number, body: Uint8Array): Promise<void> {
@@ -375,6 +403,15 @@ export class Iap2SenderSession extends Iap2SenderSessionFlow {
         this.transportIdentifierSent = false;
         this.transportIdentifierPending = false;
         this.log('Buick B233 在 0x4301 等待期间重新发送同一 0x1D01；按实机握手重做一次 MFi');
+      }
+      if (this.mfiAuthenticationFailed && !this.authenticated) {
+        this.mfiAuthenticationFailed = false;
+        this.validatedAccessoryCertificate = undefined;
+        this.clearMfiChallenge();
+        this.clearMfiCertificateTimer();
+        this.mfiCertificateRequestCount = 0;
+        this.challengeIndex = 0;
+        this.log('MFi 认证失败后收到新的 0x1D01；清理旧认证状态并重新开始认证');
       }
       this.chooseChallengeLength(body);
       this.logMfiMessageCapabilities(body);
@@ -475,7 +512,18 @@ export class Iap2SenderSession extends Iap2SenderSessionFlow {
         `收到 MFi AA03 challenge 响应：body=${body.length}B, parameters=${responseParameters.length}, ` +
           `challenge=${challenge?.length ?? 0}B, signature=${signature?.length ?? 0}B`
       );
-      if (!certificate || !challenge || !signature) {
+      if (!certificate || !challenge) {
+        this.log('当前证书或 challenge 尚未就绪；忽略可能来自较早阶段的 AA03，继续等待有效认证响应');
+        if (!certificate && this.mfiCertificateRequestCount === 0 &&
+          !this.mfiAuthenticationFailed && !this.authenticated) {
+          await this.sendControl(MESSAGE.MFI_CERTIFICATE_REQUEST);
+          this.mfiCertificateRequestCount = 1;
+          this.startMfiCertificateTimer();
+          this.log('已因提前收到 AA03 发起 AA00 证书请求，按正常证书与签名校验流程继续');
+        }
+        return;
+      }
+      if (!signature) {
         this.failMfiAuthentication('MFi challenge 响应缺少证书、挑战或签名数据');
         return;
       }
@@ -502,7 +550,7 @@ export class Iap2SenderSession extends Iap2SenderSessionFlow {
     }
     if (messageId === MESSAGE.WIFI_CONFIGURATION) {
       if (!this.authenticated) {
-        this.log('忽略 MFi 认证完成前收到的 Wi-Fi 配置');
+        this.deferAuthenticatedMessage(messageId, body);
         return;
       }
       if (this.wifiConfigurationTimer !== undefined) {
@@ -546,7 +594,7 @@ export class Iap2SenderSession extends Iap2SenderSessionFlow {
           this.log('Buick B233 二次 MFi 尚未完成；暂存提前到达的 0x4301');
           return;
         }
-        this.log('忽略 MFi 认证完成前收到的 CarPlay 会话请求');
+        this.deferAuthenticatedMessage(messageId, body);
         return;
       }
       try {
@@ -600,17 +648,21 @@ export class Iap2SenderSession extends Iap2SenderSessionFlow {
       return;
     }
     if (messageId === MESSAGE.START_HID) {
+      if (!this.authenticated) {
+        this.deferAuthenticatedMessage(messageId, body);
+        return;
+      }
       if (this.hidStartWaitTimer !== undefined) {
         clearTimeout(this.hidStartWaitTimer);
         this.hidStartWaitTimer = undefined;
-        await this.sendControl(
-          MESSAGE.DEVICE_HID_REPORT,
-          concatBytes(numberParameter(0, 0, 2), this.parameter(1, new Uint8Array([0])))
-        );
-        this.log('收到 iAP2 StartHID；已发送 DeviceHIDReport 应答');
+      }
+      await this.sendControl(
+        MESSAGE.DEVICE_HID_REPORT,
+        concatBytes(numberParameter(0, 0, 2), this.parameter(1, new Uint8Array([0])))
+      );
+      this.log('收到 iAP2 StartHID；已发送 DeviceHIDReport 应答');
+      if (!this.wifiConfigurationReceived) {
         await this.requestWifiConfiguration();
-      } else {
-        this.log('收到等待窗口外的 iAP2 StartHID；未发送 DeviceHIDReport');
       }
       return;
     }
