@@ -4411,7 +4411,7 @@ test('IPv6 socket uses a wildcard local bind when the selected WLAN has no enume
   ]);
 });
 
-test('AirPlay RTSP connection scopes IPv6 link-local addresses to the selected interface', async () => {
+test('AirPlay RTSP connection leaves IPv6 link-local routing to the selected network', async () => {
   const attempts = [];
   class StubAirPlayRtspClient {
     constructor() {}
@@ -4438,11 +4438,11 @@ test('AirPlay RTSP connection scopes IPv6 link-local addresses to the selected i
     addresses: [],
     port: 7000
   });
-  assert.deepEqual(attempts, [{ host: 'fe80::1899:7bff:fe39:e165%wlan0', port: 7000 }]);
-  assert.equal(target.connectedHost, 'fe80::1899:7bff:fe39:e165%wlan0');
+  assert.deepEqual(attempts, [{ host: 'fe80::1899:7bff:fe39:e165', port: 7000 }]);
+  assert.equal(target.connectedHost, 'fe80::1899:7bff:fe39:e165');
 });
 
-test('AirPlay RTSP connect scopes IPv6 link-local endpoints and passes the IPv6 family', async () => {
+test('AirPlay RTSP connect removes IPv6 scope IDs from the socket destination', async () => {
   let connectOptions;
   const socket = {
     on() {},
@@ -4451,6 +4451,7 @@ test('AirPlay RTSP connect scopes IPv6 link-local endpoints and passes the IPv6 
   const Target = loadMethods('airplay/AirPlayRtspClient.ets', 'AirPlayRtspClient', ['connect'], {
     netSocket: { constructTCPSocketInstance: () => socket },
     getSocketAddressFamily: address => address.includes(':') ? 2 : 1,
+    stripIpv6ScopeId: address => address.split('%')[0],
     formatNetworkError: error => error.message
   });
   const target = new Target();
@@ -4461,13 +4462,13 @@ test('AirPlay RTSP connect scopes IPv6 link-local endpoints and passes the IPv6 
   target.onError = () => {};
   target.onDisconnected = () => {};
 
-  await target.connect('fe80::1899:7bff:fe39:e165', 7000);
-  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165%wlan0');
+  await target.connect('fe80::1899:7bff:fe39:e165%wlan0', 7000);
+  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165');
   assert.equal(connectOptions.address.family, 2);
   assert.equal(connectOptions.address.port, 7000);
 });
 
-test('AirPlay event channel scopes IPv6 link-local endpoints before TCP connect', async () => {
+test('AirPlay event channel removes IPv6 scope IDs from the TCP destination', async () => {
   let connectOptions;
   const socket = {
     on() {},
@@ -4477,6 +4478,7 @@ test('AirPlay event channel scopes IPv6 link-local endpoints before TCP connect'
     ['connect'], {
       netSocket: { constructTCPSocketInstance: () => socket },
       getSocketAddressFamily: address => address.includes(':') ? 2 : 1,
+      stripIpv6ScopeId: address => address.split('%')[0],
       formatProtocolEvent: () => ''
     });
   const target = new Target();
@@ -4487,12 +4489,12 @@ test('AirPlay event channel scopes IPv6 link-local endpoints before TCP connect'
   };
 
   await target.connect('fe80::1899:7bff:fe39:e165', 7000);
-  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165%wlan0');
+  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165');
   assert.equal(connectOptions.address.family, 2);
   assert.equal(connectOptions.address.port, 7000);
 });
 
-test('AirPlay video TCP scopes IPv6 link-local receiver addresses', async () => {
+test('AirPlay video TCP removes IPv6 scope IDs from the destination', async () => {
   let connectOptions;
   const socket = {
     on() {},
@@ -4503,7 +4505,8 @@ test('AirPlay video TCP scopes IPv6 link-local receiver addresses', async () => 
   const Target = loadMethods('airplay/media/AirPlayMediaSessionTransport.ets',
     'AirPlayMediaSessionTransport', ['openVideoDataPort'], {
       netSocket: { constructTCPSocketInstance: () => socket },
-      getSocketAddressFamily: address => address.includes(':') ? 2 : 1
+      getSocketAddressFamily: address => address.includes(':') ? 2 : 1,
+      stripIpv6ScopeId: address => address.split('%')[0]
     });
   const target = new Target();
   target.receiverHost = 'fe80::1899:7bff:fe39:e165';
@@ -4515,7 +4518,7 @@ test('AirPlay video TCP scopes IPv6 link-local receiver addresses', async () => 
   };
 
   await target.openVideoDataPort(7001);
-  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165%wlan0');
+  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165');
   assert.equal(connectOptions.address.family, 2);
   assert.equal(connectOptions.address.port, 7001);
 });

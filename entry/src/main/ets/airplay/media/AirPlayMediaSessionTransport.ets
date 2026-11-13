@@ -19,7 +19,11 @@ import {
 import { encodeUtf8, toArrayBuffer } from '../../protocol/Iap2Codec';
 import { CARPLAY_SENDER_OS_BUILD_VERSION, CARPLAY_SENDER_SOURCE_VERSION } from '../../protocol/CarPlaySenderCompatibility';
 import { AudioRtpSession, SAMPLES_PER_PACKET } from '../../audio/AudioRtpSender';
-import { getSocketAddressFamily, WifiNetworkLease } from '../../network/WifiNetworkLease';
+import {
+  getSocketAddressFamily,
+  stripIpv6ScopeId,
+  WifiNetworkLease
+} from '../../network/WifiNetworkLease';
 import { formatProtocolEvent, formatRawBytesDiagnostic } from '../../session/ProtocolLogger';
 import { ProjectionDisplayMode } from '../../video/ProjectionSettings';
 import { Iap2SenderSession } from '../../session/Iap2SenderSession';
@@ -212,7 +216,7 @@ export abstract class AirPlayMediaSessionTransport {
         this.log('AirPlay video TCP socket 已绑定指定车机 Wi-Fi 网络');
       }
       await socket.connect({
-        address: { address: socketHost, family: getSocketAddressFamily(socketHost), port },
+        address: { address: stripIpv6ScopeId(socketHost), family: getSocketAddressFamily(socketHost), port },
         timeout: 5000
       });
       this.log(`AirPlay screen data TCP connected: ${socketHost}:${port}`);

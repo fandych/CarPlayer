@@ -1,7 +1,7 @@
 import netSocket from '@ohos.net.socket';
 import { AirPlayControlCipher } from './ControlCipher';
 import { BinaryPlist, formatPlistDiagnostic } from './BinaryPlist';
-import { getSocketAddressFamily, WifiNetworkLease } from '../network/WifiNetworkLease';
+import { getSocketAddressFamily, stripIpv6ScopeId, WifiNetworkLease } from '../network/WifiNetworkLease';
 import { hkdfSha512 } from './AirPlayCrypto';
 import { concatBytes, decodeUtf8, encodeUtf8, toArrayBuffer } from '../protocol/Iap2Codec';
 import { formatProtocolEvent, formatRawBytesDiagnostic } from '../session/ProtocolLogger';
@@ -228,7 +228,7 @@ export class AirPlayEventChannel {
         this.log('AirPlay event socket 已绑定指定车机 Wi-Fi 网络');
       }
       await socket.connect({
-        address: { address: socketHost, family: addressFamily, port },
+        address: { address: stripIpv6ScopeId(socketHost), family: addressFamily, port },
         timeout: 5000
       });
       this.log(`AirPlay ${this.cipher ? 'encrypted' : 'plaintext'} event channel connected to ${socketHost}:${port}`);

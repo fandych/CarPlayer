@@ -201,13 +201,6 @@ export class AirPlayPairingClient {
     const hosts = orderAirPlayAddresses([service.host, ...(service.addresses ?? [])].filter(Boolean));
     const failures: string[] = [];
     for (const host of hosts) {
-      const socketHost = this.wifiNetworkLease.scopeLinkLocalAddress(host);
-      if (socketHost !== host) {
-        this.log(formatProtocolEvent('airplay.endpoint.address.normalized',
-          'originalAddress', host,
-          'socketAddress', socketHost
-        ));
-      }
       let connectionEstablished = false;
       const client = new AirPlayRtspClient(
         this.log,
@@ -220,14 +213,14 @@ export class AirPlayPairingClient {
       );
       this.client = client;
       try {
-        await client.connect(socketHost, service.port);
+        await client.connect(host, service.port);
         connectionEstablished = true;
-        this.connectedHost = socketHost;
+        this.connectedHost = host;
         return;
       } catch (error) {
         this.client = undefined;
         const message = error instanceof Error ? error.message : String(error);
-        failures.push(`${socketHost}: ${message}`);
+        failures.push(`${host}: ${message}`);
         try {
           await client.close();
         } catch (cleanupError) {

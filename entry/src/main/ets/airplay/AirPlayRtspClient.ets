@@ -4,7 +4,12 @@ import { decodeUtf8, encodeUtf8, concatBytes, toArrayBuffer } from '../protocol/
 import { AirPlayControlCipher } from './ControlCipher';
 import { BinaryPlist, formatPlistDiagnostic } from './BinaryPlist';
 import { CARPLAY_SENDER_SOURCE_VERSION } from '../protocol/CarPlaySenderCompatibility';
-import { formatNetworkError, getSocketAddressFamily, WifiNetworkLease } from '../network/WifiNetworkLease';
+import {
+  formatNetworkError,
+  getSocketAddressFamily,
+  stripIpv6ScopeId,
+  WifiNetworkLease
+} from '../network/WifiNetworkLease';
 import { formatProtocolEvent, formatRawBytesDiagnostic } from '../session/ProtocolLogger';
 
 export interface AirPlayRtspResponse {
@@ -98,7 +103,7 @@ export class AirPlayRtspClient {
       socket.on('close', this.closeHandler);
       const socketHost = this.wifiNetworkLease.scopeLinkLocalAddress(host);
       const options: netSocket.TCPConnectOptions = {
-        address: { address: socketHost, family: getSocketAddressFamily(socketHost), port },
+        address: { address: stripIpv6ScopeId(socketHost), family: getSocketAddressFamily(socketHost), port },
         timeout: 5000
       };
       if (await this.wifiNetworkLease.bindSocket(
