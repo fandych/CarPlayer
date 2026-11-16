@@ -1,4 +1,11 @@
 import connection from '@ohos.net.connection';
+import nativeNetworkUtilities from 'libnetworkutils.so';
+
+interface NativeNetworkUtilities {
+  setIpv6SocketInterface(socketFd: number, interfaceName: string): void;
+}
+
+const networkUtilities: NativeNetworkUtilities = nativeNetworkUtilities as NativeNetworkUtilities;
 
 const WIFI_NETWORK_BIND_WAIT_MS: number = 15_000;
 const WIFI_NETWORK_BIND_WARNING_MS: number = 5000;
@@ -263,6 +270,11 @@ export class WifiNetworkLease {
       await socket.bind(bindAddress);
       stage = 'network-bind';
       await handle.bindSocket(socket);
+      if (addressFamily === 2 && this.localAddresses?.interfaceName) {
+        const socketFd: number = await socket.getSocketFd();
+        networkUtilities.setIpv6SocketInterface(socketFd, this.localAddresses.interfaceName);
+        this.log(`IPv6 socket 出站接口已指定：purpose=${purpose}, interface=${this.localAddresses.interfaceName}`);
+      }
       this.log(`指定车机 Wi-Fi socket 已绑定：purpose=${purpose}, netId=${handle.netId}, family=IPv${addressFamily}`);
       return true;
     } catch (error) {

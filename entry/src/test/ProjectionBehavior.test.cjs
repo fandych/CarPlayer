@@ -4315,6 +4315,7 @@ test('wireless WLAN selection reuses the matching local network without requirin
   const otherWifi = { netId: 2 };
   let bound = 0;
   const socketEvents = [];
+  const interfaceBindings = [];
   const vehicleWifi = { netId: 3, async bindSocket() { socketEvents.push('network-bind'); bound++; } };
   let unregistered = 0;
   const { WifiNetworkLease } = loadEts('network/WifiNetworkLease.ets', {
@@ -4333,6 +4334,12 @@ test('wireless WLAN selection reuses the matching local network without requirin
         assert.equal(timeout, 15000);
         return { on(name, handler) { handlers[name] = handler; },
           register(callback) { callback(); }, unregister(callback) { unregistered++; callback(); } };
+      }
+    },
+    'libnetworkutils.so': {
+      setIpv6SocketInterface(socketFd, interfaceName) {
+        interfaceBindings.push({ socketFd, interfaceName });
+        socketEvents.push('interface-bind');
       }
     }
   });
@@ -4356,11 +4363,16 @@ test('wireless WLAN selection reuses the matching local network without requirin
   } }, 'test IPv4 TCP');
   await lease.bindSocket({ async bind(address) {
     assert.deepEqual(address, { address: 'fe80::3%wlan0', family: 2, port: 0 });
+  }, async getSocketFd() {
+    return 17;
   } }, 'test IPv6 TCP', 2);
   await lease.bindSocket({ async bind(address) {
     assert.deepEqual(address, { address: '10.36.232.67', family: 1, port: 5353 });
   } }, 'test mDNS multicast', 1, 5353);
-  assert.deepEqual(socketEvents, ['socket-bind', 'network-bind', 'network-bind', 'network-bind']);
+  assert.deepEqual(socketEvents, [
+    'socket-bind', 'network-bind', 'network-bind', 'interface-bind', 'network-bind'
+  ]);
+  assert.deepEqual(interfaceBindings, [{ socketFd: 17, interfaceName: 'wlan0' }]);
   assert.equal(bound, 3);
   handlers.netLost(vehicleWifi);
   assert.equal(lost, true);
@@ -4371,7 +4383,8 @@ test('wireless WLAN selection reuses the matching local network without requirin
 
 test('wireless network lease scopes link-local addresses to the selected interface', () => {
   const { WifiNetworkLease, orderAirPlayAddresses, stripIpv6ScopeId } = loadEts('network/WifiNetworkLease.ets', {
-    '@ohos.net.connection': {}
+    '@ohos.net.connection': {},
+    'libnetworkutils.so': { setIpv6SocketInterface() {} }
   });
   const lease = new WifiNetworkLease();
   lease.localAddresses = { interfaceName: 'wlan0' };
@@ -4390,8 +4403,14 @@ test('wireless network lease scopes link-local addresses to the selected interfa
 });
 
 test('IPv6 socket uses a wildcard local bind when the selected WLAN has no enumerated IPv6 address', async () => {
+  const interfaceBindings = [];
   const { WifiNetworkLease } = loadEts('network/WifiNetworkLease.ets', {
-    '@ohos.net.connection': {}
+    '@ohos.net.connection': {},
+    'libnetworkutils.so': {
+      setIpv6SocketInterface(socketFd, interfaceName) {
+        interfaceBindings.push({ socketFd, interfaceName });
+      }
+    }
   });
   const lease = new WifiNetworkLease();
   const actions = [];
@@ -4403,12 +4422,16 @@ test('IPv6 socket uses a wildcard local bind when the selected WLAN has no enume
   await lease.bindSocket({
     async bind(address) {
       actions.push({ type: 'local-bind', address });
+    },
+    async getSocketFd() {
+      return 23;
     }
   }, 'test IPv6 TCP', 2);
   assert.deepEqual(actions, [
     { type: 'local-bind', address: { address: '::', family: 2, port: 0 } },
     'network-bind'
   ]);
+  assert.deepEqual(interfaceBindings, [{ socketFd: 23, interfaceName: 'wlan0' }]);
 });
 
 test('AirPlay RTSP connection leaves IPv6 link-local routing to the selected network', async () => {
@@ -4419,7 +4442,8 @@ test('AirPlay RTSP connection leaves IPv6 link-local routing to the selected net
     async close() {}
   }
   const { WifiNetworkLease, orderAirPlayAddresses, stripIpv6ScopeId } = loadEts('network/WifiNetworkLease.ets', {
-    '@ohos.net.connection': {}
+    '@ohos.net.connection': {},
+    'libnetworkutils.so': { setIpv6SocketInterface() {} }
   });
   const Target = loadMethods('airplay/AirPlayPairingClient.ets', 'AirPlayPairingClient', ['connect'], {
     AirPlayRtspClient: StubAirPlayRtspClient,
@@ -4531,7 +4555,8 @@ test('AirPlay RTSP tries IPv4 endpoint candidates before IPv6 candidates', async
     async close() {}
   }
   const { orderAirPlayAddresses, stripIpv6ScopeId } = loadEts('network/WifiNetworkLease.ets', {
-    '@ohos.net.connection': {}
+    '@ohos.net.connection': {},
+    'libnetworkutils.so': { setIpv6SocketInterface() {} }
   });
   const Target = loadMethods('airplay/AirPlayPairingClient.ets', 'AirPlayPairingClient', ['connect'], {
     AirPlayRtspClient: StubAirPlayRtspClient,
@@ -4566,7 +4591,8 @@ test('wireless WLAN selection cancels pending acquisition and ignores late avail
         register(callback) { registered = true; callback(); },
         unregister(callback) { unregistered++; callback(); }
       }; }
-    }
+    },
+    'libnetworkutils.so': { setIpv6SocketInterface() {} }
   });
   const lease = new WifiNetworkLease();
   const acquiring = lease.acquire('BUICK_7841', () => {}, () => {}, '10.36.232.67');
@@ -6505,7 +6531,8 @@ test('wireless network lease exposes only the selected network default gateway',
           ]
         };
       }
-    }
+    },
+    'libnetworkutils.so': { setIpv6SocketInterface() {} }
   });
   const lease = new WifiNetworkLease();
   const addresses = await lease.getMatchingLocalAddresses({ netId: 3 }, '10.36.232.67');
