@@ -4402,8 +4402,10 @@ test('wireless network lease scopes link-local addresses to the selected interfa
   assert.throws(() => lease.scopeLinkLocalAddress('fe80::1'), /interfaceName is unavailable/);
 });
 
-test('IPv6 socket uses a wildcard local bind when the selected WLAN has no enumerated IPv6 address', async () => {
+test('IPv6 socket without an enumerated WLAN address relies on the selected network binding', async () => {
   const interfaceBindings = [];
+  const messages = [];
+  let socketFdRequests = 0;
   const { WifiNetworkLease } = loadEts('network/WifiNetworkLease.ets', {
     '@ohos.net.connection': {},
     'libnetworkutils.so': {
@@ -4419,11 +4421,13 @@ test('IPv6 socket uses a wildcard local bind when the selected WLAN has no enume
     async bindSocket() { actions.push('network-bind'); }
   };
   lease.localAddresses = { ipv4: '10.12.82.67', interfaceName: 'wlan0' };
+  lease.log = message => messages.push(message);
   await lease.bindSocket({
     async bind(address) {
       actions.push({ type: 'local-bind', address });
     },
     async getSocketFd() {
+      socketFdRequests++;
       return 23;
     }
   }, 'test IPv6 TCP', 2);
@@ -4431,7 +4435,9 @@ test('IPv6 socket uses a wildcard local bind when the selected WLAN has no enume
     { type: 'local-bind', address: { address: '::', family: 2, port: 0 } },
     'network-bind'
   ]);
-  assert.deepEqual(interfaceBindings, [{ socketFd: 23, interfaceName: 'wlan0' }]);
+  assert.deepEqual(interfaceBindings, []);
+  assert.equal(socketFdRequests, 0);
+  assert.ok(messages.some(message => message.includes('跳过 IPv6 接口选项')));
 });
 
 test('AirPlay RTSP connection leaves IPv6 link-local routing to the selected network', async () => {

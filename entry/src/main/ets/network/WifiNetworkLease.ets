@@ -271,9 +271,13 @@ export class WifiNetworkLease {
       stage = 'network-bind';
       await handle.bindSocket(socket);
       if (addressFamily === 2 && this.localAddresses?.interfaceName) {
-        const socketFd: number = await socket.getSocketFd();
-        networkUtilities.setIpv6SocketInterface(socketFd, this.localAddresses.interfaceName);
-        this.log(`IPv6 socket 出站接口已指定：purpose=${purpose}, interface=${this.localAddresses.interfaceName}`);
+        if (selectedLocalAddress) {
+          const socketFd: number = await socket.getSocketFd();
+          networkUtilities.setIpv6SocketInterface(socketFd, this.localAddresses.interfaceName);
+          this.log(`IPv6 socket 出站接口已指定：purpose=${purpose}, interface=${this.localAddresses.interfaceName}`);
+        } else {
+          this.log(`车机 WLAN 未列出 IPv6 本机地址；跳过 IPv6 接口选项，socket 仍绑定指定网络 netId=${handle.netId}`);
+        }
       }
       this.log(`指定车机 Wi-Fi socket 已绑定：purpose=${purpose}, netId=${handle.netId}, family=IPv${addressFamily}`);
       return true;
