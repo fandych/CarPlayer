@@ -50,6 +50,7 @@ node --test --test-name-pattern="irregular-display calibration preserves aspect 
 
 ## 相关文档
 
+- [HarmonyOS 公开 API 限制与能力边界](HarmonyOS_API限制说明.md)
 - [原生模块说明与测试边界](entry/src/main/cpp/README.md)
 - [HarmonyOS CarPlay 客户端实现方案（设计背景）](docs/HarmonyOS_CarPlay客户端实现方案.md)
 - [CarPlay iAP2 控制码字典](docs/CarPlay-iAP2控制码字典.md)
