@@ -16,8 +16,6 @@ add_library(mediabytes SHARED media/pcm.c media/pcm_napi.c media/h264.c media/h2
 target_link_libraries(mediabytes PUBLIC libace_napi.z.so)
 add_library(sessioncore SHARED session/session_core.c session/session_core_napi.c)
 target_link_libraries(sessioncore PUBLIC libace_napi.z.so)
-add_library(networkutils SHARED network/socket_network_napi.c)
-target_link_libraries(networkutils PUBLIC libace_napi.z.so)
 
 target_link_libraries(projection PUBLIC
   libace_napi.z.so

@@ -64,6 +64,7 @@ function protocolEventLabel(event: string): string {
     case 'airplay.event.receive.processing-delay': return 'AirPlay 事件处理延迟';
     case 'airplay.event.plaintext.tx': return '发送 AirPlay 明文事件响应';
     case 'airplay.audio.rtp.tx': return '发送 AirPlay 音频包';
+    case 'airplay.audio.rtp.summary': return 'AirPlay 音频发送统计';
     case 'airplay.audio.sync.tx': return '发送 AirPlay 音频同步包';
     case 'airplay.video.codec_config.tx': return '发送 AirPlay 视频格式信息';
     case 'airplay.video.frame.tx': return '发送 AirPlay 视频帧';

@@ -7,7 +7,6 @@ import { CARPLAY_SENDER_SOURCE_VERSION } from '../protocol/CarPlaySenderCompatib
 import {
   formatNetworkError,
   getSocketAddressFamily,
-  stripIpv6ScopeId,
   WifiNetworkLease
 } from '../network/WifiNetworkLease';
 import { formatProtocolEvent, formatRawBytesDiagnostic } from '../session/ProtocolLogger';
@@ -103,7 +102,7 @@ export class AirPlayRtspClient {
       socket.on('close', this.closeHandler);
       const socketHost = this.wifiNetworkLease.scopeLinkLocalAddress(host);
       const options: netSocket.TCPConnectOptions = {
-        address: { address: stripIpv6ScopeId(socketHost), family: getSocketAddressFamily(socketHost), port },
+        address: { address: socketHost, family: getSocketAddressFamily(socketHost), port },
         timeout: 5000
       };
       if (await this.wifiNetworkLease.bindSocket(

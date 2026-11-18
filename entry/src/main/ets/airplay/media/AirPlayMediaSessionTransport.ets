@@ -21,7 +21,6 @@ import { CARPLAY_SENDER_OS_BUILD_VERSION, CARPLAY_SENDER_SOURCE_VERSION } from '
 import { AudioRtpSession, SAMPLES_PER_PACKET } from '../../audio/AudioRtpSender';
 import {
   getSocketAddressFamily,
-  stripIpv6ScopeId,
   WifiNetworkLease
 } from '../../network/WifiNetworkLease';
 import { formatProtocolEvent, formatRawBytesDiagnostic } from '../../session/ProtocolLogger';
@@ -216,7 +215,7 @@ export abstract class AirPlayMediaSessionTransport {
         this.log('AirPlay video TCP socket 已绑定指定车机 Wi-Fi 网络');
       }
       await socket.connect({
-        address: { address: stripIpv6ScopeId(socketHost), family: getSocketAddressFamily(socketHost), port },
+        address: { address: socketHost, family: getSocketAddressFamily(socketHost), port },
         timeout: 5000
       });
       this.log(`AirPlay screen data TCP connected: ${socketHost}:${port}`);

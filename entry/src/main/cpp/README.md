@@ -6,7 +6,6 @@
 - `protocol/iap2_control.*` implements control messages and length-prefixed parameters.
 - `protocol/tlv8.*` implements bounded TLV8 parsing, fragmentation and encoding for AirPlay pairing.
 - `session/session_core.*` issues atomic 64-bit lifecycle generations so stale async callbacks can be rejected without routing identifiers through JavaScript numbers.
-- `network/socket_network_napi.c` selects the egress interface for IPv6 sockets that are already bound to the vehicle network; this supplies link-local routing information that `@ohos.net.socket` does not expose in `NetAddress`.
 - `media/pcm.*` converts 16-bit PCM sample byte order.
 - `media/h264.*` locates NAL units in Annex B, AVC configuration and length-prefixed data.
 - `*_napi.c` validates and converts N-API values; protocol and media cores do not depend on HarmonyOS.

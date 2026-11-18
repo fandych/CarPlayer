@@ -2357,7 +2357,7 @@ test('protocol logs are archived immediately and batched before updating the UI'
   assert.deepEqual(Array.from(target.logs), ['meaning: starts encrypted session', 'TX SETUP']);
 });
 
-test('audio and video packet diagnostics cover every send without logging media payloads', async () => {
+test('audio packet diagnostics are batched and media payloads remain unlogged; video diagnostics cover each frame', async () => {
   const formatEvent = (event, ...fields) => {
     const values = [];
     for (let index = 0; index + 1 < fields.length; index += 2) values.push(`${fields[index]}=${fields[index + 1]}`);
@@ -2370,7 +2370,8 @@ test('audio and video packet diagnostics cover every send without logging media 
     return result;
   };
 
-  const AudioTarget = loadMethods('audio/AudioRtpSender.ets', 'AudioRtpSender', ['sendPacket'], {
+  const AudioTarget = loadMethods('audio/AudioRtpSender.ets', 'AudioRtpSender',
+    ['sendPacket', 'reportAudioProgress'], {
     buildAudioRtpHeader: () => new Uint8Array(12),
     nonce64: () => new Uint8Array(12),
     advanceAudioRtpTimestamp: (timestamp, packets) => (timestamp + packets * 352) >>> 0,
@@ -2389,13 +2390,26 @@ test('audio and video packet diagnostics cover every send without logging media 
   audio.nonceCounter = 0;
   audio.firstPacket = true;
   audio.packetsSent = 0;
+  audio.pendingLogPackets = 0;
+  audio.pendingLogPcmBytes = 0;
+  audio.pendingLogFirstSequence = 0;
+  audio.pendingLogLastSequence = 0;
+  audio.pendingLogFirstTimestamp = 0;
+  audio.pendingLogLastTimestamp = 0;
+  audio.droppedPackets = 0;
+  audio.reportedDroppedPackets = 0;
   audio.log = line => audioLogs.push(line);
   for (let index = 0; index < 4; index++) await audio.sendPacket(new Uint8Array([0xaa, 0xbb]));
-  assert.equal(audioLogs.length, 8);
-  assert.deepEqual(audioLogs.filter(line => line.includes('airplay.audio.rtp.tx'))
-    .map(line => Number(line.match(/packet=(\d+)/)?.[1])), [1, 2, 3, 4]);
+  assert.equal(audioLogs.length, 0);
+  audio.reportAudioProgress();
+  assert.equal(audioLogs.length, 1);
+  assert.ok(audioLogs[0].includes('airplay.audio.rtp.summary'));
+  assert.ok(audioLogs[0].includes('packets=4'));
+  assert.ok(audioLogs[0].includes('firstSequence=4'));
+  assert.ok(audioLogs[0].includes('lastSequence=7'));
+  assert.ok(audioLogs[0].includes('firstTimestamp=100'));
+  assert.ok(audioLogs[0].includes('lastTimestamp=1156'));
   assert.ok(audioLogs.every(line => !line.includes('aa bb')));
-  assert.ok(audioLogs[1].includes('载荷未写入日志'));
 
   const VideoTarget = loadMethods('airplay/AirPlayVideoStream.ets', 'AirPlayVideoStreamSender', ['sendFrame'], {
     AirPlayVideoEncryptionMode: { CHACHA20_POLY1305: 0, AES_128_CTR: 1 },
@@ -4315,7 +4329,6 @@ test('wireless WLAN selection reuses the matching local network without requirin
   const otherWifi = { netId: 2 };
   let bound = 0;
   const socketEvents = [];
-  const interfaceBindings = [];
   const vehicleWifi = { netId: 3, async bindSocket() { socketEvents.push('network-bind'); bound++; } };
   let unregistered = 0;
   const { WifiNetworkLease } = loadEts('network/WifiNetworkLease.ets', {
@@ -4334,12 +4347,6 @@ test('wireless WLAN selection reuses the matching local network without requirin
         assert.equal(timeout, 15000);
         return { on(name, handler) { handlers[name] = handler; },
           register(callback) { callback(); }, unregister(callback) { unregistered++; callback(); } };
-      }
-    },
-    'libnetworkutils.so': {
-      setIpv6SocketInterface(socketFd, interfaceName) {
-        interfaceBindings.push({ socketFd, interfaceName });
-        socketEvents.push('interface-bind');
       }
     }
   });
@@ -4363,16 +4370,13 @@ test('wireless WLAN selection reuses the matching local network without requirin
   } }, 'test IPv4 TCP');
   await lease.bindSocket({ async bind(address) {
     assert.deepEqual(address, { address: 'fe80::3%wlan0', family: 2, port: 0 });
-  }, async getSocketFd() {
-    return 17;
   } }, 'test IPv6 TCP', 2);
   await lease.bindSocket({ async bind(address) {
     assert.deepEqual(address, { address: '10.36.232.67', family: 1, port: 5353 });
   } }, 'test mDNS multicast', 1, 5353);
   assert.deepEqual(socketEvents, [
-    'socket-bind', 'network-bind', 'network-bind', 'interface-bind', 'network-bind'
+    'socket-bind', 'network-bind', 'network-bind', 'network-bind'
   ]);
-  assert.deepEqual(interfaceBindings, [{ socketFd: 17, interfaceName: 'wlan0' }]);
   assert.equal(bound, 3);
   handlers.netLost(vehicleWifi);
   assert.equal(lost, true);
@@ -4383,8 +4387,7 @@ test('wireless WLAN selection reuses the matching local network without requirin
 
 test('wireless network lease scopes link-local addresses to the selected interface', () => {
   const { WifiNetworkLease, orderAirPlayAddresses, stripIpv6ScopeId } = loadEts('network/WifiNetworkLease.ets', {
-    '@ohos.net.connection': {},
-    'libnetworkutils.so': { setIpv6SocketInterface() {} }
+    '@ohos.net.connection': {}
   });
   const lease = new WifiNetworkLease();
   lease.localAddresses = { interfaceName: 'wlan0' };
@@ -4402,17 +4405,9 @@ test('wireless network lease scopes link-local addresses to the selected interfa
   assert.throws(() => lease.scopeLinkLocalAddress('fe80::1'), /interfaceName is unavailable/);
 });
 
-test('IPv6 socket without an enumerated WLAN address relies on the selected network binding', async () => {
-  const interfaceBindings = [];
-  const messages = [];
-  let socketFdRequests = 0;
+test('IPv6 wildcard socket remains bound to the selected network without a listed local IPv6 address', async () => {
   const { WifiNetworkLease } = loadEts('network/WifiNetworkLease.ets', {
-    '@ohos.net.connection': {},
-    'libnetworkutils.so': {
-      setIpv6SocketInterface(socketFd, interfaceName) {
-        interfaceBindings.push({ socketFd, interfaceName });
-      }
-    }
+    '@ohos.net.connection': {}
   });
   const lease = new WifiNetworkLease();
   const actions = [];
@@ -4421,23 +4416,15 @@ test('IPv6 socket without an enumerated WLAN address relies on the selected netw
     async bindSocket() { actions.push('network-bind'); }
   };
   lease.localAddresses = { ipv4: '10.12.82.67', interfaceName: 'wlan0' };
-  lease.log = message => messages.push(message);
   await lease.bindSocket({
     async bind(address) {
       actions.push({ type: 'local-bind', address });
-    },
-    async getSocketFd() {
-      socketFdRequests++;
-      return 23;
     }
   }, 'test IPv6 TCP', 2);
   assert.deepEqual(actions, [
     { type: 'local-bind', address: { address: '::', family: 2, port: 0 } },
     'network-bind'
   ]);
-  assert.deepEqual(interfaceBindings, []);
-  assert.equal(socketFdRequests, 0);
-  assert.ok(messages.some(message => message.includes('跳过 IPv6 接口选项')));
 });
 
 test('AirPlay RTSP connection leaves IPv6 link-local routing to the selected network', async () => {
@@ -4448,8 +4435,7 @@ test('AirPlay RTSP connection leaves IPv6 link-local routing to the selected net
     async close() {}
   }
   const { WifiNetworkLease, orderAirPlayAddresses, stripIpv6ScopeId } = loadEts('network/WifiNetworkLease.ets', {
-    '@ohos.net.connection': {},
-    'libnetworkutils.so': { setIpv6SocketInterface() {} }
+    '@ohos.net.connection': {}
   });
   const Target = loadMethods('airplay/AirPlayPairingClient.ets', 'AirPlayPairingClient', ['connect'], {
     AirPlayRtspClient: StubAirPlayRtspClient,
@@ -4472,7 +4458,7 @@ test('AirPlay RTSP connection leaves IPv6 link-local routing to the selected net
   assert.equal(target.connectedHost, 'fe80::1899:7bff:fe39:e165');
 });
 
-test('AirPlay RTSP connect removes IPv6 scope IDs from the socket destination', async () => {
+test('AirPlay RTSP connect preserves the IPv6 link-local interface scope', async () => {
   let connectOptions;
   const socket = {
     on() {},
@@ -4481,24 +4467,23 @@ test('AirPlay RTSP connect removes IPv6 scope IDs from the socket destination', 
   const Target = loadMethods('airplay/AirPlayRtspClient.ets', 'AirPlayRtspClient', ['connect'], {
     netSocket: { constructTCPSocketInstance: () => socket },
     getSocketAddressFamily: address => address.includes(':') ? 2 : 1,
-    stripIpv6ScopeId: address => address.split('%')[0],
     formatNetworkError: error => error.message
   });
   const target = new Target();
   target.wifiNetworkLease = {
-    scopeLinkLocalAddress: address => `${address}%wlan0`,
+    scopeLinkLocalAddress: address => `${address.split('%')[0]}%wlan0`,
     async bindSocket() { return true; }
   };
   target.onError = () => {};
   target.onDisconnected = () => {};
 
   await target.connect('fe80::1899:7bff:fe39:e165%wlan0', 7000);
-  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165');
+  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165%wlan0');
   assert.equal(connectOptions.address.family, 2);
   assert.equal(connectOptions.address.port, 7000);
 });
 
-test('AirPlay event channel removes IPv6 scope IDs from the TCP destination', async () => {
+test('AirPlay event channel preserves the IPv6 link-local interface scope', async () => {
   let connectOptions;
   const socket = {
     on() {},
@@ -4508,7 +4493,6 @@ test('AirPlay event channel removes IPv6 scope IDs from the TCP destination', as
     ['connect'], {
       netSocket: { constructTCPSocketInstance: () => socket },
       getSocketAddressFamily: address => address.includes(':') ? 2 : 1,
-      stripIpv6ScopeId: address => address.split('%')[0],
       formatProtocolEvent: () => ''
     });
   const target = new Target();
@@ -4519,12 +4503,12 @@ test('AirPlay event channel removes IPv6 scope IDs from the TCP destination', as
   };
 
   await target.connect('fe80::1899:7bff:fe39:e165', 7000);
-  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165');
+  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165%wlan0');
   assert.equal(connectOptions.address.family, 2);
   assert.equal(connectOptions.address.port, 7000);
 });
 
-test('AirPlay video TCP removes IPv6 scope IDs from the destination', async () => {
+test('AirPlay video TCP preserves the IPv6 link-local interface scope', async () => {
   let connectOptions;
   const socket = {
     on() {},
@@ -4535,8 +4519,7 @@ test('AirPlay video TCP removes IPv6 scope IDs from the destination', async () =
   const Target = loadMethods('airplay/media/AirPlayMediaSessionTransport.ets',
     'AirPlayMediaSessionTransport', ['openVideoDataPort'], {
       netSocket: { constructTCPSocketInstance: () => socket },
-      getSocketAddressFamily: address => address.includes(':') ? 2 : 1,
-      stripIpv6ScopeId: address => address.split('%')[0]
+      getSocketAddressFamily: address => address.includes(':') ? 2 : 1
     });
   const target = new Target();
   target.receiverHost = 'fe80::1899:7bff:fe39:e165';
@@ -4548,7 +4531,7 @@ test('AirPlay video TCP removes IPv6 scope IDs from the destination', async () =
   };
 
   await target.openVideoDataPort(7001);
-  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165');
+  assert.equal(connectOptions.address.address, 'fe80::1899:7bff:fe39:e165%wlan0');
   assert.equal(connectOptions.address.family, 2);
   assert.equal(connectOptions.address.port, 7001);
 });
@@ -4561,8 +4544,7 @@ test('AirPlay RTSP tries IPv4 endpoint candidates before IPv6 candidates', async
     async close() {}
   }
   const { orderAirPlayAddresses, stripIpv6ScopeId } = loadEts('network/WifiNetworkLease.ets', {
-    '@ohos.net.connection': {},
-    'libnetworkutils.so': { setIpv6SocketInterface() {} }
+    '@ohos.net.connection': {}
   });
   const Target = loadMethods('airplay/AirPlayPairingClient.ets', 'AirPlayPairingClient', ['connect'], {
     AirPlayRtspClient: StubAirPlayRtspClient,
@@ -4597,8 +4579,7 @@ test('wireless WLAN selection cancels pending acquisition and ignores late avail
         register(callback) { registered = true; callback(); },
         unregister(callback) { unregistered++; callback(); }
       }; }
-    },
-    'libnetworkutils.so': { setIpv6SocketInterface() {} }
+    }
   });
   const lease = new WifiNetworkLease();
   const acquiring = lease.acquire('BUICK_7841', () => {}, () => {}, '10.36.232.67');
@@ -5195,9 +5176,9 @@ test('background media encryption stays on TaskPool and surfaces worker failures
   assert.equal(aad.byteLength, 128);
 });
 
-test('Audio RTP selects TaskPool encryption for its per-packet synchronous ChaCha work', () => {
+test('Audio RTP keeps small per-packet ChaCha encryption off TaskPool', () => {
   const source = fs.readFileSync(path.join(sourceRoot, 'audio/AudioRtpSender.ets'), 'utf8');
-  assert.match(source, /new MediaPacketCipher\(session\.streamKey,\s*true,\s*this\.log\)/);
+  assert.match(source, /new MediaPacketCipher\(session\.streamKey,\s*false,\s*this\.log\)/);
 });
 
 function videoSenderFixture(send, split = data => [data]) {
@@ -6537,8 +6518,7 @@ test('wireless network lease exposes only the selected network default gateway',
           ]
         };
       }
-    },
-    'libnetworkutils.so': { setIpv6SocketInterface() {} }
+    }
   });
   const lease = new WifiNetworkLease();
   const addresses = await lease.getMatchingLocalAddresses({ netId: 3 }, '10.36.232.67');

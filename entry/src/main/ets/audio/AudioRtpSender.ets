@@ -63,6 +63,13 @@ export class AudioRtpSender {
   private readonly wifiNetworkLease?: WifiNetworkLease;
   private session?: AudioRtpSession;
   private cipher?: MediaPacketCipher;
+  private pendingLogPackets: number = 0;
+  private pendingLogPcmBytes: number = 0;
+  private pendingLogFirstSequence: number = 0;
+  private pendingLogLastSequence: number = 0;
+  private pendingLogFirstTimestamp: number = 0;
+  private pendingLogLastTimestamp: number = 0;
+  private reportedDroppedPackets: number = 0;
   private pendingPcm: Uint8Array = new Uint8Array(0);
   private sendQueue: Promise<void> = Promise.resolve();
   private sequence: number = 0;
@@ -119,13 +126,18 @@ export class AudioRtpSender {
     }
     this.socket = socket;
     this.session = session;
-    this.cipher = new MediaPacketCipher(session.streamKey, true, this.log);
+    this.cipher = new MediaPacketCipher(session.streamKey, false, this.log);
     this.queuePacketLimit = MAX_QUEUED_PACKETS;
     this.running = true;
     this.syncTimer = setInterval((): void => {
+      this.reportAudioProgress();
       void this.sendSync().catch((error: Error): void => this.onError(`AirPlay audio sync failed: ${error.message}`));
     }, 1000);
     this.log(`Audio RTP sender ready for ${session.host}:${session.dataPort}`);
+    this.log(formatProtocolEvent('protocol.interpretation',
+      'transport', 'AirPlay audio RTP/UDP',
+      'meaning', '音频 PCM 按固定采样帧数加密分包发送；发送和丢包统计每秒汇总，载荷不写入日志'
+    ));
   }
 
   pushPcm(data: Uint8Array): void {
@@ -240,23 +252,39 @@ export class AudioRtpSender {
     };
     await socket.send(options);
     this.packetsSent++;
-    this.log(formatProtocolEvent('airplay.audio.rtp.tx',
-      'packet', this.packetsSent,
-      'sequence', packetSequence,
-      'timestamp', packetTimestamp,
-      'nonceCounter', packetNonceCounter,
-      'marker', marker,
-      'payloadType', 100,
-      'pcmBytes', pcmLength,
-      'encryptedBytes', encrypted.length,
-      'wireBytes', datagram.length,
+    if (this.pendingLogPackets === 0) {
+      this.pendingLogFirstSequence = packetSequence;
+      this.pendingLogFirstTimestamp = packetTimestamp;
+    }
+    this.pendingLogPackets++;
+    this.pendingLogPcmBytes += pcmLength;
+    this.pendingLogLastSequence = packetSequence;
+    this.pendingLogLastTimestamp = packetTimestamp;
+    this.firstPacket = false;
+  }
+
+  private reportAudioProgress(): void {
+    const droppedPackets = this.droppedPackets - this.reportedDroppedPackets;
+    if (this.pendingLogPackets === 0 && droppedPackets === 0) {
+      return;
+    }
+    const session = this.session;
+    if (!session) {
+      return;
+    }
+    this.log(formatProtocolEvent('airplay.audio.rtp.summary',
+      'packets', this.pendingLogPackets,
+      'firstSequence', this.pendingLogPackets > 0 ? this.pendingLogFirstSequence : null,
+      'lastSequence', this.pendingLogPackets > 0 ? this.pendingLogLastSequence : null,
+      'firstTimestamp', this.pendingLogPackets > 0 ? this.pendingLogFirstTimestamp : null,
+      'lastTimestamp', this.pendingLogPackets > 0 ? this.pendingLogLastTimestamp : null,
+      'pcmBytes', this.pendingLogPcmBytes,
+      'droppedPackets', droppedPackets,
       'destination', `${session.host}:${session.dataPort}`
     ));
-    this.log(formatProtocolEvent('protocol.interpretation',
-      'transport', 'AirPlay audio RTP/UDP',
-      'meaning', `已发送第 ${this.packetsSent} 个加密 PCM 包；序号/时间戳用于接收端排序与播放同步，载荷未写入日志`
-    ));
-    this.firstPacket = false;
+    this.pendingLogPackets = 0;
+    this.pendingLogPcmBytes = 0;
+    this.reportedDroppedPackets = this.droppedPackets;
   }
 
   private async sendSync(): Promise<void> {
