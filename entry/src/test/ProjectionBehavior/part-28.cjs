@@ -106,3 +106,77 @@ test('wireless network lease exposes only the selected network default gateway',
   ipv6OnlyLease.localAddresses = await ipv6OnlyLease.getMatchingLocalAddresses({ netId: 3 }, '10.36.232.67');
   assert.equal(ipv6OnlyLease.defaultGatewayAddress, 'fe80::1%wlan0');
 });
+
+test('AirPlay mDNS discovery ignores a pending resolution after stop and restart', async () => {
+  const handlers = [];
+  const resolutions = [];
+  const discovered = [];
+  const discoveryService = () => ({
+    on(_type, handler) { handlers.push(handler); },
+    off() {},
+    startSearchingMDNS() {},
+    stopSearchingMDNS() {}
+  });
+  const { AirPlayMdnsDiscovery } = loadEts('network/AirPlayMdnsDiscovery.ets', {
+    '@ohos.net.mdns': {
+      createDiscoveryService: discoveryService,
+      resolveLocalService: (_context, service) => new Promise(resolve => {
+        resolutions.push(() => resolve({
+          serviceName: service.serviceName,
+          host: { address: '10.36.232.90' },
+          port: 7000,
+          serviceAttribute: []
+        }));
+      })
+    },
+    '@ohos.app.ability.common': {},
+    '@ohos.util': {},
+    '../session/ProtocolLogger': {
+      formatProtocolEvent: (event, ...fields) => `【${event}】 ${fields.join(' ')}`
+    }
+  });
+  const discovery = new AirPlayMdnsDiscovery({}, service => discovered.push(service), () => {});
+  const found = { serviceName: 'receiver._airplay._tcp' };
+
+  discovery.start();
+  handlers[0](found);
+  discovery.stop();
+  discovery.start();
+  resolutions[0]();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(discovered, []);
+
+  handlers[1](found);
+  resolutions[1]();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(discovered.map(service => service.host), ['10.36.232.90']);
+  discovery.stop();
+});
+
+test('AirPlay RTSP probe declares the endpoint address family', async () => {
+  const handlers = {};
+  let connectOptions;
+  const socket = {
+    on(type, handler) { handlers[type] = handler; },
+    off() {},
+    async connect(options) { connectOptions = options; },
+    async send() {
+      handlers.message({ message: new TextEncoder().encode('RTSP/1.0 200 OK\r\n\r\n') });
+    },
+    async close() {}
+  };
+  const { AirPlayRtspProbe } = loadEts('network/AirPlayRtspProbe.ets', {
+    '@ohos.net.socket': { constructTCPSocketInstance: () => socket },
+    '../protocol/Iap2Codec': {
+      decodeUtf8: bytes => new TextDecoder().decode(bytes),
+      encodeUtf8: value => new TextEncoder().encode(value),
+      toArrayBuffer: bytes => bytes.slice().buffer
+    },
+    '../protocol/CarPlaySenderCompatibility': { CARPLAY_SENDER_SOURCE_VERSION: '1.0' },
+    './WifiNetworkAddress': { getSocketAddressFamily: address => address.includes(':') ? 2 : 1 }
+  });
+  const probe = new AirPlayRtspProbe();
+
+  assert.equal(await probe.probe({ host: 'fe80::1%wlan0', port: 7000 }), 'RTSP/1.0 200 OK');
+  assert.equal(connectOptions.address.family, 2);
+});

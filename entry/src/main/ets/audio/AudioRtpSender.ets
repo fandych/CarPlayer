@@ -224,7 +224,11 @@ export class AudioRtpSender {
     const datagram = concatBytes(header, encrypted, suffix);
     const options: netSocket.UDPSendOptions = {
       data: toArrayBuffer(datagram),
-      address: { address: session.host, port: session.dataPort }
+      address: {
+        address: session.host,
+        family: getSocketAddressFamily(session.host),
+        port: session.dataPort
+      }
     };
     await socket.send(options);
     this.packetsSent++;
@@ -276,7 +280,11 @@ export class AudioRtpSender {
     this.syncSequence = (this.syncSequence + 1) & 0xffff;
     const options: netSocket.UDPSendOptions = {
       data: toArrayBuffer(packet),
-      address: { address: session.host, port: session.controlPort }
+      address: {
+        address: session.host,
+        family: getSocketAddressFamily(session.host),
+        port: session.controlPort
+      }
     };
     this.syncPending = true;
     try {

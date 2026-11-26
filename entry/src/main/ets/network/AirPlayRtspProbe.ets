@@ -1,6 +1,7 @@
 import netSocket from '@ohos.net.socket';
 import { decodeUtf8, encodeUtf8, toArrayBuffer } from '../protocol/Iap2Codec';
 import { CARPLAY_SENDER_SOURCE_VERSION } from '../protocol/CarPlaySenderCompatibility';
+import { getSocketAddressFamily } from './WifiNetworkAddress';
 import { AirPlayService } from './AirPlayMdnsDiscovery';
 
 export class AirPlayRtspProbe {
@@ -46,7 +47,7 @@ export class AirPlayRtspProbe {
       tcp.on('error', onError);
 
       const address: netSocket.TCPConnectOptions = {
-        address: { address: service.host, port: service.port },
+        address: { address: service.host, family: getSocketAddressFamily(service.host), port: service.port },
         timeout: 5000
       };
       tcp.connect(address)

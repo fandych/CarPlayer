@@ -22,6 +22,7 @@ export class AirPlayMdnsDiscovery {
   private discoveryStartedAt: number = 0;
   private discoveryTimeoutTimer: number = -1;
   private foundCount: number = 0;
+  private generation: number = 0;
 
   constructor(
     context: common.UIAbilityContext,
@@ -37,11 +38,12 @@ export class AirPlayMdnsDiscovery {
     if (this.discovery) {
       return;
     }
+    const generation = ++this.generation;
     this.discovery = mdns.createDiscoveryService(this.context, '_airplay._tcp');
     this.discoveryStartedAt = Date.now();
     this.foundCount = 0;
     this.foundHandler = (service: mdns.LocalServiceInfo): void => {
-      if (this.resolvingNames.has(service.serviceName)) {
+      if (generation !== this.generation || !this.discovery || this.resolvingNames.has(service.serviceName)) {
         return;
       }
       this.resolvingNames.add(service.serviceName);
@@ -53,6 +55,9 @@ export class AirPlayMdnsDiscovery {
       ));
       mdns.resolveLocalService(this.context, service)
         .then((resolved: mdns.LocalServiceInfo): void => {
+          if (generation !== this.generation || !this.discovery) {
+            return;
+          }
           const host = resolved.host?.address ?? '';
           const port = resolved.port ?? 0;
           if (!host || port < 1) {
@@ -91,6 +96,9 @@ export class AirPlayMdnsDiscovery {
           this.onService(airPlayService);
         })
         .catch((error: Error): void => {
+          if (generation !== this.generation || !this.discovery) {
+            return;
+          }
           this.resolvingNames.delete(service.serviceName);
           this.onError(formatProtocolEvent('mdns.service.resolve_failed',
             'serviceName', service.serviceName,
@@ -119,14 +127,16 @@ export class AirPlayMdnsDiscovery {
   }
 
   stop(): void {
-    if (!this.discovery) {
+    const discovery = this.discovery;
+    if (!discovery) {
       return;
     }
+    this.generation++;
     const elapsedMs = Math.max(0, Date.now() - this.discoveryStartedAt);
     if (this.foundHandler) {
-      this.discovery.off('serviceFound', this.foundHandler);
+      discovery.off('serviceFound', this.foundHandler);
     }
-    this.discovery.stopSearchingMDNS();
+    discovery.stopSearchingMDNS();
     this.clearDiscoveryTimeoutTimer();
     this.discovery = undefined;
     this.foundHandler = undefined;

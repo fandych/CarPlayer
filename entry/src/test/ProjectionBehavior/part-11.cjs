@@ -127,6 +127,7 @@ test('audio packet diagnostics are batched and media payloads remain unlogged; v
     buildAudioRtpHeader: () => new Uint8Array(12),
     nonce64: () => new Uint8Array(12),
     advanceAudioRtpTimestamp: (timestamp, packets) => (timestamp + packets * 352) >>> 0,
+    getSocketAddressFamily: address => address.includes(':') ? 2 : 1,
     concatBytes,
     toArrayBuffer: bytes => bytes.slice().buffer,
     formatProtocolEvent: formatEvent
@@ -190,4 +191,50 @@ test('audio packet diagnostics are batched and media payloads remain unlogged; v
     .map(line => Number(line.match(/frame=(\d+)/)?.[1])), [1, 2, 3, 4]);
   assert.ok(videoLogs[0].includes('keyFrame=true'));
   assert.ok(videoLogs[1].includes('载荷未写入日志'));
+});
+
+test('AirPlay audio RTP and sync UDP destinations declare IPv4 and IPv6 families', async () => {
+  const destinations = [];
+  const concatBytes = (...parts) => {
+    const result = new Uint8Array(parts.reduce((length, part) => length + part.length, 0));
+    let offset = 0;
+    for (const part of parts) { result.set(part, offset); offset += part.length; }
+    return result;
+  };
+  const Target = loadMethods('audio/AudioRtpSender.ets', 'AudioRtpSender', ['sendPacket', 'sendSync'], {
+    buildAudioRtpHeader: () => new Uint8Array(12),
+    buildAudioRtpSyncPacket: () => new Uint8Array(32),
+    nonce64: () => new Uint8Array(12),
+    advanceAudioRtpTimestamp: (timestamp, packets) => (timestamp + packets * 352) >>> 0,
+    getSocketAddressFamily: address => address.includes(':') ? 2 : 1,
+    concatBytes,
+    toArrayBuffer: bytes => bytes.slice().buffer,
+    formatProtocolEvent: () => ''
+  });
+
+  for (const [host, family] of [['192.168.3.150', 1], ['fe80::1%wlan0', 2]]) {
+    const sender = new Target();
+    sender.socket = {
+      async send(options) { destinations.push(options.address); }
+    };
+    sender.session = { host, dataPort: 7001, controlPort: 7002 };
+    sender.cipher = { async seal(_nonce, pcm) { return new Uint8Array(pcm.length + 16); } };
+    sender.running = true;
+    sender.sequence = 0;
+    sender.timestamp = 0;
+    sender.nonceCounter = 0;
+    sender.firstPacket = true;
+    sender.syncSequence = 0;
+    sender.firstSync = true;
+    sender.syncPending = false;
+    sender.log = () => {};
+
+    await sender.sendPacket(new Uint8Array([0, 0]));
+    await sender.sendSync();
+    assert.deepEqual(destinations.splice(0).map(address =>
+      [address.address, address.family, address.port]), [
+      [host, family, 7001],
+      [host, family, 7002]
+    ]);
+  }
 });
