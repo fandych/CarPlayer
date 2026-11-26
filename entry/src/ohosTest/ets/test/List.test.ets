@@ -1,7 +1,7 @@
 import abilityTest from './Ability.test';
-import nativeIap2CodecTest from './NativeIap2Codec.test';
+import codecBehaviorTest from './CodecBehavior.test';
 
 export default function testsuite() {
   abilityTest();
-  nativeIap2CodecTest();
+  codecBehaviorTest();
 }

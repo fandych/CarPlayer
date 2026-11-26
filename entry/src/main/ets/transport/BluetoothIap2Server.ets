@@ -1,13 +1,13 @@
 import bluetoothSocket from '@ohos.bluetooth.socket';
 import { toArrayBuffer } from '../protocol/Iap2Codec';
+import {
+  closeHeldBluetoothClients,
+  isCarPlayAdapterName
+} from './BluetoothIap2Helpers';
+import { BluetoothIap2AcceptRetry } from './BluetoothIap2AcceptRetry';
+export { isCarPlayAdapterName } from './BluetoothIap2Helpers';
 
 export type ByteHandler = (bytes: Uint8Array) => void;
-
-export function isCarPlayAdapterName(name: string): boolean {
-  const normalized = name.toLowerCase();
-  return ['smart box', 'car link', 'carlinkit', 'auto kit', 'cpc200']
-    .some((token: string): boolean => normalized.includes(token));
-}
 
 export class BluetoothIap2Server {
   private serverId: number = -1;
@@ -20,12 +20,10 @@ export class BluetoothIap2Server {
   private adapterMode: boolean = false;
   private adapterHandoffCompleted: boolean = false;
   private readonly heldClientIds: number[] = [];
-  private acceptRetryDelayMs: number = 500;
-  private acceptRetryTimer: number = -1;
+  private readonly acceptRetry: BluetoothIap2AcceptRetry = new BluetoothIap2AcceptRetry();
   private connectionMonitorTimer: number = -1;
   private connectionGeneration: number = 0;
   private connectPending: boolean = false;
-  private lastAcceptFailure: string = '';
 
   async start(
     onConnected: () => void,
@@ -39,8 +37,7 @@ export class BluetoothIap2Server {
     }
     this.adapterMode = adapterMode;
     this.adapterHandoffCompleted = false;
-    this.acceptRetryDelayMs = 500;
-    this.lastAcceptFailure = '';
+    this.acceptRetry.cancel();
     this.onClientConnected = onConnected;
     this.onClientData = onData;
     this.onClientDisconnected = onDisconnected;
@@ -143,10 +140,7 @@ export class BluetoothIap2Server {
   stop(): void {
     this.connectionGeneration++;
     this.connectPending = false;
-    if (this.acceptRetryTimer >= 0) {
-      clearTimeout(this.acceptRetryTimer);
-      this.acceptRetryTimer = -1;
-    }
+    this.acceptRetry.cancel();
     this.disconnectClient();
     this.closeHeldClients();
     if (this.serverId >= 0) {
@@ -164,8 +158,6 @@ export class BluetoothIap2Server {
     this.onFailure = undefined;
     this.adapterMode = false;
     this.adapterHandoffCompleted = false;
-    this.acceptRetryDelayMs = 500;
-    this.lastAcceptFailure = '';
   }
 
   setAdapterHandoffCompleted(completed: boolean): void {
@@ -173,9 +165,7 @@ export class BluetoothIap2Server {
       return;
     }
     this.adapterHandoffCompleted = completed;
-    if (!completed) {
-      this.closeHeldClients();
-    }
+    if (!completed) this.closeHeldClients();
   }
 
   disconnectClient(): void {
@@ -197,8 +187,7 @@ export class BluetoothIap2Server {
           }
           return;
         }
-        this.acceptRetryDelayMs = 500;
-        this.lastAcceptFailure = '';
+        this.acceptRetry.markAccepted();
         if (this.adapterMode && this.adapterHandoffCompleted && this.clientId >= 0) {
           this.heldClientIds.push(clientId);
           this.acceptNext();
@@ -230,28 +219,14 @@ export class BluetoothIap2Server {
     }
   }
 
+  private closeClient(): void { this.closeActiveClient(false); }
+
   private scheduleAcceptRetry(): void {
-    if (this.serverId < 0 || this.acceptRetryTimer >= 0) {
-      return;
-    }
-    const delayMs = this.acceptRetryDelayMs;
-    this.acceptRetryDelayMs = Math.min(delayMs * 2, 5000);
-    this.acceptRetryTimer = setTimeout((): void => {
-      this.acceptRetryTimer = -1;
-      this.acceptNext();
-    }, delayMs);
+    this.acceptRetry.schedule((): boolean => this.serverId >= 0, (): void => this.acceptNext());
   }
 
   private reportAcceptFailure(message: string): void {
-    if (message === this.lastAcceptFailure) {
-      return;
-    }
-    this.lastAcceptFailure = message;
-    this.onFailure?.(message);
-  }
-
-  private closeClient(): void {
-    this.closeActiveClient(false);
+    this.acceptRetry.report(message, this.onFailure);
   }
 
   private closeActiveClient(notify: boolean): void {
@@ -314,17 +289,10 @@ export class BluetoothIap2Server {
   }
 
   private closeHeldClients(): void {
-    for (const clientId of this.heldClientIds) {
-      try {
-        bluetoothSocket.sppCloseClientSocket(clientId);
-      } catch (error) {
-        this.onFailure?.(`Bluetooth held client cleanup failed: ${this.errorMessage(error)}`);
-      }
-    }
-    this.heldClientIds.length = 0;
+    closeHeldBluetoothClients(this.heldClientIds, (clientId: number): void => {
+      bluetoothSocket.sppCloseClientSocket(clientId);
+    }, (message: string): void => this.onFailure?.(message));
   }
 
-  private errorMessage(error: Error | string): string {
-    return error instanceof Error ? error.message : String(error);
-  }
+  private errorMessage(error: Error | string): string { return error instanceof Error ? error.message : String(error); }
 }

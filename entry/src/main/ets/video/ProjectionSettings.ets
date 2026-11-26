@@ -1,71 +1,47 @@
-export interface ProjectionRates {
-  capture: number;
-  encode: number;
-}
-
-export interface ProjectionDisplayMode {
-  id: string;
-  label: string;
-  width: number;
-  height: number;
-  isNative: boolean;
-}
-
-export interface VerifiedProjectionDisplayMode {
-  displayUuid: string;
-  nativeWidth: number;
-  nativeHeight: number;
-  id: string;
-  width: number;
-  height: number;
-  encoder: 'video/avc';
-}
-
-export interface ProjectionDisplayModeResolution {
-  mode: ProjectionDisplayMode;
-  usedNativeFallback: boolean;
-}
-
-export interface ProjectionContentCalibration {
-  scale: number;
-  offsetX: number;
-  offsetY: number;
-}
-
-export type ProjectionCalibrationControl = 'scale' | 'offsetX' | 'offsetY';
-
-export interface ProjectionTheme {
-  id: string;
-  label: string;
-  background: string;
-  surface: string;
-  panel: string;
-}
-
-export type ProjectionDockPosition = 'left' | 'bottom';
-export type ProjectionDayNightMode = 'AUTO' | 'DAY' | 'NIGHT';
-export type ProjectionSafeInsetEdge = 'top' | 'right' | 'bottom' | 'left';
-export type ProjectionSplitPane = 'map' | 'music';
-
-export const RECEIVER_NATIVE_MODE_ID: string = 'receiver-native';
-export const PROJECTION_ENCODER_MAX_WIDTH: number = 4096;
-export const PROJECTION_ENCODER_MAX_HEIGHT: number = 2160;
-export const PROJECTION_SPLIT_RATIO_MIN: number = 1;
-export const PROJECTION_SPLIT_RATIO_MAX: number = 10;
-
-export const VERIFIED_PROJECTION_DISPLAY_MODES: VerifiedProjectionDisplayMode[] = [];
-
-export const PROJECTION_THEMES: ProjectionTheme[] = [
-  { id: 'aurora', label: '极光', background: '#10101C', surface: '#262630', panel: '#1E1E26' },
-  { id: 'sunset', label: '日落', background: '#2B1033', surface: '#262630', panel: '#1E1E26' },
-  { id: 'forest', label: '森林', background: '#0B1F1A', surface: '#262630', panel: '#1E1E26' },
-  { id: 'ocean', label: '深海', background: '#06102A', surface: '#262630', panel: '#1E1E26' },
-  { id: 'graphite', label: '石墨', background: '#16161A', surface: '#262630', panel: '#1E1E26' }
-];
-
-export const PROJECTION_ACCENTS: string[] = [
-  '#0A84FF', '#30D158', '#FF9F0A', '#FF375F', '#BF5AF2', '#64D2FF'
-];
+import {
+  PROJECTION_ACCENTS,
+  PROJECTION_ENCODER_MAX_HEIGHT,
+  PROJECTION_ENCODER_MAX_WIDTH,
+  PROJECTION_THEMES,
+  RECEIVER_NATIVE_MODE_ID,
+  VERIFIED_PROJECTION_DISPLAY_MODES,
+  ProjectionCalibrationControl,
+  ProjectionContentCalibration,
+  ProjectionDayNightMode,
+  ProjectionDisplayMode,
+  ProjectionDisplayModeResolution,
+  ProjectionDockPosition,
+  ProjectionRates,
+  ProjectionSafeInsetEdge,
+  ProjectionTheme,
+  VerifiedProjectionDisplayMode
+} from './ProjectionSettingsTypes';
+export {
+  PROJECTION_ACCENTS,
+  PROJECTION_ENCODER_MAX_HEIGHT,
+  PROJECTION_ENCODER_MAX_WIDTH,
+  PROJECTION_SPLIT_RATIO_MAX,
+  PROJECTION_SPLIT_RATIO_MIN,
+  PROJECTION_THEMES,
+  RECEIVER_NATIVE_MODE_ID,
+  VERIFIED_PROJECTION_DISPLAY_MODES,
+  ProjectionCalibrationControl,
+  ProjectionContentCalibration,
+  ProjectionDayNightMode,
+  ProjectionDisplayMode,
+  ProjectionDisplayModeResolution,
+  ProjectionDockPosition,
+  ProjectionRates,
+  ProjectionSafeInsetEdge,
+  ProjectionSplitPane,
+  ProjectionTheme,
+  VerifiedProjectionDisplayMode
+} from './ProjectionSettingsTypes';
+export {
+  normalizeProjectionSplitRatio,
+  readProjectionSplitRatio,
+  saveProjectionSplitRatio
+} from './ProjectionSplitSettings';
 
 let settingsInitialized: boolean = false;
 
@@ -83,32 +59,6 @@ export function initializeProjectionSettings(): void {
   PersistentStorage.persistProp('carplaySplitMapRatio', 3);
   PersistentStorage.persistProp('carplaySplitMusicRatio', 2);
   settingsInitialized = true;
-}
-
-export function normalizeProjectionSplitRatio(value: number, fallback: number = 3): number {
-  const defaultValue = Number.isFinite(fallback)
-    ? Math.max(PROJECTION_SPLIT_RATIO_MIN, Math.min(PROJECTION_SPLIT_RATIO_MAX, Math.round(fallback)))
-    : 3;
-  if (!Number.isFinite(value)) {
-    return defaultValue;
-  }
-  return Math.max(PROJECTION_SPLIT_RATIO_MIN, Math.min(PROJECTION_SPLIT_RATIO_MAX, Math.round(value)));
-}
-
-export function readProjectionSplitRatio(pane: ProjectionSplitPane): number {
-  const defaultValue = pane === 'map' ? 3 : 2;
-  const key = pane === 'map' ? 'carplaySplitMapRatio' : 'carplaySplitMusicRatio';
-  PersistentStorage.persistProp(key, defaultValue);
-  return normalizeProjectionSplitRatio(AppStorage.get<number>(key) ?? defaultValue, defaultValue);
-}
-
-export function saveProjectionSplitRatio(pane: ProjectionSplitPane, value: number): number {
-  const defaultValue = pane === 'map' ? 3 : 2;
-  const key = pane === 'map' ? 'carplaySplitMapRatio' : 'carplaySplitMusicRatio';
-  const ratio = normalizeProjectionSplitRatio(value, defaultValue);
-  PersistentStorage.persistProp(key, defaultValue);
-  AppStorage.setOrCreate(key, ratio);
-  return ratio;
 }
 
 export function projectionTheme(id: string): ProjectionTheme {

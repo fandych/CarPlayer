@@ -41,12 +41,9 @@ node --test entry\src\test\ProjectionBehavior.test.cjs
 
 # 只运行一个 Node 测试（按名称或正则表达式匹配）
 node --test --test-name-pattern="irregular-display calibration preserves aspect ratio" entry\src\test\ProjectionBehavior.test.cjs
-
-# 纯 C 原生核心测试
-.\entry\src\test\native\run-tests.ps1
 ```
 
-`run-tests.ps1` 使用 DevEco SDK 自带的 LLVM 工具；SDK 安装位置非默认时设置 `DEVECO_SDK_HOME`。Hypium 测试通过 DevEco Studio 的测试运行器执行；`entry/src/ohosTest` 中的 N-API 测试需要 HarmonyOS 设备。主机 Hypium 测试会注入 ArkTS 替身，不验证原生库运行时行为。`code-linter.json5` 定义 ArkTS lint 规则和排除范围，仓库未提供独立 lint 命令。
+Hypium 测试通过 DevEco Studio 的测试运行器执行；`entry/src/ohosTest` 中的 N-API 测试需要 HarmonyOS 设备。主机 Hypium 测试会注入 ArkTS 替身，不验证原生库运行时行为。`code-linter.json5` 定义 ArkTS lint 规则和排除范围，仓库未提供独立 lint 命令。
 
 ## 相关文档
 

@@ -1,17 +1,15 @@
 import wifiManager from '@ohos.wifiManager';
 import { WifiCredentials } from '../session/Iap2SenderSession';
 import { formatProtocolEvent } from '../session/ProtocolLogger';
+import { formatWifiApiError } from './WifiCarPlayErrors';
+import { formatWifiIpv4Address } from './WifiIpv4Address';
+export { formatWifiIpv4Address } from './WifiIpv4Address';
 
 const WIFI_JOIN_TIMEOUT_MS: number = 25_000;
 
 export interface WifiConnectionResult {
   ssid: string;
   ipAddress: string;
-}
-
-interface WifiApiErrorDetails {
-  code?: number;
-  message?: string;
 }
 
 export class WifiCarPlayConnector {
@@ -286,29 +284,4 @@ export class WifiCarPlayConnector {
   private formatIpAddress(ipAddress: number): string {
     return formatWifiIpv4Address(ipAddress);
   }
-}
-
-// WifiLinkedInfo.ipAddress holds the first octet in the most significant byte.
-export function formatWifiIpv4Address(ipAddress: number): string {
-  return [
-    (ipAddress >>> 24) & 0xff,
-    (ipAddress >>> 16) & 0xff,
-    (ipAddress >>> 8) & 0xff,
-    ipAddress & 0xff
-  ].join('.');
-}
-
-function formatWifiApiError(error: Error | Object): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  const details = error as WifiApiErrorDetails;
-  const parts: string[] = [];
-  if (details.code !== undefined) {
-    parts.push(`code=${details.code}`);
-  }
-  if (details.message) {
-    parts.push(details.message);
-  }
-  return parts.length > 0 ? parts.join(': ') : JSON.stringify(error) || String(error);
 }

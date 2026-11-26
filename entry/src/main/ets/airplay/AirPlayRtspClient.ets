@@ -1,15 +1,11 @@
-import netSocket from '@ohos.net.socket';
-import { settleSocketWithin } from '../network/SocketDeadline';
-import { decodeUtf8, encodeUtf8, concatBytes, toArrayBuffer } from '../protocol/Iap2Codec';
+import { encodeUtf8, concatBytes } from '../protocol/Iap2Codec';
 import { AirPlayControlCipher } from './ControlCipher';
-import { BinaryPlist, formatPlistDiagnostic } from './BinaryPlist';
 import { CARPLAY_SENDER_SOURCE_VERSION } from '../protocol/CarPlaySenderCompatibility';
-import {
-  formatNetworkError,
-  getSocketAddressFamily,
-  WifiNetworkLease
-} from '../network/WifiNetworkLease';
-import { formatProtocolEvent, formatRawBytesDiagnostic } from '../session/ProtocolLogger';
+import { formatNetworkError, WifiNetworkLease } from '../network/WifiNetworkLease';
+import { formatProtocolEvent } from '../session/ProtocolLogger';
+import { AirPlayRtspConnection } from './AirPlayRtspConnection';
+import { formatRtspBodySummary, formatRtspRawBytes, isSensitiveRtspPath } from './AirPlayRtspDiagnostics';
+import { parseAirPlayRtspResponse } from './AirPlayRtspResponseParser';
 
 export interface AirPlayRtspResponse {
   statusCode: number;
@@ -38,10 +34,7 @@ interface PendingResponse {
 const RTSP_REQUEST_TIMEOUT_MS: number = 10_000;
 
 export class AirPlayRtspClient {
-  private socket?: netSocket.TCPSocket;
-  private messageHandler?: (info: netSocket.SocketMessageInfo) => void;
-  private errorHandler?: (error: Error) => void;
-  private closeHandler?: () => void;
+  private readonly connection: AirPlayRtspConnection;
   private receiveBuffer: Uint8Array = new Uint8Array(0);
   private pending?: PendingResponse;
   private cipher?: AirPlayControlCipher;
@@ -50,8 +43,6 @@ export class AirPlayRtspClient {
   private nextCseq: number = 1;
   private readonly onError: (message: string) => void;
   private readonly onDisconnected: (message: string) => void;
-  private readonly wifiNetworkLease: WifiNetworkLease;
-  private disconnectNotified: boolean = false;
 
   constructor(
     onError: (message: string) => void,
@@ -60,66 +51,40 @@ export class AirPlayRtspClient {
   ) {
     this.onError = onError;
     this.onDisconnected = onDisconnected;
-    this.wifiNetworkLease = wifiNetworkLease;
+    this.connection = new AirPlayRtspConnection(
+      (data: Uint8Array): void => {
+        this.receiveQueue = this.receiveQueue
+          .then((): Promise<void> => this.handleIncoming(data))
+          .catch((error: Error): void => {
+            this.onError(`AirPlay RTSP receive failed: ${formatNetworkError(error)}`);
+            this.failPending(error);
+          });
+      },
+      (error: Error): void => {
+        const message = formatNetworkError(error);
+        this.onError(`AirPlay RTSP socket error: ${message}`);
+        this.failPending(new Error(message));
+      },
+      (message: string): void => {
+        this.failPending(new Error(message));
+        this.onDisconnected(message);
+      },
+      (): void => {
+        this.onError('AirPlay RTSP socket 已绑定指定车机 Wi-Fi 网络');
+      },
+      (): void => {
+        this.failPending(new Error('AirPlay RTSP connection closed'));
+      },
+      wifiNetworkLease
+    );
   }
 
   get isConnected(): boolean {
-    return this.socket !== undefined && !this.disconnectNotified;
+    return this.connection.isConnected;
   }
 
   async connect(host: string, port: number): Promise<void> {
-    if (this.socket) {
-      throw new Error('AirPlay RTSP client is already connected');
-    }
-    if (!host || port < 1 || port > 65535) {
-      throw new Error('Invalid AirPlay RTSP endpoint');
-    }
-    const socket = netSocket.constructTCPSocketInstance();
-    this.socket = socket;
-    this.disconnectNotified = false;
-    this.messageHandler = (info: netSocket.SocketMessageInfo): void => {
-      const data = new Uint8Array(info.message);
-      this.receiveQueue = this.receiveQueue
-        .then((): Promise<void> => this.handleIncoming(data))
-        .catch((error: Error): void => {
-          this.onError(`AirPlay RTSP receive failed: ${formatNetworkError(error)}`);
-          this.failPending(error);
-        });
-    };
-    this.errorHandler = (error: Error): void => {
-      const message = formatNetworkError(error);
-      this.onError(`AirPlay RTSP socket error: ${message}`);
-      this.failPending(new Error(message));
-      this.notifyDisconnected(socket, `RTSP socket error: ${message}`);
-    };
-    this.closeHandler = (): void => {
-      this.failPending(new Error('AirPlay RTSP socket closed by peer'));
-      this.notifyDisconnected(socket, 'RTSP socket closed by peer');
-    };
-    try {
-      socket.on('message', this.messageHandler);
-      socket.on('error', this.errorHandler);
-      socket.on('close', this.closeHandler);
-      const socketHost = this.wifiNetworkLease.scopeLinkLocalAddress(host);
-      const options: netSocket.TCPConnectOptions = {
-        address: { address: socketHost, family: getSocketAddressFamily(socketHost), port },
-        timeout: 5000
-      };
-      if (await this.wifiNetworkLease.bindSocket(
-        socket, 'AirPlay RTSP TCP', getSocketAddressFamily(socketHost))) {
-        this.onError('AirPlay RTSP socket 已绑定指定车机 Wi-Fi 网络');
-      }
-      await socket.connect(options);
-    } catch (error) {
-      const message = formatNetworkError(error);
-      try {
-        await this.close();
-      } catch (cleanupError) {
-        const cleanupMessage = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
-        throw new Error(`AirPlay RTSP connect failed: ${message}; cleanup failed: ${cleanupMessage}`);
-      }
-      throw new Error(`AirPlay RTSP connect failed: ${message}`);
-    }
+    await this.connection.connect(host, port);
   }
 
   async request(
@@ -147,8 +112,7 @@ export class AirPlayRtspClient {
     body: Uint8Array,
     headers: AirPlayRtspHeaders
   ): Promise<AirPlayRtspResponse> {
-    const socket = this.socket;
-    if (!socket) {
+    if (!this.connection.hasSocket) {
       throw new Error('AirPlay RTSP client is not connected');
     }
     if (this.pending) {
@@ -179,7 +143,7 @@ export class AirPlayRtspClient {
       this.pending = pending;
     });
     void responsePromise.catch((): void => {});
-    this.onError(formatRawWireBytes(
+    this.onError(formatRtspRawBytes(
       'TX',
       outbound,
       this.cipher === undefined && isSensitiveRtspPath(path)
@@ -195,9 +159,8 @@ export class AirPlayRtspClient {
       'timeoutMs', RTSP_REQUEST_TIMEOUT_MS,
       'meaning', `向接收端发送 ${method} ${path}，等待对应 CSeq=${cseq} 的响应`
     ));
-    const sendOptions: netSocket.TCPSendOptions = { data: toArrayBuffer(outbound) };
     try {
-      await socket.send(sendOptions);
+      await this.connection.send(outbound);
     } catch (error) {
       const message = formatNetworkError(error);
       this.failPending(new Error(`AirPlay RTSP write failed: ${message}`));
@@ -217,49 +180,12 @@ export class AirPlayRtspClient {
 
   async close(): Promise<void> {
     this.failPending(new Error('AirPlay RTSP connection closed'));
-    const socket = this.socket;
-    this.socket = undefined;
-    if (!socket) {
-      return;
-    }
-    const failures: string[] = [];
-    if (this.messageHandler) {
-      try {
-        socket.off('message', this.messageHandler);
-      } catch (error) {
-        failures.push(`message listener: ${formatNetworkError(error)}`);
-      }
-    }
-    if (this.errorHandler) {
-      try {
-        socket.off('error', this.errorHandler);
-      } catch (error) {
-        failures.push(`error listener: ${formatNetworkError(error)}`);
-      }
-    }
-    if (this.closeHandler) {
-      try {
-        socket.off('close', this.closeHandler);
-      } catch (error) {
-        failures.push(`close listener: ${formatNetworkError(error)}`);
-      }
-    }
-    this.messageHandler = undefined;
-    this.errorHandler = undefined;
-    this.closeHandler = undefined;
-    try {
-      await settleSocketWithin(socket.close(), 1500, 'RTSP socket close timed out');
-    } catch (error) {
-      failures.push(`socket close: ${formatNetworkError(error)}`);
-    }
-    if (failures.length > 0) {
-      throw new Error(`AirPlay RTSP cleanup failed (${failures.join('; ')})`);
-    }
+    await this.connection.close();
   }
 
   private async handleIncoming(data: Uint8Array): Promise<void> {
     const cipher = this.cipher;
-    this.onError(formatRawWireBytes(
+    this.onError(formatRtspRawBytes(
       'RX',
       data,
       cipher === undefined && isSensitiveRtspPath(this.pending?.path ?? '')
@@ -295,47 +221,12 @@ export class AirPlayRtspClient {
 
   private parseResponse(): void {
     while (this.pending) {
-      const headerEnd = findHeaderEnd(this.receiveBuffer);
-      if (headerEnd < 0) {
+      const parsed = parseAirPlayRtspResponse(this.receiveBuffer, this.pending.cseq);
+      if (!parsed) {
         return;
       }
-      const headerText = decodeUtf8(this.receiveBuffer.slice(0, headerEnd));
-      const lines = headerText.split('\r\n');
-      const statusLine = lines[0] ?? '';
-      const statusCode = parseStatusCode(statusLine);
-      const headers: Map<string, string> = new Map<string, string>();
-      for (let index = 1; index < lines.length; index++) {
-        const line = lines[index];
-        const separator = line.indexOf(':');
-        if (separator > 0) {
-          headers.set(line.slice(0, separator).trim().toLowerCase(), line.slice(separator + 1).trim());
-        }
-      }
-      if (headers.has('transfer-encoding')) {
-        throw new Error('Chunked RTSP response bodies are not supported');
-      }
-      const contentLengthValue = headers.get('content-length') ?? '0';
-      const contentLength = Number.parseInt(contentLengthValue, 10);
-      if (!Number.isFinite(contentLength) || contentLength < 0 || contentLength > 1024 * 1024) {
-        throw new Error(`Invalid AirPlay RTSP Content-Length: ${contentLengthValue}`);
-      }
-      const bodyStart = headerEnd + 4;
-      const responseLength = bodyStart + contentLength;
-      if (this.receiveBuffer.length < responseLength) {
-        return;
-      }
-      const cseqValue = headers.get('cseq');
-      if (cseqValue && Number.parseInt(cseqValue, 10) !== this.pending.cseq) {
-        throw new Error(`AirPlay RTSP CSeq mismatch: expected ${this.pending.cseq}, got ${cseqValue}`);
-      }
-      const response: AirPlayRtspResponse = {
-        statusCode,
-        statusLine,
-        headers,
-        body: this.receiveBuffer.slice(bodyStart, responseLength)
-      };
-      this.receiveBuffer = this.receiveBuffer.slice(responseLength);
-      this.resolvePending(response);
+      this.receiveBuffer = this.receiveBuffer.slice(parsed.consumedBytes);
+      this.resolvePending(parsed.response);
     }
   }
 
@@ -385,70 +276,4 @@ export class AirPlayRtspClient {
     pending.reject(error);
   }
 
-  private notifyDisconnected(socket: netSocket.TCPSocket, message: string): void {
-    if (this.socket !== socket || this.disconnectNotified) {
-      return;
-    }
-    this.disconnectNotified = true;
-    this.onDisconnected(message);
-  }
-}
-
-function findHeaderEnd(bytes: Uint8Array): number {
-  for (let index = 0; index + 3 < bytes.length; index++) {
-    if (bytes[index] === 13 && bytes[index + 1] === 10 && bytes[index + 2] === 13 && bytes[index + 3] === 10) {
-      return index;
-    }
-  }
-  return -1;
-}
-
-function parseStatusCode(statusLine: string): number {
-  const parts = statusLine.split(' ');
-  if (parts.length < 2) {
-    throw new Error(`Invalid AirPlay RTSP status line: ${statusLine}`);
-  }
-  const statusCode = Number.parseInt(parts[1], 10);
-  if (!Number.isFinite(statusCode)) {
-    throw new Error(`Invalid AirPlay RTSP status code: ${statusLine}`);
-  }
-  return statusCode;
-}
-
-const MAX_RAW_LOG_BYTES: number = 16 * 1024;
-
-function isPairingPath(path: string): boolean {
-  return path.includes('/pair-setup') || path.includes('/pair-verify');
-}
-
-function isSensitiveRtspPath(path: string): boolean {
-  return isPairingPath(path) || path === '/setup' || path === '/info' || path.endsWith('/auth-setup');
-}
-
-function formatRtspBodySummary(path: string, contentType: string | undefined, body: Uint8Array): string {
-  if (isPairingPath(path) || path.endsWith('/auth-setup')) {
-    return `authentication payload redacted (${body.length}B)`;
-  }
-  if (body.length === 0) {
-    return 'empty body';
-  }
-  if (contentType?.toLowerCase().includes('binary-plist')) {
-    try {
-      return formatPlistDiagnostic(BinaryPlist.decode(body));
-    } catch (error) {
-      return `invalid binary plist: ${formatNetworkError(error)}`;
-    }
-  }
-  return `body omitted (${body.length}B; content type=${contentType ?? 'unspecified'})`;
-}
-
-function formatRawWireBytes(direction: string, bytes: Uint8Array, redact: boolean): string {
-  let maskedBytes: Uint8Array | undefined;
-  if (redact) {
-    maskedBytes = new Uint8Array(bytes.length);
-    for (let index = 0; index < maskedBytes.length; index++) {
-      maskedBytes[index] = 1;
-    }
-  }
-  return formatRawBytesDiagnostic(direction, 'AirPlay RTSP', bytes, MAX_RAW_LOG_BYTES, maskedBytes);
 }

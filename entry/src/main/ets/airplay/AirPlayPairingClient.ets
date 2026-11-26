@@ -1,6 +1,7 @@
 import common from '@ohos.app.ability.common';
 import { AirPlayService } from '../network/AirPlayMdnsDiscovery';
 import { AirPlayIdentityStore } from './AirPlayIdentityStore';
+import { AirPlayPairingHandshake } from './AirPlayPairingHandshake';
 import {
   AirPlayMediaSession,
   AirPlayMediaSessionInfo,
@@ -10,10 +11,9 @@ import { EncodedH264Event } from './AirPlayVideoStream';
 import { AirPlayRtspClient } from './AirPlayRtspClient';
 import { orderAirPlayAddresses, WifiNetworkLease } from '../network/WifiNetworkLease';
 import { Iap2SenderSession } from '../session/Iap2SenderSession';
-import { formatProtocolEvent } from '../session/ProtocolLogger';
-import { AirPlayRtspStatusError, PairSetupClient, PairVerifyClient } from './pairing/PairingProtocol';
 
 export { AirPlayRtspStatusError } from './pairing/PairingProtocol';
+export { supportsAirPlayPairingAndEncryption } from './AirPlayPairingHelpers';
 
 export interface AirPlayPairingResult {
   receiverId: string;
@@ -22,33 +22,8 @@ export interface AirPlayPairingResult {
   features: string;
 }
 
-const HK_PAIRING_AND_ENCRYPT: bigint = BigInt('0x4000000000');
 const AIRPLAY_PLAINTEXT_SETUP_WINDOW_MS: number = 120_000;
 const AIRPLAY_PLAINTEXT_SETUP_RETRY_MS: number = 2000;
-
-export function supportsAirPlayPairingAndEncryption(features: string | undefined): boolean | undefined {
-  if (!features) {
-    return undefined;
-  }
-  const words = features.split(',');
-  if (words.length !== 2) {
-    return undefined;
-  }
-  const parseWord = (word: string): bigint | undefined => {
-    const normalized = word.trim().replace(/^0x/i, '');
-    if (!/^[0-9a-f]{1,8}$/i.test(normalized)) {
-      return undefined;
-    }
-    return BigInt(`0x${normalized}`);
-  };
-  const low = parseWord(words[0]);
-  const high = parseWord(words[1]);
-  if (low === undefined || high === undefined) {
-    return undefined;
-  }
-  const combined = (high << BigInt(32)) | low;
-  return (combined & HK_PAIRING_AND_ENCRYPT) !== BigInt(0);
-}
 
 export class AirPlayPairingClient {
   private readonly identityStore: AirPlayIdentityStore = new AirPlayIdentityStore();
@@ -74,89 +49,20 @@ export class AirPlayPairingClient {
 
   async pair(context: common.UIAbilityContext, service: AirPlayService): Promise<AirPlayPairingResult> {
     const generation = this.lifecycleGeneration;
-    const advertisedReceiverKey = decodeHex(service.txt['pk'] ?? '');
-    if (advertisedReceiverKey.length !== 0 && advertisedReceiverKey.length !== 32) {
-      throw new Error('AirPlay receiver public key must be 32 bytes');
-    }
-    if (advertisedReceiverKey.length === 0) {
-      this.log('AirPlay endpoint 未提供预广播公钥；将从已验证的 Pair-Setup 响应建立接收端身份');
-    }
-    const identity = await this.identityStore.loadOrCreate(context);
-    const deviceIdentifier = service.txt['deviceid'] ?? '';
-    const storedReceiver = await this.identityStore.loadVerifiedReceiver(context, deviceIdentifier);
-    if (generation !== this.lifecycleGeneration) {
-      throw new Error('AirPlay pairing was cancelled');
-    }
-    if (advertisedReceiverKey.length === 32 && storedReceiver &&
-      !equalBytes(advertisedReceiverKey, storedReceiver.publicKeyRaw)) {
-      throw new Error('AirPlay receiver key conflicts with the previously verified identity');
-    }
-    const expectedReceiverKey = advertisedReceiverKey.length === 32
-      ? advertisedReceiverKey
-      : storedReceiver?.publicKeyRaw;
+    const handshake = new AirPlayPairingHandshake(
+      this.identityStore,
+      this.log,
+      (target: AirPlayService): Promise<void> => this.connect(target),
+      (): AirPlayRtspClient => this.requireClient(),
+      (): Promise<void> => this.closeResources(),
+      (): boolean => generation === this.lifecycleGeneration
+    );
+    const state = await handshake.prepare(context, service);
     try {
-      await this.connect(service);
-      if (generation !== this.lifecycleGeneration) {
-        await this.closeResources();
-        throw new Error('AirPlay pairing was cancelled');
-      }
-      let setupReceiverId = '';
-      let setupReceiverKey: Uint8Array | undefined;
-      let usedPairVerifyFastPath = false;
-      try {
-        const receiver = await new PairSetupClient(this.requireClient(), identity, this.log)
-          .run(expectedReceiverKey);
-        setupReceiverId = receiver.receiverId;
-        setupReceiverKey = receiver.receiverPublicKey;
-      } catch (error) {
-        if (!(error instanceof AirPlayRtspStatusError) || error.statusCode !== 403) {
-          throw error instanceof Error ? error : new Error(String(error));
-        }
-        if (!expectedReceiverKey) {
-          this.log('Pair-Setup 403 fast path rejected: no advertised or previously verified receiver key is available');
-          throw error;
-        }
-        this.log('Pair-Setup 被接收端以 403 拒绝；关闭当前 TCP 并按 CardDeck 已配对快路径重连 Pair-Verify');
-        await this.closeResources();
-        if (generation !== this.lifecycleGeneration) {
-          throw new Error('AirPlay pairing was cancelled');
-        }
-        await this.connect(service);
-        if (generation !== this.lifecycleGeneration) {
-          await this.closeResources();
-          throw new Error('AirPlay pairing was cancelled');
-        }
-        usedPairVerifyFastPath = true;
-      }
-      const receiverKey = setupReceiverKey ?? expectedReceiverKey;
-      if (!receiverKey || receiverKey.length !== 32) {
-        throw new Error('Pair-Setup did not provide a verifiable receiver public key');
-      }
-      const keys = await new PairVerifyClient(this.requireClient(), identity, this.log).run(receiverKey);
-      if (generation !== this.lifecycleGeneration) {
-        await this.closeResources();
-        throw new Error('AirPlay pairing was cancelled');
-      }
-      if (setupReceiverId && setupReceiverId !== keys.receiverId) {
-        throw new Error('pair-setup and pair-verify receiver identities do not match');
-      }
-      if (storedReceiver && storedReceiver.receiverId !== keys.receiverId) {
-        throw new Error('pair-verify receiver ID conflicts with the previously verified identity');
-      }
-      if (deviceIdentifier) {
-        try {
-          await this.identityStore.saveVerifiedReceiver(context, deviceIdentifier, keys.receiverId, receiverKey);
-        } catch (error) {
-          this.log(`WARN: AirPlay verified receiver identity could not be persisted: ${error instanceof Error ? error.message : String(error)}`);
-        }
-      }
-      const client = this.requireClient();
-      client.activateEncryption(keys.phoneReadKey, keys.phoneWriteKey);
-      const model = service.txt['model'] ?? '未提供';
-      const features = service.txt['features'] ?? '未提供';
-      const receiverId = setupReceiverId || keys.receiverId;
+      const outcome = await handshake.run(state, service);
+      const { receiverId, model, features, sharedSecret, usedPairVerifyFastPath } = outcome;
       this.service = service;
-      this.sharedSecret = keys.sharedSecret.slice();
+      this.sharedSecret = sharedSecret;
       this.log(
         `AirPlay pair-verify 已通过：receiver=${receiverId} mDNS model=${model} features=${features} ` +
           `路径=${usedPairVerifyFastPath ? '已配对快路径' : '新配对'}`
@@ -379,27 +285,4 @@ export class AirPlayPairingClient {
       throw new Error(`AirPlay cleanup failed: ${failures.join('; ')}`);
     }
   }
-}
-
-function decodeHex(hex: string): Uint8Array {
-  const normalized = hex.startsWith('0x') ? hex.slice(2) : hex;
-  if (normalized.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(normalized)) {
-    throw new Error('AirPlay TXT public key is not valid hexadecimal');
-  }
-  const result = new Uint8Array(normalized.length / 2);
-  for (let index = 0; index < result.length; index++) {
-    result[index] = parseInt(normalized.slice(index * 2, index * 2 + 2), 16);
-  }
-  return result;
-}
-
-function equalBytes(left: Uint8Array, right: Uint8Array): boolean {
-  if (left.length !== right.length) {
-    return false;
-  }
-  let difference = 0;
-  for (let index = 0; index < left.length; index++) {
-    difference |= left[index] ^ right[index];
-  }
-  return difference === 0;
 }
