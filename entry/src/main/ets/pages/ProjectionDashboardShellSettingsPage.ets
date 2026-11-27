@@ -50,38 +50,38 @@ export struct ProjectionDashboardShellSettingsPage {
   @Prop captureFps: number = 60;
   @Prop receiverHomeMessage: string = '';
   @Prop launchMessage: string = '';
-  @Prop settingsIconResource: (lightIcon: string, darkIcon: string, selected?: boolean) => Resource =
+  settingsIconResource: (lightIcon: string, darkIcon: string, selected?: boolean) => Resource =
     (_lightIcon: string, _darkIcon: string, _selected?: boolean): Resource => $r('app.media.ic_car_front');
-  @Prop onSettingsTabChange: (tab: string) => void = (_tab: string): void => {};
-  @Prop onDayNightModeChange: (mode: 'AUTO' | 'DAY' | 'NIGHT') => void =
+  onSettingsTabChange: (tab: string) => void = (_tab: string): void => {};
+  onDayNightModeChange: (mode: 'AUTO' | 'DAY' | 'NIGHT') => void =
     (_mode: 'AUTO' | 'DAY' | 'NIGHT'): void => {};
-  @Prop onBrightnessChange: (value: number) => void = (_value: number): void => {};
-  @Prop onBrightnessTouch: (pointX: number, area: Area) => void =
+  onBrightnessChange: (value: number) => void = (_value: number): void => {};
+  onBrightnessTouch: (pointX: number, area: Area) => void =
     (_pointX: number, _area: Area): void => {};
-  @Prop onSplitRatioAdjust: (pane: ProjectionSplitPane, delta: number) => void =
+  onSplitRatioAdjust: (pane: ProjectionSplitPane, delta: number) => void =
     (_pane: ProjectionSplitPane, _delta: number): void => {};
-  @Prop onSplitRatioInputChange: (pane: ProjectionSplitPane, value: string) => void =
+  onSplitRatioInputChange: (pane: ProjectionSplitPane, value: string) => void =
     (_pane: ProjectionSplitPane, _value: string): void => {};
-  @Prop onSplitRatioRestore: (pane: ProjectionSplitPane) => void = (_pane: ProjectionSplitPane): void => {};
-  @Prop onSplitRatioFocus: (pane: ProjectionSplitPane) => void = (_pane: ProjectionSplitPane): void => {};
-  @Prop onDockPositionToggle: () => void = (): void => {};
-  @Prop onSafeInsetAdjust: (edge: ProjectionSafeInsetEdge, delta: number) => void =
+  onSplitRatioRestore: (pane: ProjectionSplitPane) => void = (_pane: ProjectionSplitPane): void => {};
+  onSplitRatioFocus: (pane: ProjectionSplitPane) => void = (_pane: ProjectionSplitPane): void => {};
+  onDockPositionToggle: () => void = (): void => {};
+  onSafeInsetAdjust: (edge: ProjectionSafeInsetEdge, delta: number) => void =
     (_edge: ProjectionSafeInsetEdge, _delta: number): void => {};
-  @Prop onContentCalibrationAdjust: (control: ProjectionCalibrationControl, delta: number) => void =
+  onContentCalibrationAdjust: (control: ProjectionCalibrationControl, delta: number) => void =
     (_control: ProjectionCalibrationControl, _delta: number): void => {};
-  @Prop onDropdownToggle: (key: string) => void = (_key: string): void => {};
-  @Prop onDropdownSelect: (key: string, index: number) => void = (_key: string, _index: number): void => {};
-  @Prop onBluetoothAudioChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
-  @Prop onEncoderFpsSelect: (index: number) => void = (_index: number): void => {};
-  @Prop onCaptureFpsSelect: (index: number) => void = (_index: number): void => {};
-  @Prop onTouchAreaChange: (
+  onDropdownToggle: (key: string) => void = (_key: string): void => {};
+  onDropdownSelect: (key: string, index: number) => void = (_key: string, _index: number): void => {};
+  onBluetoothAudioChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
+  onEncoderFpsSelect: (index: number) => void = (_index: number): void => {};
+  onCaptureFpsSelect: (index: number) => void = (_index: number): void => {};
+  onTouchAreaChange: (
     group: string, key: string, area: Area, action: () => void, longPress?: () => void,
     drag?: (pointX: number) => void
   ) => void = (_group: string, _key: string, _area: Area, _action: () => void,
     _longPress?: () => void, _drag?: (pointX: number) => void): void => {};
-  @Prop onProjectionContentAreaChange: (area: Area) => void = (_area: Area): void => {};
-  @Prop onSettingsScrollerReady: (scroller: Scroller) => void = (_scroller: Scroller): void => {};
-  @Prop onTouchBoundsChange: (group: string, area: Area) => void =
+  onProjectionContentAreaChange: (area: Area) => void = (_area: Area): void => {};
+  onSettingsScrollerReady: (scroller: Scroller) => void = (_scroller: Scroller): void => {};
+  onTouchBoundsChange: (group: string, area: Area) => void =
     (_group: string, _area: Area): void => {};
 
   build() {

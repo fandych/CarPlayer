@@ -1,6 +1,6 @@
 import { ProjectionMediaCommand } from '../session/MediaSessionBridge';
 import {
-  ProjectionSplitPane, ProjectionSafeInsetEdge, ProjectionCalibrationControl, projectionTheme
+  ProjectionSplitPane, ProjectionSafeInsetEdge, ProjectionCalibrationControl
 } from '../video/ProjectionSettings';
 import { ProjectionApp } from './ProjectionAppCatalog';
 import { ProjectionDashboardState } from './ProjectionDashboardState';
@@ -9,6 +9,7 @@ import { ProjectionDashboardAppController } from './ProjectionDashboardAppContro
 import { ProjectionDashboardTouchController } from './ProjectionDashboardTouchController';
 import { ProjectionDashboardMediaController } from './ProjectionDashboardMediaController';
 import { ProjectionDashboardPresentationController } from './ProjectionDashboardPresentationController';
+import { ProjectionDashboardShellBindings } from './ProjectionDashboardShellBindingsTypes';
 
 export function projectionDashboardShellBindings(
   state: ProjectionDashboardState,
@@ -17,84 +18,8 @@ export function projectionDashboardShellBindings(
   media: ProjectionDashboardMediaController,
   presentation: ProjectionDashboardPresentationController,
   settings: ProjectionDashboardSettingsController
-) {
+): ProjectionDashboardShellBindings {
   return {
-    theme: state.theme,
-    accent: state.accent,
-    dayNightMode: state.dayNightMode,
-    nightMode: state.nightMode,
-    dockPosition: state.dockPosition,
-    dashboardView: state.dashboardView,
-    preserveSplitSurfaceForOverlays: state.preserveSplitSurfaceForOverlays,
-    settingsTab: state.settingsTab,
-    activeSettingsDropdown: state.activeSettingsDropdown,
-    displayBrightness: state.displayBrightness,
-    splitMapRatio: state.splitMapRatio,
-    splitMusicRatio: state.splitMusicRatio,
-    splitMapRatioInput: state.splitMapRatioInput,
-    splitMusicRatioInput: state.splitMusicRatioInput,
-    splitRatioMessage: state.splitRatioMessage,
-    selectedMapUri: state.selectedMapUri,
-    selectedMusicUri: state.selectedMusicUri,
-    apps: state.apps,
-    appsGridColumns: state.appsGridColumns,
-    appsGridTemplate: app.appsGridTemplate(state),
-    activeAppLabel: state.activeAppLabel,
-    activeAppUri: state.activeAppUri,
-    appOnPhone: state.appOnPhone,
-    mapAppLabel: state.mapAppLabel,
-    mapAppUri: state.mapAppUri,
-    mapOnPhone: state.mapOnPhone,
-    navigationPreview: state.navigationPreview,
-    launchMessage: state.launchMessage,
-    mapMessage: state.mapMessage,
-    mediaState: state.mediaState,
-    dockActionMessage: state.dockActionMessage,
-    dockHint: state.dockHint,
-    batteryPercent: state.batteryPercent,
-    signalLevel: state.signalLevel,
-    networkLabel: state.networkLabel,
-    dockIconSize: state.dockIconSize,
-    deviceDisplayUuid: state.vehicleDisplayUuid,
-    safeInsetTop: state.safeInsetTop,
-    safeInsetRight: state.safeInsetRight,
-    safeInsetBottom: state.safeInsetBottom,
-    safeInsetLeft: state.safeInsetLeft,
-    contentScalePercent: state.contentScalePercent,
-    contentOffsetXPercent: state.contentOffsetXPercent,
-    contentOffsetYPercent: state.contentOffsetYPercent,
-    calibrationMessage: state.calibrationMessage,
-    projectionModeOptions: state.projectionModeOptions,
-    selectedProjectionModeId: state.selectedProjectionModeId,
-    activeProjectionModeId: state.activeProjectionModeId,
-    projectionResolutionMessage: state.projectionResolutionMessage,
-    resolutionSelectionMessage: state.resolutionSelectionMessage,
-    projectionNativeWidth: state.projectionNativeWidth,
-    projectionNativeHeight: state.projectionNativeHeight,
-    useBluetoothAudio: state.useBluetoothAudio,
-    encoderFps: state.encoderFps,
-    captureFps: state.captureFps,
-    activeEncoderFps: state.activeEncoderFps,
-    activeCaptureFps: state.activeCaptureFps,
-    receiverHomeMessage: state.receiverHomeMessage,
-    viewAreaOriginX: state.viewAreaOriginX,
-    viewAreaOriginY: state.viewAreaOriginY,
-    primaryTextColor: presentation.primaryTextColor(state),
-    secondaryTextColor: presentation.secondaryTextColor(state),
-    mutedTextColor: presentation.mutedTextColor(state),
-    mapBackgroundColor: presentation.mapBackgroundColor(state),
-    glassStrokeColor: presentation.glassStrokeColor(state),
-    cardStrokeColor: presentation.cardStrokeColor(state),
-    glassSecondaryColor: presentation.glassSecondaryColor(state),
-    glassPanelColor: presentation.glassPanelColor(state),
-    glassSurfaceColor: presentation.glassSurfaceColor(state),
-    settingsPanelColor: presentation.settingsPanelColor(state),
-    settingsGroupColor: presentation.settingsGroupColor(state),
-    settingsSeparatorColor: presentation.settingsSeparatorColor(state),
-    lightAppearance: presentation.isLightAppearance(state),
-    themeBackgroundColor: projectionTheme(state.theme).background,
-    dockItems: app.dockItems(state),
-    verticalDock: state.dockPosition !== 'bottom',
     wallpaperResource: (themeId: string): Resource => presentation.wallpaperResource(themeId),
     mapPreviewResource: (): Resource => presentation.mapPreviewResource(state),
     dockIconResource: (icon: string, selected: boolean): Resource =>

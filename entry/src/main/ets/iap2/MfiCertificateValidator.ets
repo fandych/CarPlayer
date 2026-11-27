@@ -26,9 +26,15 @@ export async function validateMfiAccessoryCertificate(
   if (certificatePayload.length === 0) {
     throw new Error('MFi certificate payload is empty');
   }
-  const { allowIntermediateDownload, pinnedFingerprints, requestTrust, log } = options;
+  const allowIntermediateDownload = options.allowIntermediateDownload;
+  const pinnedFingerprints = options.pinnedFingerprints;
+  const requestTrust = options.requestTrust;
+  const log = options.log;
   const loaded = await loadMfiCertificatePayload(certificatePayload, log);
-  const { candidateCertificates, untrustedCertificates, encodingName, serializedChain } = loaded;
+  const candidateCertificates = loaded.candidateCertificates;
+  const untrustedCertificates = loaded.untrustedCertificates;
+  const encodingName = loaded.encodingName;
+  const serializedChain = loaded.serializedChain;
   const fingerprint = await sha256Fingerprint(serializedChain);
   log(
     `MFi certificate payload parsed: format=${encodingName}, bytes=${serializedChain.length}, ` +

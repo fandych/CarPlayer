@@ -15,12 +15,19 @@ export class AirPlayVideoFrameQueue {
   private failed: boolean = false;
   private frameGeneration: number = 0;
   private awaitingKeyFrame: boolean = false;
+  private readonly processEvent: (event: EncodedH264Event) => Promise<void>;
+  private readonly log: (message: string) => void;
+  private readonly requestKeyFrame: () => void;
 
   constructor(
-    private readonly processEvent: (event: EncodedH264Event) => Promise<void>,
-    private readonly log: (message: string) => void,
-    private readonly requestKeyFrame: () => void
-  ) {}
+    processEvent: (event: EncodedH264Event) => Promise<void>,
+    log: (message: string) => void,
+    requestKeyFrame: () => void
+  ) {
+    this.processEvent = processEvent;
+    this.log = log;
+    this.requestKeyFrame = requestKeyFrame;
+  }
 
   handleEncoderEvent(event: EncodedH264Event): Promise<void> {
     if (this.failed) {

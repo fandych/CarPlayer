@@ -6,6 +6,12 @@ import {
   ProjectionLaunchState,
   ProjectionLaunchTarget
 } from './ProjectionAppTypes';
+import {
+  PROJECTION_APP_CANDIDATES,
+  PROJECTION_MAP_URI,
+  PROJECTION_VEHICLE_APPS
+} from './ProjectionAppCatalogData';
+
 export {
   ProjectionAbilityLookup,
   ProjectionApp,
@@ -14,12 +20,6 @@ export {
   ProjectionLaunchState,
   ProjectionLaunchTarget
 } from './ProjectionAppTypes';
-
-import {
-  PROJECTION_APP_CANDIDATES,
-  PROJECTION_MAP_URI,
-  PROJECTION_VEHICLE_APPS
-} from './ProjectionAppCatalogData';
 export { PROJECTION_APP_CANDIDATES, PROJECTION_MAP_URI, PROJECTION_VEHICLE_APPS } from './ProjectionAppCatalogData';
 
 function copyProjectionApp(source: ProjectionApp): ProjectionApp {

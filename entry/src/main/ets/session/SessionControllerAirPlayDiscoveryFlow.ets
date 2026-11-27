@@ -8,6 +8,7 @@ import { SessionControllerIap2Flow } from './SessionControllerIap2Flow';
 
 export abstract class SessionControllerAirPlayDiscoveryFlow extends SessionControllerIap2Flow {
   protected abstract clearAirPlayInviteWaitTimer(): void;
+  protected abstract clearAirPlayTimers(): void;
 
   protected startAirPlayDiscovery(): void {
     if (this.discovery) {

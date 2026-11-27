@@ -1,7 +1,7 @@
 import { SAMPLES_PER_PACKET } from '../../audio/AudioRtpSender';
 import { CARPLAY_SENDER_OS_BUILD_VERSION, CARPLAY_SENDER_SOURCE_VERSION } from '../../protocol/CarPlaySenderCompatibility';
 import { BinaryPlist, PlistNode } from '../BinaryPlist';
-import { AirPlayModes } from './AirPlayMediaSessionTypes';
+import { AirPlayModes, createDefaultModes } from './AirPlayMediaSessionTypes';
 import { createNtpTimestamp, createUuid, normalizeDeviceId } from './AirPlayMediaHelpers';
 
 const CONTROLLER_FEATURES: string[] = [

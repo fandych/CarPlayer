@@ -4,8 +4,9 @@ import { ProjectionMediaSnapshot } from '../session/MediaSessionBridge';
 import { ProjectionDisplayMode } from '../video/ProjectionSettings';
 import { ProjectionMediaCoordinator } from './ProjectionMediaCoordinator';
 import { ProjectionPoint, ProjectionTouchRouter } from './ProjectionTouchRouter';
+import { ProjectionDashboardSettingsState } from './ProjectionDashboardSettingsController';
 
-export interface ProjectionDashboardState {
+export interface ProjectionDashboardState extends ProjectionDashboardSettingsState {
   onAppClick: (app: ProjectionApp) => void;
   onHomeClick: () => void;
   onBackClick: () => void;

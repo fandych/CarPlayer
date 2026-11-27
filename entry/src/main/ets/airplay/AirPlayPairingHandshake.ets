@@ -82,7 +82,11 @@ export class AirPlayPairingHandshake {
     state: AirPlayPairingHandshakeState,
     service: AirPlayService
   ): Promise<AirPlayPairingHandshakeOutcome> {
-    const { context, identity, deviceIdentifier, storedReceiver, expectedReceiverKey } = state;
+    const context = state.context;
+    const identity = state.identity;
+    const deviceIdentifier = state.deviceIdentifier;
+    const storedReceiver = state.storedReceiver;
+    const expectedReceiverKey = state.expectedReceiverKey;
     await this.connect(service);
     if (!this.isCurrent()) {
       await this.closeResources();

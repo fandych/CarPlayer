@@ -14,7 +14,6 @@ import {
   ProjectionMediaSnapshot
 } from '../session/MediaSessionBridge';
 import { ProjectionMediaCoordinator } from './ProjectionMediaCoordinator';
-import { ProjectionDashboardShell } from './ProjectionDashboardShell';
 import {
   initializeProjectionSettings, ProjectionDisplayMode,
   RECEIVER_NATIVE_MODE_ID
@@ -24,6 +23,8 @@ import { ProjectionDashboardMediaController } from './ProjectionDashboardMediaCo
 import { ProjectionDashboardPresentationController } from './ProjectionDashboardPresentationController';
 import { ProjectionDashboardTouchController } from './ProjectionDashboardTouchController';
 import { projectionDashboardShellBindings } from './ProjectionDashboardShellBindings';
+import { ProjectionDashboardShellBindings } from './ProjectionDashboardShellBindingsTypes';
+import { renderProjectionDashboard } from './ProjectionDashboardView';
 
 export { ProjectionMapSurface } from './ProjectionSurface';
 export { discoverProjectionApps } from './ProjectionDashboardAppDiscovery';
@@ -139,6 +140,10 @@ export struct ProjectionDashboard {
   readonly sidebarMediaScroller: Scroller = new Scroller();
   projectionViewportWidth: number = 0;
   projectionViewportHeight: number = 0;
+  private readonly shellBindings: ProjectionDashboardShellBindings = projectionDashboardShellBindings(
+    this, this.appController, this.touchController, this.mediaController,
+    this.presentationController, this.settingsController
+  );
   private readonly touchHandler = (event: emitter.GenericEventData<CarPlayTouchTap>): void => {
     this.touchRouter.handleTap(
       event.data,
@@ -234,9 +239,11 @@ export struct ProjectionDashboard {
   }
 
   build() {
-    ProjectionDashboardShell(projectionDashboardShellBindings(
-      this, this.appController, this.touchController, this.mediaController,
-      this.presentationController, this.settingsController
-    ))
+    renderProjectionDashboard({
+      state: this,
+      app: this.appController,
+      presentation: this.presentationController,
+      bindings: this.shellBindings
+    })
   }
 }

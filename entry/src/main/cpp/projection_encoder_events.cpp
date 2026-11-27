@@ -43,8 +43,10 @@ void OnOutputBuffer(OH_AVCodec* codec, uint32_t index, OH_AVBuffer* buffer, void
   OH_AVCodecBufferAttr attributes{};
   const OH_AVErrCode attrResult = OH_AVBuffer_GetBufferAttr(buffer, &attributes);
   uint8_t* address = OH_AVBuffer_GetAddr(buffer);
+  const int32_t capacity = OH_AVBuffer_GetCapacity(buffer);
   if (state->running.load() && attrResult == AV_ERR_OK && address != nullptr &&
-      attributes.offset >= 0 && attributes.size > 0 && attributes.size <= MAX_ENCODED_BUFFER_BYTES) {
+      attributes.offset >= 0 && attributes.size > 0 && attributes.size <= MAX_ENCODED_BUFFER_BYTES &&
+      capacity >= 0 && attributes.offset <= capacity && attributes.size <= capacity - attributes.offset) {
     auto* event = new EncoderEvent();
     event->type = (attributes.flags & AVCODEC_BUFFER_FLAGS_CODEC_DATA) != 0 ? "codecConfig" : "frame";
     event->timestampUs = attributes.pts;

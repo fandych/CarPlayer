@@ -4,6 +4,7 @@ import { Iap2SenderSession, WifiCredentials, WirelessAirPlayEndpoint } from './I
 import { SessionControllerConnectionFlow } from './SessionControllerConnectionFlow';
 
 export abstract class SessionControllerIap2Flow extends SessionControllerConnectionFlow {
+  protected abstract handleIap2AirPlayEndpoint(endpoint: WirelessAirPlayEndpoint | undefined): void;
   protected abstract clearAirPlayWaitTimers(): void;
   protected abstract hasSelfContainedAirPlayEndpoint(): boolean;
   protected abstract startAirPlayPrerequisiteWait(): void;

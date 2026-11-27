@@ -7,6 +7,7 @@ export abstract class Iap2SenderSessionPostAuthenticationFlow extends Iap2Sender
   protected abstract sendDeviceStateGreetings(force?: boolean): Promise<void>;
   protected abstract sendTransportIdentifier(): Promise<void>;
   protected abstract startStartSessionWaitTimer(generation: number): void;
+  protected abstract clearStartSessionWaitTimer(): void;
 
   protected async startPostAuthenticationSequence(generation: number): Promise<void> {
     await this.sendDeviceStateGreetings();

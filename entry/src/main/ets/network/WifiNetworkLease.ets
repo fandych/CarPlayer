@@ -126,9 +126,13 @@ export class WifiNetworkLease {
         log(`匹配车机 WLAN 已等待 ${WIFI_NETWORK_BIND_WARNING_MS / 1000} 秒；仍等待 netAvailable，暂不使用默认路由`);
       }
     }, WIFI_NETWORK_BIND_WARNING_MS);
+    const candidateVersions: Map<number, number> = new Map<number, number>();
     this.availableHandler = (handle: connection.NetHandle): void => {
+      const version = (candidateVersions.get(handle.netId) ?? 0) + 1;
+      candidateVersions.set(handle.netId, version);
       void this.getMatchingLocalAddresses(handle, localAddress).then((addresses: LocalNetworkAddresses | undefined): void => {
         if (!addresses || this.netConnection !== netConnection || generation !== this.generation ||
+          candidateVersions.get(handle.netId) !== version ||
           (this.netHandle && this.netHandle.netId !== handle.netId)) {
           return;
         }
@@ -140,6 +144,7 @@ export class WifiNetworkLease {
       });
     };
     this.lostHandler = (handle: connection.NetHandle): void => {
+      candidateVersions.set(handle.netId, (candidateVersions.get(handle.netId) ?? 0) + 1);
       if (this.netConnection === netConnection && this.netHandle?.netId === handle.netId) {
         this.netHandle = undefined;
         rejectAvailable(new Error('车机 WLAN 在网络选择期间丢失'));
@@ -252,15 +257,20 @@ export class WifiNetworkLease {
       this.availabilityWarningTimer = undefined;
     }
     const netConnection = this.netConnection;
+    const registered = this.registered;
     this.netConnection = undefined;
     this.netHandle = undefined;
     this.localAddresses = undefined;
+    this.registered = false;
+    this.availableHandler = undefined;
+    this.lostHandler = undefined;
+    this.unavailableHandler = undefined;
+    this.log = (_message: string): void => {};
     if (!netConnection) {
-      this.log = (_message: string): void => {};
       return;
     }
     let unregisterError: Error | undefined;
-    if (this.registered) {
+    if (registered) {
       try {
         await new Promise<void>((resolve, reject) => {
           netConnection.unregister((error) => {
@@ -275,11 +285,6 @@ export class WifiNetworkLease {
         unregisterError = error instanceof Error ? error : new Error(String(error));
       }
     }
-    this.registered = false;
-    this.availableHandler = undefined;
-    this.lostHandler = undefined;
-    this.unavailableHandler = undefined;
-    this.log = (_message: string): void => {};
     if (unregisterError) {
       throw unregisterError;
     }

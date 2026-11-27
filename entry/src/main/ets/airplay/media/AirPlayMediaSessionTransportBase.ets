@@ -1,6 +1,6 @@
 import netSocket from '@ohos.net.socket';
 import { AirPlayEventChannel } from '../AirPlayEventChannel';
-import { AirPlayRtspClient } from '../AirPlayRtspClient';
+import { AirPlayRtspClient, AirPlayRtspResponse } from '../AirPlayRtspClient';
 import { PlistNode } from '../BinaryPlist';
 import { AirPlayVideoStreamSender } from '../AirPlayVideoStream';
 import { TouchHidDevice } from '../CarPlayTouchReport';
@@ -63,6 +63,9 @@ export abstract class AirPlayMediaSessionTransportBase {
   protected abstract createModesDictionary(modes: AirPlayModes): PlistNode;
   protected abstract createModesChangedPayload(modes: AirPlayModes): Uint8Array;
   protected abstract createLowPowerKeepAliveBeacon(): Uint8Array;
+  protected abstract reportVideoSocketFailure(socket: netSocket.TCPSocket, reason: string): void;
+  protected abstract request(method: string, path: string, body: Uint8Array, label: string):
+    Promise<AirPlayRtspResponse>;
   constructor(
     client: AirPlayRtspClient,
     receiverHost: string,

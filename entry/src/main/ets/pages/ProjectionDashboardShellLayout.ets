@@ -3,7 +3,7 @@ import { ProjectionDock, ProjectionDockItem } from './ProjectionDock';
 @Component
 export struct ProjectionDashboardShellLayout {
   @Prop theme: string = 'aurora';
-  @Prop wallpaperResource: (themeId: string) => Resource = (_themeId: string): Resource =>
+  wallpaperResource: (themeId: string) => Resource = (_themeId: string): Resource =>
     $r('app.media.projection_aurora');
   @Prop lightAppearance: boolean = false;
   @Prop dockPosition: string = 'left';
@@ -28,19 +28,19 @@ export struct ProjectionDashboardShellLayout {
   @Prop mutedTextColor: string = '#80FFFFFF';
   @Prop glassSurfaceColor: string = '#9E1E1E26';
   @Prop glassStrokeColor: string = '#38FFFFFF';
-  @Prop dockIconResource: (icon: string, selected: boolean) => Resource =
+  dockIconResource: (icon: string, selected: boolean) => Resource =
     (_icon: string, _selected: boolean): Resource => $r('app.media.ic_house');
-  @Prop onDockAction: (id: string, longPress: boolean) => void = (_id: string, _longPress: boolean): void => {};
-  @Prop onDockHintChange: (hint: string) => void = (_hint: string): void => {};
-  @Prop onTouchAreaChange: (
+  onDockAction: (id: string, longPress: boolean) => void = (_id: string, _longPress: boolean): void => {};
+  onDockHintChange: (hint: string) => void = (_hint: string): void => {};
+  onTouchAreaChange: (
     group: string, key: string, area: Area, action: () => void, longPress?: () => void,
     drag?: (pointX: number) => void
   ) => void = (_group: string, _key: string, _area: Area, _action: () => void,
     _longPress?: () => void, _drag?: (pointX: number) => void): void => {};
-  @Prop onDockScrollerReady: (scroller: Scroller) => void = (_scroller: Scroller): void => {};
-  @Prop onTouchBoundsChange: (group: string, area: Area) => void =
+  onDockScrollerReady: (scroller: Scroller) => void = (_scroller: Scroller): void => {};
+  onTouchBoundsChange: (group: string, area: Area) => void =
     (_group: string, _area: Area): void => {};
-  @Prop onViewportAreaChange: (area: Area) => void = (_area: Area): void => {};
+  onViewportAreaChange: (area: Area) => void = (_area: Area): void => {};
   @BuilderParam content: () => void = this.EmptyContent;
 
   @Builder

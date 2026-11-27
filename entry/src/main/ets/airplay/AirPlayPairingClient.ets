@@ -60,7 +60,11 @@ export class AirPlayPairingClient {
     const state = await handshake.prepare(context, service);
     try {
       const outcome = await handshake.run(state, service);
-      const { receiverId, model, features, sharedSecret, usedPairVerifyFastPath } = outcome;
+      const receiverId = outcome.receiverId;
+      const model = outcome.model;
+      const features = outcome.features;
+      const sharedSecret = outcome.sharedSecret;
+      const usedPairVerifyFastPath = outcome.usedPairVerifyFastPath;
       this.service = service;
       this.sharedSecret = sharedSecret;
       this.log(

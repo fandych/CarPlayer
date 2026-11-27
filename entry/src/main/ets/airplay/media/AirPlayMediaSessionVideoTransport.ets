@@ -2,7 +2,7 @@ import netSocket from '@ohos.net.socket';
 import { hkdfSha512 } from '../AirPlayCrypto';
 import { EncodedH264Event } from '../AirPlayVideoStream';
 import { PlistNode } from '../BinaryPlist';
-import { encodeUtf8 } from '../../protocol/Iap2Codec';
+import { encodeUtf8, toArrayBuffer } from '../../protocol/Iap2Codec';
 import { AudioRtpSession } from '../../audio/AudioRtpSender';
 import { AirPlayMediaSessionTransportBase } from './AirPlayMediaSessionTransportBase';
 import {

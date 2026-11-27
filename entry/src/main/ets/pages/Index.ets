@@ -37,16 +37,16 @@ struct Index {
   @State logs: string[] = [];
   @State projectionDisplayId: number = -1;
   @State connectionDuration: string = '00:00';
-  private connectionStartedAt: number = 0;
-  private connectionTimer: number = -1;
-  private controller?: SessionController;
-  private readonly settingsStore: CarPlayerSettingsStore = new CarPlayerSettingsStore();
-  private protocolLogger?: ProtocolLogger;
-  private pendingUiLogLines: string[] = [];
-  private uiLogFlushTimer: number = -1;
-  private logSessionId: string = '';
-  private connectionAttempt: number = 0;
-  private lastConnectionSummary: string = '';
+  connectionStartedAt: number = 0;
+  connectionTimer: number = -1;
+  controller?: SessionController;
+  readonly settingsStore: CarPlayerSettingsStore = new CarPlayerSettingsStore();
+  protocolLogger?: ProtocolLogger;
+  pendingUiLogLines: string[] = [];
+  uiLogFlushTimer: number = -1;
+  logSessionId: string = '';
+  connectionAttempt: number = 0;
+  lastConnectionSummary: string = '';
 
   aboutToAppear(): void {
     this.logSessionId = this.createLogSessionId();
@@ -59,7 +59,8 @@ struct Index {
   }
 
   build() {
-    IndexRootView({
+    Stack() {
+      IndexRootView({
       status: this.status,
       statusLabel: IndexStatusLabel(this.status),
       statusDescription: IndexStatusDescription(this.status),
@@ -111,7 +112,8 @@ struct Index {
       onSkipMfiChange: (enabled: boolean): void => { void this.setSkipMfiChallengeVerification(enabled); },
       onRevokeFingerprint: (fingerprint: string): void => { void this.revokeMfiFingerprint(fingerprint); },
       onRetrySettings: (): void => { void this.loadSettings(); }
-    })
+      })
+    }.width('100%').height('100%')
   }
 
   onMainAction(): void {
@@ -152,7 +154,7 @@ struct Index {
     return indexSettingsActions.loadSettings(this as IndexHost);
   }
 
-  private getAppContext(): common.UIAbilityContext {
+  getAppContext(): common.UIAbilityContext {
     const context = this.getUIContext().getHostContext();
     if (!context) {
       throw new Error('无法获取应用上下文');

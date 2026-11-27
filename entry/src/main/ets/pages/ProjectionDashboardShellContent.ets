@@ -37,39 +37,38 @@ export struct ProjectionDashboardShellContent {
   @Prop lightAppearance: boolean = false;
   @Prop mapBackgroundColor: string = '#1D2230';
   @Prop verticalDock: boolean = false;
-  @Prop wallpaperResource: (themeId: string) => Resource = (_themeId: string): Resource =>
+  wallpaperResource: (themeId: string) => Resource = (_themeId: string): Resource =>
     $r('app.media.projection_aurora');
-  @Prop mapPreviewResource: () => Resource = (): Resource => $r('app.media.projection_map_preview');
+  mapPreviewResource: () => Resource = (): Resource => $r('app.media.projection_map_preview');
   @Prop appsGridColumns: number = 4;
   @Prop appsGridTemplate: string = '1fr 1fr 1fr 1fr';
   @Prop dockActionMessage: string = '';
-  @Prop onAppSurfaceChange: (surfaceId: string, area: Area | undefined, attached: boolean) => void =
+  onAppSurfaceChange: (surfaceId: string, area: Area | undefined, attached: boolean) => void =
     (_surfaceId: string, _area: Area | undefined, _attached: boolean): void => {};
-  @Prop onMapSurfaceChange: (surfaceId: string, area: Area | undefined, attached: boolean) => void =
+  onMapSurfaceChange: (surfaceId: string, area: Area | undefined, attached: boolean) => void =
     (_surfaceId: string, _area: Area | undefined, _attached: boolean): void => {};
-  @Prop onTouchAreaChange: (
+  onTouchAreaChange: (
     group: string, key: string, area: Area, action: () => void, longPress?: () => void,
     drag?: (pointX: number) => void
   ) => void = (_group: string, _key: string, _area: Area, _action: () => void,
     _longPress?: () => void, _drag?: (pointX: number) => void): void => {};
-  @Prop onTouchBoundsChange: (group: string, area: Area) => void =
+  onTouchBoundsChange: (group: string, area: Area) => void =
     (_group: string, _area: Area): void => {};
-  @Prop onToggleAppDisplay: () => void = (): void => {};
-  @Prop onToggleMapDisplay: () => void = (): void => {};
-  @Prop onOpenMediaApp: () => void = (): void => {};
-  @Prop onOpenMapApp: () => void = (): void => {};
-  @Prop onSendMediaCommand: (command: ProjectionMediaCommand) => void = (_command: ProjectionMediaCommand): void => {};
-  @Prop onSelectApp: (app: ProjectionApp) => void = (_app: ProjectionApp): void => {};
-  @Prop onGridAreaChange: (area: Area) => void = (_area: Area): void => {};
-  @Prop onAppsScrollerReady: (scroller: Scroller) => void = (_scroller: Scroller): void => {};
-  @Prop onSettingsTabChange: (tab: string) => void = (_tab: string): void => {};
-  @Prop settingsPage: ProjectionDashboardShellSettingsPage;
-  @Prop onThemeChange: (themeId: string) => void = (_themeId: string): void => {};
-  @Prop onAccentChange: (color: string) => void = (_color: string): void => {};
-  @Prop onThemesScrollerReady: (scroller: Scroller) => void = (_scroller: Scroller): void => {};
-  @Prop onDockMenuBoundsChange: (area: Area) => void = (_area: Area): void => {};
-  @Prop onDockMenuScrollerReady: (scroller: Scroller) => void = (_scroller: Scroller): void => {};
-  @Prop onHomeClick: () => void = (): void => {};
+  onToggleAppDisplay: () => void = (): void => {};
+  onToggleMapDisplay: () => void = (): void => {};
+  onOpenMediaApp: () => void = (): void => {};
+  onOpenMapApp: () => void = (): void => {};
+  onSendMediaCommand: (command: ProjectionMediaCommand) => void = (_command: ProjectionMediaCommand): void => {};
+  onSelectApp: (app: ProjectionApp) => void = (_app: ProjectionApp): void => {};
+  onGridAreaChange: (area: Area) => void = (_area: Area): void => {};
+  onAppsScrollerReady: (scroller: Scroller) => void = (_scroller: Scroller): void => {};
+  onSettingsTabChange: (tab: string) => void = (_tab: string): void => {};
+  onThemeChange: (themeId: string) => void = (_themeId: string): void => {};
+  onAccentChange: (color: string) => void = (_color: string): void => {};
+  onThemesScrollerReady: (scroller: Scroller) => void = (_scroller: Scroller): void => {};
+  onDockMenuBoundsChange: (area: Area) => void = (_area: Area): void => {};
+  onDockMenuScrollerReady: (scroller: Scroller) => void = (_scroller: Scroller): void => {};
+  onHomeClick: () => void = (): void => {};
   @BuilderParam settingsPage: () => void = this.EmptySettingsPage;
 
   @Builder

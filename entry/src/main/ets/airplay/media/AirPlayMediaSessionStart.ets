@@ -29,6 +29,7 @@ import {
 const MIB3_IAP2_DETECT_MARKER: Uint8Array = new Uint8Array([0xff, 0x55, 0x02, 0x00, 0xee, 0x10]);
 
 export abstract class AirPlayMediaSessionStart extends AirPlayMediaSessionStartHelpers {
+  abstract stop(abort?: boolean): Promise<void>;
   async start(
     deviceId: string,
     sharedSecret?: Uint8Array,

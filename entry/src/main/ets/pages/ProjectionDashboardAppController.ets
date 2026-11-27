@@ -1,4 +1,5 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import promptAction from '@ohos.promptAction';
 import { ProjectionApp, activeProjectionMusicApp, findLaunchableProjectionApp, isProjectionAppLaunchable,
   PROJECTION_MAP_URI, PROJECTION_VEHICLE_APPS, projectionAppCatalog } from './ProjectionAppCatalog';
 import { ProjectionDockItem } from './ProjectionDock';

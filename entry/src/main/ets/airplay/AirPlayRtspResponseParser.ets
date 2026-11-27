@@ -1,12 +1,8 @@
 import { decodeUtf8 } from '../protocol/Iap2Codec';
+import { AirPlayRtspResponse } from './AirPlayRtspClient';
 
 export interface ParsedAirPlayRtspResponse {
-  response: {
-    statusCode: number;
-    statusLine: string;
-    headers: Map<string, string>;
-    body: Uint8Array;
-  };
+  response: AirPlayRtspResponse;
   consumedBytes: number;
 }
 

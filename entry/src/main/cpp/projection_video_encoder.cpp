@@ -122,7 +122,7 @@ napi_value CreateVideoEncoder(napi_env env, napi_callback_info info) {
     return failFormat("frame rate");
   }
   EmitDiagnostic(state, "frame rate accepted: " + std::to_string(fps));
-  if (!OH_AVFormat_SetIntValue(format, OH_MD_KEY_I_FRAME_INTERVAL, 1)) {
+  if (!OH_AVFormat_SetIntValue(format, OH_MD_KEY_I_FRAME_INTERVAL, 1000)) {
     return failFormat("I-frame interval");
   }
   EmitDiagnostic(state, "I-frame interval accepted: 1 second");

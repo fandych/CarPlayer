@@ -180,3 +180,92 @@ test('AirPlay RTSP probe declares the endpoint address family', async () => {
   assert.equal(await probe.probe({ host: 'fe80::1%wlan0', port: 7000 }), 'RTSP/1.0 200 OK');
   assert.equal(connectOptions.address.family, 2);
 });
+
+test('wireless WLAN selection discards a candidate lost during asynchronous validation', async () => {
+  const handlers = {};
+  const pending = [];
+  const logs = [];
+  const { WifiNetworkLease } = loadEts('network/WifiNetworkLease.ets', {
+    '@ohos.net.connection': {
+      NetBearType: { BEARER_WIFI: 1 },
+      async getAllNets() { return []; },
+      async getNetCapabilities() { return { bearerTypes: [1] }; },
+      getConnectionProperties() { return new Promise(resolve => pending.push(resolve)); },
+      createNetConnection() { return {
+        on(name, handler) { handlers[name] = handler; },
+        register(callback) { callback(); },
+        unregister(callback) { callback(); }
+      }; }
+    }
+  });
+  const lease = new WifiNetworkLease();
+  const acquiring = lease.acquire('vehicle', () => {}, message => logs.push(message), '10.36.232.67');
+  for (let i = 0; i < 20 && !handlers.netAvailable; i++) await Promise.resolve();
+  const handle = { netId: 3 };
+  handlers.netAvailable(handle);
+  for (let i = 0; i < 20 && !pending.length; i++) await Promise.resolve();
+  handlers.netLost(handle);
+  const properties = { interfaceName: 'wlan0', linkAddresses: [
+    { address: { address: '10.36.232.67' }, prefixLength: 24 }
+  ] };
+  pending[0](properties);
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+  assert.equal(lease.netHandle, undefined);
+  assert.equal(logs.some(message => message.includes('已匹配车机 WLAN')), false);
+
+  handlers.netAvailable(handle);
+  for (let i = 0; i < 20 && pending.length < 2; i++) await Promise.resolve();
+  pending[1](properties);
+  assert.equal((await acquiring).netId, 3);
+  await lease.release();
+});
+
+test('projection builder reads current state and retains interactive callbacks', () => {
+  const filename = path.join(sourceRoot, 'pages/ProjectionDashboardView.ets');
+  const source = fs.readFileSync(filename, 'utf8').replace('@Builder', '');
+  const script = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 }
+  }).outputText;
+  const exports = {};
+  const renders = [];
+  const requireMock = name => {
+    if (name === '../video/ProjectionSettings') return { projectionTheme: () => ({ background: '#000' }) };
+    if (name === './ProjectionDashboardShell') return { ProjectionDashboardShell: options => renders.push(options) };
+    throw new Error(`Unexpected import ${name}`);
+  };
+  vm.runInThisContext(`(function(exports, require) { ${script}\n})`, { filename })(exports, requireMock);
+  const state = { theme: 'aurora', dashboardView: 'home', splitMapRatio: 3, dockPosition: 'left' };
+  const app = { appsGridTemplate: () => '', dockItems: () => [] };
+  const presentation = new Proxy({}, { get: () => () => '' });
+  let selected = '';
+  const options = { state, app, presentation, bindings: { onThemeChange: value => { selected = value; } } };
+  exports.renderProjectionDashboard(options);
+  state.dashboardView = 'split';
+  state.splitMapRatio = 5;
+  exports.renderProjectionDashboard(options);
+  assert.equal(renders[0].dashboardView, 'home');
+  assert.equal(renders[1].dashboardView, 'split');
+  assert.equal(renders[1].splitMapRatio, 5);
+  renders[1].onThemeChange('ocean');
+  assert.equal(selected, 'ocean');
+});
+
+test('AirPlay mode payload builders can use default modes', () => {
+  const modes = loadEts('airplay/media/AirPlayMediaSessionTypes.ets');
+  const node = {
+    integer: value => value,
+    dictionary: value => value,
+    array: value => value,
+    string: value => value
+  };
+  const { AirPlayMediaSessionPayloads } = loadEts('airplay/media/AirPlayMediaSessionPayloads.ets', {
+    '../../audio/AudioRtpSender': {},
+    '../../protocol/CarPlaySenderCompatibility': {},
+    '../BinaryPlist': { PlistNode: node, BinaryPlist: { encode: value => value } },
+    './AirPlayMediaSessionTypes': modes,
+    './AirPlayMediaHelpers': {}
+  });
+  const payload = AirPlayMediaSessionPayloads.buildModesChangedPayload();
+  assert.equal(payload.get('type'), 'modesChanged');
+  assert.equal(payload.get('params').get('resources')[0].get('entity'), 1);
+});
